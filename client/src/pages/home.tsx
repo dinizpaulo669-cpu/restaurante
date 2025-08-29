@@ -32,6 +32,14 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  // Redirect new users to onboarding if they don't have a role set
+  useEffect(() => {
+    if (isAuthenticated && user && !user?.role) {
+      setLocation("/onboarding");
+      return;
+    }
+  }, [isAuthenticated, user, setLocation]);
+
   // Redirect restaurant owner to dashboard if restaurant exists
   useEffect(() => {
     if (isAuthenticated && user?.role === "restaurant_owner" && restaurant && !restaurantLoading) {

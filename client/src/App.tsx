@@ -11,6 +11,7 @@ import Subscribe from "@/pages/subscribe";
 import SetupRestaurant from "@/pages/setup-restaurant";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
+import Onboarding from "@/pages/onboarding";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -33,6 +34,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/onboarding" component={Onboarding} />
           <Route path="/setup-restaurant" component={SetupRestaurant} />
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/dashboard" component={Dashboard} />

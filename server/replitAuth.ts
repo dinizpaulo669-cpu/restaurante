@@ -59,29 +59,24 @@ async function upsertUser(
 ) {
   const existingUser = await storage.getUser(claims["sub"]);
   
-  // Se é um novo usuário, criar com período de teste
+  // Se é um novo usuário, criar sem role definido
   if (!existingUser) {
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 dias de teste
-    
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
-      subscriptionPlan: "trial",
-      trialEndsAt: trialEndDate,
-      isTrialActive: true,
     });
   } else {
-    // Atualizar usuário existente sem modificar trial
+    // Atualizar usuário existente preservando configurações
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
+      role: existingUser.role,
       subscriptionPlan: existingUser.subscriptionPlan,
       trialEndsAt: existingUser.trialEndsAt,
       isTrialActive: existingUser.isTrialActive,

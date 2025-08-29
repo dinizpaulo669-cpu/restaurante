@@ -28,6 +28,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/update-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { role } = req.body;
+      
+      if (!role || !['customer', 'restaurant_owner'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      await storage.upsertUser({
+        id: userId,
+        email: req.user.claims.email,
+        firstName: req.user.claims.first_name,
+        lastName: req.user.claims.last_name,
+        profileImageUrl: req.user.claims.profile_image_url,
+        role: role,
+        subscriptionPlan: role === "customer" ? null : "trial",
+        trialEndsAt: role === "customer" ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        isTrialActive: role === "restaurant_owner",
+      });
+
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
   // Restaurant routes
   app.get("/api/restaurants", async (req, res) => {
     try {
