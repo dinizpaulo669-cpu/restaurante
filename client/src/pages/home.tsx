@@ -32,6 +32,14 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  // Redirect restaurant owner to dashboard if restaurant exists
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "restaurant_owner" && restaurant && !restaurantLoading) {
+      setLocation("/dashboard");
+      return;
+    }
+  }, [isAuthenticated, user, restaurant, restaurantLoading, setLocation]);
+
   // Check if user came from plan selection and redirect to restaurant setup
   useEffect(() => {
     if (isAuthenticated && user?.role === "restaurant_owner" && !restaurant && !restaurantLoading) {
@@ -219,8 +227,7 @@ export default function Home() {
       }
     }
 
-    // Redirect to dashboard if restaurant exists
-    setLocation("/dashboard");
+    // This shouldn't be reached as useEffect handles dashboard redirect
     return null;
   }
 
