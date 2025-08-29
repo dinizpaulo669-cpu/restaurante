@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { ProductForm } from "@/components/product-form";
+import { ProductCard } from "@/components/product-card";
 import { 
   Home, 
   Package, 
@@ -16,7 +18,8 @@ import {
   LogOut,
   Clock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -25,6 +28,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState("home");
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [showProductForm, setShowProductForm] = useState(false);
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/my-restaurant"],
@@ -34,6 +38,12 @@ export default function Dashboard() {
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/my-orders"],
+    enabled: isAuthenticated && !!restaurant,
+    retry: false,
+  });
+
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: [`/api/restaurants/${restaurant?.id}/products`],
     enabled: isAuthenticated && !!restaurant,
     retry: false,
   });
@@ -215,6 +225,64 @@ export default function Dashboard() {
       );
     }
 
+    if (activeSection === "produtos") {
+      if (showProductForm) {
+        return (
+          <div className="p-6">
+            <ProductForm
+              restaurantId={restaurant.id}
+              onSuccess={() => setShowProductForm(false)}
+              onCancel={() => setShowProductForm(false)}
+            />
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Produtos</h2>
+            <Button 
+              onClick={() => setShowProductForm(true)}
+              data-testid="button-add-product"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Produto
+            </Button>
+          </div>
+
+          {productsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : products.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhum produto cadastrado</h3>
+                <p className="text-muted-foreground mb-4">
+                  Comece adicionando seu primeiro produto ao cardápio
+                </p>
+                <Button 
+                  onClick={() => setShowProductForm(true)}
+                  data-testid="button-add-first-product"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Primeiro Produto
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {products.map((product: any) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-4 capitalize">{activeSection}</h2>
@@ -263,6 +331,12 @@ export default function Dashboard() {
                   {item.submenu?.map((subitem, index) => (
                     <button
                       key={index}
+                      onClick={() => {
+                        if (item.id === "produtos" && index === 0) {
+                          setActiveSection("produtos");
+                          setExpandedMenu(null);
+                        }
+                      }}
                       className="w-full text-left p-2 text-sm hover:bg-muted rounded-lg transition-colors"
                       data-testid={`submenu-${item.id}-${index}`}
                     >

@@ -1,9 +1,12 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage as dbStorage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema } from "@shared/schema";
 import Stripe from "stripe";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
@@ -12,7 +15,39 @@ if (process.env.STRIPE_SECRET_KEY) {
   });
 }
 
+// Configuração do multer para upload de imagens
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: multerStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Servir arquivos estáticos para uploads
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+  
   // Auth middleware
   await setupAuth(app);
 
@@ -20,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = await dbStorage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -37,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid role" });
       }
 
-      await storage.upsertUser({
+      await dbStorage.upsertUser({
         id: userId,
         email: req.user.claims.email,
         firstName: req.user.claims.first_name,
@@ -49,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isTrialActive: role === "restaurant_owner",
       });
 
-      const user = await storage.getUser(userId);
+      const user = await dbStorage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -61,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { search, category, limit } = req.query;
-      const restaurants = await storage.getRestaurants(
+      const restaurants = await dbStorage.getRestaurants(
         search as string,
         category as string,
         limit ? parseInt(limit as string) : undefined
@@ -75,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/restaurants/:id", async (req, res) => {
     try {
-      const restaurant = await storage.getRestaurant(req.params.id);
+      const restaurant = await dbStorage.getRestaurant(req.params.id);
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
       }
@@ -95,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Update user role to restaurant_owner
-      await storage.upsertUser({
+      await dbStorage.upsertUser({
         id: userId,
         email: req.user.claims.email,
         firstName: req.user.claims.first_name,
@@ -104,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "restaurant_owner",
       });
 
-      const restaurant = await storage.createRestaurant(restaurantData);
+      const restaurant = await dbStorage.createRestaurant(restaurantData);
       res.json(restaurant);
     } catch (error) {
       console.error("Error creating restaurant:", error);
@@ -115,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/my-restaurant", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const restaurant = await storage.getRestaurantByOwner(userId);
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
       }
@@ -129,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product routes
   app.get("/api/restaurants/:id/products", async (req, res) => {
     try {
-      const products = await storage.getProducts(req.params.id);
+      const products = await dbStorage.getProducts(req.params.id);
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -137,21 +172,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", isAuthenticated, async (req: any, res) => {
+  app.post("/api/products", isAuthenticated, upload.single('image'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const restaurant = await storage.getRestaurantByOwner(userId);
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
       
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
       }
 
-      const productData = insertProductSchema.parse({
+      // Processar dados do formulário
+      const formData = {
         ...req.body,
         restaurantId: restaurant.id,
-      });
+        price: parseFloat(req.body.price),
+        costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
+        stock: parseInt(req.body.stock) || 0,
+        preparationTime: parseInt(req.body.preparationTime) || 15,
+        isActive: req.body.isActive === 'true',
+      };
 
-      const product = await storage.createProduct(productData);
+      // Adicionar URL da imagem se foi feito upload
+      if (req.file) {
+        formData.imageUrl = `/uploads/products/${req.file.filename}`;
+      }
+
+      const productData = insertProductSchema.parse(formData);
+      const product = await dbStorage.createProduct(productData);
       res.json(product);
     } catch (error) {
       console.error("Error creating product:", error);
@@ -162,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
       const updates = req.body;
-      const product = await storage.updateProduct(req.params.id, updates);
+      const product = await dbStorage.updateProduct(req.params.id, updates);
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -172,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
     try {
-      await storage.deleteProduct(req.params.id);
+      await dbStorage.deleteProduct(req.params.id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -183,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Category routes
   app.get("/api/restaurants/:id/categories", async (req, res) => {
     try {
-      const categories = await storage.getCategories(req.params.id);
+      const categories = await dbStorage.getCategories(req.params.id);
       res.json(categories);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -195,13 +242,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/my-orders", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const restaurant = await storage.getRestaurantByOwner(userId);
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
       
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
       }
 
-      const orders = await storage.getOrders(restaurant.id);
+      const orders = await dbStorage.getOrders(restaurant.id);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -212,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders", async (req, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(orderData);
+      const order = await dbStorage.createOrder(orderData);
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -223,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/orders/:id/status", isAuthenticated, async (req, res) => {
     try {
       const { status } = req.body;
-      const order = await storage.updateOrderStatus(req.params.id, status);
+      const order = await dbStorage.updateOrderStatus(req.params.id, status);
       res.json(order);
     } catch (error) {
       console.error("Error updating order status:", error);
@@ -238,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = req.user.claims.sub;
         const { priceId } = req.body;
 
-        let user = await storage.getUser(userId);
+        let user = await dbStorage.getUser(userId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -262,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
           });
           customerId = customer.id;
-          user = await storage.updateUserStripeInfo(userId, customerId);
+          user = await dbStorage.updateUserStripeInfo(userId, customerId);
         }
 
         const subscription = await stripe!.subscriptions.create({
@@ -272,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expand: ['latest_invoice.payment_intent'],
         });
 
-        await storage.updateUserStripeInfo(userId, customerId, subscription.id);
+        await dbStorage.updateUserStripeInfo(userId, customerId, subscription.id);
 
         const invoice = subscription.latest_invoice;
         const clientSecret = typeof invoice === 'object' && invoice?.payment_intent ? 

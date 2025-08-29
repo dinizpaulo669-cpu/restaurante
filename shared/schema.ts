@@ -89,8 +89,11 @@ export const products = pgTable("products", {
   name: varchar("name").notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
+  stock: integer("stock").default(0),
   imageUrl: varchar("image_url"),
   isActive: boolean("is_active").default(true),
+  availabilityType: varchar("availability_type").notNull().default("local_and_delivery"), // "local_only" | "local_and_delivery"
   preparationTime: integer("preparation_time").default(15), // in minutes
   ingredients: text("ingredients").array(),
   allergens: text("allergens").array(),
