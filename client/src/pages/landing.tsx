@@ -19,7 +19,7 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-  const { data: restaurants = [], isLoading } = useQuery({
+  const { data: restaurants = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/restaurants", searchQuery, selectedCategory],
     enabled: true,
   });
@@ -47,22 +47,14 @@ export default function Landing() {
               </Link>
             </nav>
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => window.location.href = "/api/login"}
-                data-testid="button-login"
-              >
-                <i className="fas fa-user mr-2"></i>
-                <span className="hidden sm:inline">Entrar</span>
-              </Button>
-              <Button 
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => window.location.href = "/api/login"}
-                data-testid="button-register"
-              >
-                Cadastrar
-              </Button>
+              <Link href="/register">
+                <Button 
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  data-testid="button-register"
+                >
+                  Cadastrar
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -155,7 +147,7 @@ export default function Landing() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restaurants.map((restaurant) => (
+              {restaurants.map((restaurant: any) => (
                 <RestaurantCard key={restaurant.id} restaurant={restaurant} />
               ))}
             </div>
