@@ -205,7 +205,17 @@ export default function Sales() {
                   ))}
                 </ul>
                 <Button
-                  onClick={() => window.location.href = "/api/login"}
+                  onClick={() => {
+                    // Save selected plan to localStorage
+                    localStorage.setItem('selectedPlan', JSON.stringify({
+                      id: plan.id,
+                      name: plan.name,
+                      price: plan.price,
+                      priceId: plan.priceId
+                    }));
+                    // Redirect to login
+                    window.location.href = "/api/login";
+                  }}
                   className={`w-full py-3 font-semibold transition-colors ${
                     plan.popular
                       ? "bg-white text-primary hover:bg-gray-100"

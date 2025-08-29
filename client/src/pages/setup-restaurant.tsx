@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,7 @@ export default function SetupRestaurant() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -42,12 +43,27 @@ export default function SetupRestaurant() {
     maxDeliveryTime: 40,
   });
 
+  // Check for selected plan from localStorage
+  useEffect(() => {
+    const savedPlan = localStorage.getItem('selectedPlan');
+    if (savedPlan) {
+      try {
+        setSelectedPlan(JSON.parse(savedPlan));
+      } catch (error) {
+        console.error('Error parsing selected plan:', error);
+        localStorage.removeItem('selectedPlan');
+      }
+    }
+  }, []);
+
   const createRestaurantMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       return await apiRequest("POST", "/api/restaurants", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-restaurant"] });
+      // Clear selected plan from localStorage
+      localStorage.removeItem('selectedPlan');
       toast({
         title: "Restaurante Criado!",
         description: "Seu restaurante foi configurado com sucesso. Bem-vindo ao RestaurantePro!",
@@ -125,6 +141,16 @@ export default function SetupRestaurant() {
         <Card>
           <CardHeader>
             <CardTitle data-testid="setup-title">🚀 Configure seu Restaurante</CardTitle>
+            {selectedPlan && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-blue-800 text-sm">
+                  <strong>📋 Plano Selecionado: {selectedPlan.name}</strong>
+                  <span className="block mt-1">
+                    R$ {selectedPlan.price}/mês - Após criar seu restaurante, você terá 7 dias grátis para testar!
+                  </span>
+                </p>
+              </div>
+            )}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-green-800 text-sm">
                 <strong>✨ Período de Teste Gratuito Ativo!</strong>

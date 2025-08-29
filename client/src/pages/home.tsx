@@ -32,6 +32,18 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  // Check if user came from plan selection and redirect to restaurant setup
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "restaurant_owner" && !restaurant && !restaurantLoading) {
+      const selectedPlan = localStorage.getItem('selectedPlan');
+      if (selectedPlan) {
+        // User selected a plan, redirect to restaurant setup
+        setLocation("/setup-restaurant");
+        return;
+      }
+    }
+  }, [isAuthenticated, user, restaurant, restaurantLoading, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
