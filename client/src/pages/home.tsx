@@ -98,44 +98,113 @@ export default function Home() {
     }
 
     if (!restaurant) {
-      return (
-        <div className="min-h-screen bg-background">
-          <header className="bg-card shadow-sm border-b border-border">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = "/api/logout"}
-                  data-testid="button-logout"
-                >
-                  Sair
-                </Button>
+      // Check if user has active trial
+      const isTrialUser = user?.subscriptionPlan === "trial" && user?.isTrialActive;
+      
+      if (isTrialUser) {
+        // Show restaurant creation form during trial
+        return (
+          <div className="min-h-screen bg-background">
+            <header className="bg-card shadow-sm border-b border-border">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = "/api/logout"}
+                    data-testid="button-logout"
+                  >
+                    Sair
+                  </Button>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          <div className="max-w-4xl mx-auto px-4 py-12">
-            <Card>
-              <CardHeader>
-                <CardTitle data-testid="setup-title">Configure seu Restaurante</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground" data-testid="setup-description">
-                  Para continuar, você precisa escolher um plano e configurar seu restaurante.
-                </p>
-                <Button 
-                  onClick={() => setLocation("/sales")}
-                  className="w-full"
-                  data-testid="button-choose-plan"
-                >
-                  Escolher Plano
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="max-w-4xl mx-auto px-4 py-12">
+              <Card>
+                <CardHeader>
+                  <CardTitle data-testid="setup-title">✨ Bem-vindo ao seu teste gratuito!</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-green-800 text-sm">
+                      <strong>🎉 Parabéns!</strong> Você tem 7 dias gratuitos para testar todas as funcionalidades do RestaurantePro.
+                      {user?.trialEndsAt && (
+                        <span className="block mt-1">
+                          Seu teste expira em: <strong>{new Date(user.trialEndsAt).toLocaleDateString('pt-BR')}</strong>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground" data-testid="setup-description">
+                    Vamos configurar seu restaurante! Você pode criar seu restaurante agora e explorar todas as funcionalidades durante o período de teste.
+                  </p>
+                  <Button 
+                    onClick={() => setLocation("/setup-restaurant")}
+                    className="w-full"
+                    data-testid="button-setup-restaurant"
+                  >
+                    Criar Meu Restaurante
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setLocation("/sales")}
+                    className="w-full"
+                    data-testid="button-view-plans"
+                  >
+                    Ver Planos e Preços
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-      );
+        );
+      } else {
+        // Trial expired or not active, show payment options
+        return (
+          <div className="min-h-screen bg-background">
+            <header className="bg-card shadow-sm border-b border-border">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = "/api/logout"}
+                    data-testid="button-logout"
+                  >
+                    Sair
+                  </Button>
+                </div>
+              </div>
+            </header>
+
+            <div className="max-w-4xl mx-auto px-4 py-12">
+              <Card>
+                <CardHeader>
+                  <CardTitle data-testid="setup-title">Configure seu Restaurante</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-amber-800 text-sm">
+                      Seu período de teste gratuito expirou. Escolha um plano para continuar usando o RestaurantePro.
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground" data-testid="setup-description">
+                    Para continuar, você precisa escolher um plano e configurar seu restaurante.
+                  </p>
+                  <Button 
+                    onClick={() => setLocation("/sales")}
+                    className="w-full"
+                    data-testid="button-choose-plan"
+                  >
+                    Escolher Plano
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        );
+      }
     }
 
     // Redirect to dashboard if restaurant exists

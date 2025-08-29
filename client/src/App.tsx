@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Sales from "@/pages/sales";
 import Subscribe from "@/pages/subscribe";
+import SetupRestaurant from "@/pages/setup-restaurant";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 
@@ -32,6 +33,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/setup-restaurant" component={SetupRestaurant} />
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/dashboard" component={Dashboard} />
         </>

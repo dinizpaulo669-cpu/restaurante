@@ -34,7 +34,9 @@ export const users = pgTable("users", {
   role: varchar("role").notNull().default("customer"), // "customer" | "restaurant_owner"
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
-  subscriptionPlan: varchar("subscription_plan"), // "basic" | "pro" | "enterprise"
+  subscriptionPlan: varchar("subscription_plan").default("trial"), // "trial" | "basic" | "pro" | "enterprise"
+  trialEndsAt: timestamp("trial_ends_at"),
+  isTrialActive: boolean("is_trial_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

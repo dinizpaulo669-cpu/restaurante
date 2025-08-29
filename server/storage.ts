@@ -28,6 +28,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId?: string): Promise<User>;
+  checkTrialStatus(userId: string): Promise<boolean>;
   
   // Restaurant operations
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
@@ -79,6 +80,27 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+  
+  async checkTrialStatus(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user || !user.isTrialActive || !user.trialEndsAt) {
+      return false;
+    }
+    
+    const now = new Date();
+    const trialEnd = new Date(user.trialEndsAt);
+    
+    if (now > trialEnd) {
+      // Trial expired, update status
+      await db
+        .update(users)
+        .set({ isTrialActive: false, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      return false;
+    }
+    
+    return true;
   }
 
   async updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId?: string): Promise<User> {
