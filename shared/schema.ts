@@ -58,6 +58,9 @@ export const restaurants = pgTable("restaurants", {
   minDeliveryTime: integer("min_delivery_time").default(20), // in minutes
   maxDeliveryTime: integer("max_delivery_time").default(40), // in minutes
   isActive: boolean("is_active").default(true),
+  openingTime: varchar("opening_time").default("00:00"), // Horário de abertura
+  closingTime: varchar("closing_time").default("22:22"), // Horário de fechamento
+  deliveryTime: integer("delivery_time").default(30), // Tempo de entrega em minutos
   openingHours: jsonb("opening_hours"), // JSON with daily hours
   deliveryZipCodes: text("delivery_zip_codes").array(),
   whatsappNumber: varchar("whatsapp_number"),
