@@ -64,7 +64,7 @@ export function CategoryForm({ restaurantId, category, onSuccess, onCancel }: Ca
         }
         return response.json();
       } else {
-        const response = await fetch("/api/categories", {
+        const response = await fetch("/api/dev/categories", {
           method: "POST",
           body: JSON.stringify(payload),
           headers: { "Content-Type": "application/json" },

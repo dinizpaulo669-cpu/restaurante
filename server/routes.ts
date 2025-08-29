@@ -86,6 +86,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota de desenvolvimento para criar produtos sem autenticação
+  app.post("/api/dev/products", upload.single('image'), async (req: any, res) => {
+    try {
+      // Processar dados do formulário usando restaurante de desenvolvimento
+      const formData = {
+        ...req.body,
+        restaurantId: "dev-restaurant-123",
+        price: parseFloat(req.body.price),
+        costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
+        stock: parseInt(req.body.stock) || 0,
+        preparationTime: parseInt(req.body.preparationTime) || 15,
+        isActive: req.body.isActive === 'true',
+      };
+
+      // Adicionar URL da imagem se foi feito upload
+      if (req.file) {
+        formData.imageUrl = `/uploads/products/${req.file.filename}`;
+      }
+
+      const productData = insertProductSchema.parse(formData);
+      const product = await dbStorage.createProduct(productData);
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating dev product:", error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  // Rota de desenvolvimento para criar categorias sem autenticação
+  app.post("/api/dev/categories", async (req: any, res) => {
+    try {
+      const categoryData = insertCategorySchema.parse({
+        ...req.body,
+        restaurantId: "dev-restaurant-123",
+      });
+
+      const category = await dbStorage.createCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating dev category:", error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
   app.post('/api/update-role', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

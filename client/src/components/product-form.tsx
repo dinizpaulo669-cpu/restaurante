@@ -81,7 +81,7 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
         formData.append("image", selectedImage);
       }
 
-      const response = await fetch('/api/products', {
+      const response = await fetch('/api/dev/products', {
         method: 'POST',
         body: formData,
       });
