@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [productSubSection, setProductSubSection] = useState("produtos");
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
-    queryKey: ["/api/my-restaurant"],
+    queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
     enabled: isAuthenticated && (user as any)?.role === "restaurant_owner",
     retry: false,
   });

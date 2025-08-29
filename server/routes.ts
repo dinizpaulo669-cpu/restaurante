@@ -63,6 +63,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota de desenvolvimento para bypass de autenticação
+  app.get('/api/dev/auth/user', async (req: any, res) => {
+    try {
+      // Usuário de desenvolvimento para testes
+      const devUser = {
+        id: "dev-user-123",
+        email: "test@restaurant.com",
+        firstName: "Usuário",
+        lastName: "Teste",
+        role: "restaurant_owner",
+        subscriptionPlan: "pro",
+        isTrialActive: true,
+        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      res.json(devUser);
+    } catch (error) {
+      console.error("Error fetching dev user:", error);
+      res.status(500).json({ message: "Failed to fetch dev user" });
+    }
+  });
+
   app.post('/api/update-role', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -158,6 +181,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user restaurant:", error);
       res.status(500).json({ message: "Failed to fetch restaurant" });
+    }
+  });
+
+  // Rota de desenvolvimento para restaurante de teste
+  app.get("/api/dev/my-restaurant", async (req: any, res) => {
+    try {
+      const devRestaurant = {
+        id: "dev-restaurant-123",
+        ownerId: "dev-user-123",
+        name: "Restaurante Teste",
+        description: "Restaurante para testes de desenvolvimento",
+        category: "italiana",
+        address: "Rua Teste, 123 - Centro",
+        phone: "(11) 99999-9999",
+        email: "contato@restauranteteste.com",
+        logoUrl: null,
+        bannerUrl: null,
+        rating: "4.5",
+        deliveryFee: "5.00",
+        minDeliveryTime: 20,
+        maxDeliveryTime: 40,
+        isActive: true,
+        openingTime: "11:00",
+        closingTime: "23:00",
+        deliveryTime: 30,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      res.json(devRestaurant);
+    } catch (error) {
+      console.error("Error fetching dev restaurant:", error);
+      res.status(500).json({ message: "Failed to fetch dev restaurant" });
     }
   });
 
