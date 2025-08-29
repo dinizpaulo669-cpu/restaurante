@@ -45,6 +45,16 @@ export default function Dashboard() {
     retry: false,
   });
 
+  // Debug log
+  console.log("Dashboard Debug:", {
+    isAuthenticated,
+    userRole: (user as any)?.role,
+    restaurant,
+    restaurantLoading,
+    activeSection,
+    productSubSection
+  });
+
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/my-orders"],
     enabled: isAuthenticated && !!restaurant,
@@ -377,7 +387,10 @@ export default function Dashboard() {
       return (
         <div className="p-6">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Produtos</h2>
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-green-600">🎉 PRODUTOS - SISTEMA ATUALIZADO COM SUCESSO! 🎉</h2>
+              <p className="text-sm text-green-500 font-semibold">Agora você pode gerenciar Produtos, Categorias e Adicionais nas abas abaixo!</p>
+            </div>
             
             {/* Abas de navegação */}
             <div className="flex border-b border-border">
