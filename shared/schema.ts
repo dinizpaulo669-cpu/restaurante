@@ -116,8 +116,13 @@ export const additionals = pgTable("additionals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
   name: varchar("name").notNull(),
+  description: text("description"),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  stock: integer("stock").default(0),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Orders
@@ -180,6 +185,17 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   updatedAt: true,
 });
 
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAdditionalSchema = createInsertSchema(additionals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -198,6 +214,9 @@ export type ProductVariation = typeof productVariations.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type InsertAdditional = z.infer<typeof insertAdditionalSchema>;
 
 // Relations
 import { relations } from "drizzle-orm";

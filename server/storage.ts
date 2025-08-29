@@ -14,10 +14,12 @@ import {
   type Product,
   type InsertProduct,
   type Category,
+  type InsertCategory,
   type Order,
   type InsertOrder,
   type OrderItem,
   type Additional,
+  type InsertAdditional,
   type ProductVariation,
 } from "@shared/schema";
 import { db } from "./db";
@@ -45,7 +47,9 @@ export interface IStorage {
   
   // Category operations
   getCategories(restaurantId: string): Promise<Category[]>;
-  createCategory(category: Omit<Category, 'id' | 'createdAt'>): Promise<Category>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category>;
+  deleteCategory(id: string): Promise<void>;
   
   // Order operations
   getOrders(restaurantId: string): Promise<Order[]>;
@@ -55,6 +59,9 @@ export interface IStorage {
   
   // Additional operations
   getAdditionals(restaurantId: string): Promise<Additional[]>;
+  createAdditional(additional: InsertAdditional): Promise<Additional>;
+  updateAdditional(id: string, updates: Partial<InsertAdditional>): Promise<Additional>;
+  deleteAdditional(id: string): Promise<void>;
   
   // Variations operations
   getProductVariations(productId: string): Promise<ProductVariation[]>;
@@ -209,12 +216,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(categories.sortOrder);
   }
 
-  async createCategory(category: Omit<Category, 'id' | 'createdAt'>): Promise<Category> {
+  async createCategory(category: InsertCategory): Promise<Category> {
     const [newCategory] = await db
       .insert(categories)
       .values(category)
       .returning();
     return newCategory;
+  }
+
+  async updateCategory(id: string, updates: Partial<InsertCategory>): Promise<Category> {
+    const [category] = await db
+      .update(categories)
+      .set(updates)
+      .where(eq(categories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await db.delete(categories).where(eq(categories.id, id));
   }
 
   // Order operations
@@ -270,7 +290,29 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(additionals)
-      .where(eq(additionals.restaurantId, restaurantId));
+      .where(eq(additionals.restaurantId, restaurantId))
+      .orderBy(additionals.name);
+  }
+
+  async createAdditional(additional: InsertAdditional): Promise<Additional> {
+    const [newAdditional] = await db
+      .insert(additionals)
+      .values(additional)
+      .returning();
+    return newAdditional;
+  }
+
+  async updateAdditional(id: string, updates: Partial<InsertAdditional>): Promise<Additional> {
+    const [additional] = await db
+      .update(additionals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(additionals.id, id))
+      .returning();
+    return additional;
+  }
+
+  async deleteAdditional(id: string): Promise<void> {
+    await db.delete(additionals).where(eq(additionals.id, id));
   }
 
   // Variations operations

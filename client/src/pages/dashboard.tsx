@@ -9,6 +9,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { ProductForm } from "@/components/product-form";
 import { ProductCard } from "@/components/product-card";
+import { CategoryForm } from "@/components/category-form";
+import { CategoryList } from "@/components/category-list";
+import { AdditionalForm } from "@/components/additional-form";
+import { AdditionalList } from "@/components/additional-list";
 import { 
   Home, 
   Package, 
@@ -29,10 +33,15 @@ export default function Dashboard() {
   const [activeSection, setActiveSection] = useState("home");
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [showAdditionalForm, setShowAdditionalForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingAdditional, setEditingAdditional] = useState<any>(null);
+  const [productSubSection, setProductSubSection] = useState("produtos");
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/my-restaurant"],
-    enabled: isAuthenticated && user?.role === "restaurant_owner",
+    enabled: isAuthenticated && (user as any)?.role === "restaurant_owner",
     retry: false,
   });
 
@@ -43,7 +52,7 @@ export default function Dashboard() {
   });
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: [`/api/restaurants/${restaurant?.id}/products`],
+    queryKey: [`/api/restaurants/${(restaurant as any)?.id}/products`],
     enabled: isAuthenticated && !!restaurant,
     retry: false,
   });
@@ -128,11 +137,11 @@ export default function Dashboard() {
 
   // Contadores de pedidos por status
   const orderCounts = {
-    abertos: orders.filter((order: any) => order.status === 'pending').length,
-    preparando: orders.filter((order: any) => order.status === 'preparing').length,
-    entrega: orders.filter((order: any) => order.status === 'out_for_delivery').length,
-    finalizados: orders.filter((order: any) => order.status === 'delivered').length,
-    cancelados: orders.filter((order: any) => order.status === 'cancelled').length,
+    abertos: (orders as any[]).filter((order: any) => order.status === 'pending').length,
+    preparando: (orders as any[]).filter((order: any) => order.status === 'preparing').length,
+    entrega: (orders as any[]).filter((order: any) => order.status === 'out_for_delivery').length,
+    finalizados: (orders as any[]).filter((order: any) => order.status === 'delivered').length,
+    cancelados: (orders as any[]).filter((order: any) => order.status === 'cancelled').length,
   };
 
   const handleMenuClick = (itemId: string) => {
@@ -156,7 +165,7 @@ export default function Dashboard() {
                   <Clock className="w-4 h-4 text-green-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Abertura</p>
-                    <p className="font-semibold">{restaurant.openingTime || "00:00"}</p>
+                    <p className="font-semibold">{(restaurant as any).openingTime || "00:00"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -168,7 +177,7 @@ export default function Dashboard() {
                   <Clock className="w-4 h-4 text-red-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Fechamento</p>
-                    <p className="font-semibold">{restaurant.closingTime || "22:22"}</p>
+                    <p className="font-semibold">{(restaurant as any).closingTime || "22:22"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -178,7 +187,7 @@ export default function Dashboard() {
               <CardContent className="p-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Tempo de entrega em minutos</p>
-                  <p className="font-semibold text-2xl">{restaurant.deliveryTime || 30}</p>
+                  <p className="font-semibold text-2xl">{(restaurant as any).deliveryTime || 30}</p>
                 </div>
               </CardContent>
             </Card>
@@ -226,59 +235,190 @@ export default function Dashboard() {
     }
 
     if (activeSection === "produtos") {
-      if (showProductForm) {
-        return (
-          <div className="p-6">
-            <ProductForm
-              restaurantId={restaurant.id}
-              onSuccess={() => setShowProductForm(false)}
-              onCancel={() => setShowProductForm(false)}
-            />
-          </div>
-        );
-      }
+      const renderProductSubContent = () => {
+        // Gerenciar Produtos
+        if (productSubSection === "produtos") {
+          if (showProductForm) {
+            return (
+              <ProductForm
+                restaurantId={(restaurant as any).id}
+                onSuccess={() => setShowProductForm(false)}
+                onCancel={() => setShowProductForm(false)}
+              />
+            );
+          }
+
+          return (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Gerenciar Produtos</h3>
+                <Button 
+                  onClick={() => setShowProductForm(true)}
+                  data-testid="button-add-product"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Produto
+                </Button>
+              </div>
+
+              {productsLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : (products as any[]).length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Nenhum produto cadastrado</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Comece adicionando seu primeiro produto ao cardápio
+                    </p>
+                    <Button 
+                      onClick={() => setShowProductForm(true)}
+                      data-testid="button-add-first-product"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Primeiro Produto
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {(products as any[]).map((product: any) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Gerenciar Categorias
+        if (productSubSection === "categorias") {
+          if (showCategoryForm || editingCategory) {
+            return (
+              <CategoryForm
+                restaurantId={(restaurant as any).id}
+                category={editingCategory}
+                onSuccess={() => {
+                  setShowCategoryForm(false);
+                  setEditingCategory(null);
+                }}
+                onCancel={() => {
+                  setShowCategoryForm(false);
+                  setEditingCategory(null);
+                }}
+              />
+            );
+          }
+
+          return (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Gerenciar Categorias</h3>
+                <Button 
+                  onClick={() => setShowCategoryForm(true)}
+                  data-testid="button-add-category"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Categoria
+                </Button>
+              </div>
+              <CategoryList 
+                restaurantId={(restaurant as any).id}
+                onEdit={(category) => setEditingCategory(category)}
+              />
+            </div>
+          );
+        }
+
+        // Gerenciar Adicionais
+        if (productSubSection === "adicionais") {
+          if (showAdditionalForm || editingAdditional) {
+            return (
+              <AdditionalForm
+                restaurantId={(restaurant as any).id}
+                additional={editingAdditional}
+                onSuccess={() => {
+                  setShowAdditionalForm(false);
+                  setEditingAdditional(null);
+                }}
+                onCancel={() => {
+                  setShowAdditionalForm(false);
+                  setEditingAdditional(null);
+                }}
+              />
+            );
+          }
+
+          return (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Gerenciar Adicionais</h3>
+                <Button 
+                  onClick={() => setShowAdditionalForm(true)}
+                  data-testid="button-add-additional"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Adicional
+                </Button>
+              </div>
+              <AdditionalList 
+                restaurantId={(restaurant as any).id}
+                onEdit={(additional) => setEditingAdditional(additional)}
+              />
+            </div>
+          );
+        }
+
+        return null;
+      };
 
       return (
         <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Produtos</h2>
-            <Button 
-              onClick={() => setShowProductForm(true)}
-              data-testid="button-add-product"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Produto
-            </Button>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-4">Produtos</h2>
+            
+            {/* Abas de navegação */}
+            <div className="flex border-b border-border">
+              <button
+                onClick={() => setProductSubSection("produtos")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "produtos"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-produtos"
+              >
+                Produtos
+              </button>
+              <button
+                onClick={() => setProductSubSection("categorias")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "categorias"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-categorias"
+              >
+                Categorias
+              </button>
+              <button
+                onClick={() => setProductSubSection("adicionais")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "adicionais"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-adicionais"
+              >
+                Adicionais
+              </button>
+            </div>
           </div>
 
-          {productsLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : products.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhum produto cadastrado</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece adicionando seu primeiro produto ao cardápio
-                </p>
-                <Button 
-                  onClick={() => setShowProductForm(true)}
-                  data-testid="button-add-first-product"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Primeiro Produto
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {products.map((product: any) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
+          {/* Conteúdo da aba ativa */}
+          {renderProductSubContent()}
         </div>
       );
     }
@@ -298,7 +438,7 @@ export default function Dashboard() {
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold text-primary">RestaurantePro</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Bem vindo(a), {user?.firstName || user?.email?.split('@')[0] || 'Paulo'} teste!
+            Bem vindo(a), {(user as any)?.firstName || (user as any)?.email?.split('@')[0] || 'Paulo'} teste!
           </p>
         </div>
 
@@ -363,7 +503,7 @@ export default function Dashboard() {
       <div className="flex-1">
         <header className="bg-card shadow-sm border-b p-4">
           <h2 className="text-xl font-semibold capitalize">
-            {activeSection === "home" ? restaurant.name : activeSection}
+            {activeSection === "home" ? (restaurant as any).name : activeSection}
           </h2>
         </header>
 

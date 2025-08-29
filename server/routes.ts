@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertCategorySchema, insertAdditionalSchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -235,6 +235,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching categories:", error);
       res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const categoryData = insertCategorySchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+      });
+
+      const category = await dbStorage.createCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.put("/api/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const updates = req.body;
+      const category = await dbStorage.updateCategory(req.params.id, updates);
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating category:", error);
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      await dbStorage.deleteCategory(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
+  // Additional routes
+  app.get("/api/restaurants/:id/additionals", async (req, res) => {
+    try {
+      const additionals = await dbStorage.getAdditionals(req.params.id);
+      res.json(additionals);
+    } catch (error) {
+      console.error("Error fetching additionals:", error);
+      res.status(500).json({ message: "Failed to fetch additionals" });
+    }
+  });
+
+  app.post("/api/additionals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const additionalData = insertAdditionalSchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+        price: parseFloat(req.body.price),
+        costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
+        stock: parseInt(req.body.stock) || 0,
+      });
+
+      const additional = await dbStorage.createAdditional(additionalData);
+      res.json(additional);
+    } catch (error) {
+      console.error("Error creating additional:", error);
+      res.status(500).json({ message: "Failed to create additional" });
+    }
+  });
+
+  app.put("/api/additionals/:id", isAuthenticated, async (req, res) => {
+    try {
+      const updates = {
+        ...req.body,
+        price: req.body.price ? parseFloat(req.body.price) : undefined,
+        costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
+        stock: req.body.stock ? parseInt(req.body.stock) : undefined,
+      };
+      const additional = await dbStorage.updateAdditional(req.params.id, updates);
+      res.json(additional);
+    } catch (error) {
+      console.error("Error updating additional:", error);
+      res.status(500).json({ message: "Failed to update additional" });
+    }
+  });
+
+  app.delete("/api/additionals/:id", isAuthenticated, async (req, res) => {
+    try {
+      await dbStorage.deleteAdditional(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting additional:", error);
+      res.status(500).json({ message: "Failed to delete additional" });
     }
   });
 
