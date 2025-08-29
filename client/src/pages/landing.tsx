@@ -47,6 +47,15 @@ export default function Landing() {
               </Link>
             </nav>
             <div className="flex items-center space-x-4">
+              <Link href="/login">
+                <Button 
+                  variant="ghost" 
+                  className="text-muted-foreground hover:text-foreground"
+                  data-testid="button-login"
+                >
+                  Entrar
+                </Button>
+              </Link>
               <Link href="/register">
                 <Button 
                   className="bg-primary text-primary-foreground hover:bg-primary/90"

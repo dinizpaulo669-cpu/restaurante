@@ -207,14 +207,9 @@ export default function Sales() {
                 <Button
                   onClick={() => {
                     // Save selected plan to localStorage
-                    localStorage.setItem('selectedPlan', JSON.stringify({
-                      id: plan.id,
-                      name: plan.name,
-                      price: plan.price,
-                      priceId: plan.priceId
-                    }));
-                    // Redirect to login
-                    window.location.href = "/api/login";
+                    localStorage.setItem('selectedPlan', plan.name);
+                    // Redirect to restaurant register
+                    window.location.href = "/restaurant-register";
                   }}
                   className={`w-full py-3 font-semibold transition-colors ${
                     plan.popular
