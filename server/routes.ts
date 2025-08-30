@@ -555,9 +555,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Development routes for tables
-  app.get("/api/dev/tables", async (req, res) => {
+  app.get("/api/dev/tables", isAuthenticated, async (req: any, res) => {
     try {
-      const tables = await dbStorage.getTables("dev-restaurant-123");
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const tables = await dbStorage.getTables(restaurant.id);
       res.json(tables);
     } catch (error) {
       console.error("Error fetching dev tables:", error);
@@ -565,14 +572,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/tables", async (req, res) => {
+  app.post("/api/dev/tables", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
       // Generate unique QR code
-      const qrCode = `table-dev-restaurant-123-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const qrCode = `table-${restaurant.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const tableData = insertTableSchema.parse({
         ...req.body,
-        restaurantId: "dev-restaurant-123",
+        restaurantId: restaurant.id,
         qrCode,
       });
 
