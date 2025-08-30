@@ -7,6 +7,8 @@ import {
   orderItems,
   additionals,
   productVariations,
+  tables,
+  openingHours,
   type User,
   type UpsertUser,
   type Restaurant,
@@ -21,6 +23,10 @@ import {
   type Additional,
   type InsertAdditional,
   type ProductVariation,
+  type Table,
+  type InsertTable,
+  type OpeningHour,
+  type InsertOpeningHour,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, sql } from "drizzle-orm";
@@ -65,6 +71,20 @@ export interface IStorage {
   
   // Variations operations
   getProductVariations(productId: string): Promise<ProductVariation[]>;
+  
+  // Table operations
+  getTables(restaurantId: string): Promise<Table[]>;
+  createTable(table: InsertTable): Promise<Table>;
+  updateTable(id: string, updates: Partial<InsertTable>): Promise<Table>;
+  deleteTable(id: string): Promise<void>;
+  getTableByQrCode(qrCode: string): Promise<Table | undefined>;
+  
+  // Opening hours operations
+  getOpeningHours(restaurantId: string): Promise<OpeningHour[]>;
+  createOpeningHour(openingHour: InsertOpeningHour): Promise<OpeningHour>;
+  updateOpeningHour(id: string, updates: Partial<InsertOpeningHour>): Promise<OpeningHour>;
+  deleteOpeningHour(id: string): Promise<void>;
+  upsertOpeningHours(restaurantId: string, hours: InsertOpeningHour[]): Promise<OpeningHour[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -321,6 +341,85 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(productVariations)
       .where(eq(productVariations.productId, productId));
+  }
+
+  // Table operations
+  async getTables(restaurantId: string): Promise<Table[]> {
+    return await db
+      .select()
+      .from(tables)
+      .where(eq(tables.restaurantId, restaurantId))
+      .orderBy(tables.number);
+  }
+
+  async createTable(table: InsertTable): Promise<Table> {
+    const [newTable] = await db
+      .insert(tables)
+      .values(table)
+      .returning();
+    return newTable;
+  }
+
+  async updateTable(id: string, updates: Partial<InsertTable>): Promise<Table> {
+    const [table] = await db
+      .update(tables)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tables.id, id))
+      .returning();
+    return table;
+  }
+
+  async deleteTable(id: string): Promise<void> {
+    await db.delete(tables).where(eq(tables.id, id));
+  }
+
+  async getTableByQrCode(qrCode: string): Promise<Table | undefined> {
+    const [table] = await db
+      .select()
+      .from(tables)
+      .where(eq(tables.qrCode, qrCode));
+    return table;
+  }
+
+  // Opening hours operations
+  async getOpeningHours(restaurantId: string): Promise<OpeningHour[]> {
+    return await db
+      .select()
+      .from(openingHours)
+      .where(eq(openingHours.restaurantId, restaurantId))
+      .orderBy(openingHours.dayOfWeek);
+  }
+
+  async createOpeningHour(openingHour: InsertOpeningHour): Promise<OpeningHour> {
+    const [newOpeningHour] = await db
+      .insert(openingHours)
+      .values(openingHour)
+      .returning();
+    return newOpeningHour;
+  }
+
+  async updateOpeningHour(id: string, updates: Partial<InsertOpeningHour>): Promise<OpeningHour> {
+    const [openingHour] = await db
+      .update(openingHours)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(openingHours.id, id))
+      .returning();
+    return openingHour;
+  }
+
+  async deleteOpeningHour(id: string): Promise<void> {
+    await db.delete(openingHours).where(eq(openingHours.id, id));
+  }
+
+  async upsertOpeningHours(restaurantId: string, hours: InsertOpeningHour[]): Promise<OpeningHour[]> {
+    // Remove existing hours for this restaurant
+    await db.delete(openingHours).where(eq(openingHours.restaurantId, restaurantId));
+    
+    // Insert new hours
+    if (hours.length > 0) {
+      return await db.insert(openingHours).values(hours).returning();
+    }
+    return [];
   }
 }
 

@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertCategorySchema, insertAdditionalSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertCategorySchema, insertAdditionalSchema, insertTableSchema, insertOpeningHoursSchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -479,6 +479,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating order status:", error);
       res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Table routes
+  app.get("/api/restaurants/:id/tables", async (req, res) => {
+    try {
+      const tables = await dbStorage.getTables(req.params.id);
+      res.json(tables);
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+      res.status(500).json({ message: "Failed to fetch tables" });
+    }
+  });
+
+  app.post("/api/tables", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Generate unique QR code
+      const qrCode = `table-${restaurant.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const tableData = insertTableSchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+        qrCode,
+      });
+
+      const table = await dbStorage.createTable(tableData);
+      res.json(table);
+    } catch (error) {
+      console.error("Error creating table:", error);
+      res.status(500).json({ message: "Failed to create table" });
+    }
+  });
+
+  app.put("/api/tables/:id", isAuthenticated, async (req, res) => {
+    try {
+      const updates = req.body;
+      const table = await dbStorage.updateTable(req.params.id, updates);
+      res.json(table);
+    } catch (error) {
+      console.error("Error updating table:", error);
+      res.status(500).json({ message: "Failed to update table" });
+    }
+  });
+
+  app.delete("/api/tables/:id", isAuthenticated, async (req, res) => {
+    try {
+      await dbStorage.deleteTable(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting table:", error);
+      res.status(500).json({ message: "Failed to delete table" });
+    }
+  });
+
+  // Get table by QR code (for customer access)
+  app.get("/api/tables/qr/:qrCode", async (req, res) => {
+    try {
+      const table = await dbStorage.getTableByQrCode(req.params.qrCode);
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      res.json(table);
+    } catch (error) {
+      console.error("Error fetching table by QR code:", error);
+      res.status(500).json({ message: "Failed to fetch table" });
+    }
+  });
+
+  // Opening hours routes
+  app.get("/api/restaurants/:id/opening-hours", async (req, res) => {
+    try {
+      const openingHours = await dbStorage.getOpeningHours(req.params.id);
+      res.json(openingHours);
+    } catch (error) {
+      console.error("Error fetching opening hours:", error);
+      res.status(500).json({ message: "Failed to fetch opening hours" });
+    }
+  });
+
+  app.post("/api/opening-hours", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const { hours } = req.body; // Array of opening hours
+      const hoursWithRestaurantId = hours.map((hour: any) => ({
+        ...hour,
+        restaurantId: restaurant.id,
+      }));
+
+      const openingHours = await dbStorage.upsertOpeningHours(restaurant.id, hoursWithRestaurantId);
+      res.json(openingHours);
+    } catch (error) {
+      console.error("Error saving opening hours:", error);
+      res.status(500).json({ message: "Failed to save opening hours" });
     }
   });
 

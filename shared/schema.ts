@@ -196,6 +196,7 @@ export const insertAdditionalSchema = createInsertSchema(additionals).omit({
   updatedAt: true,
 });
 
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -217,6 +218,12 @@ export type OrderItem = typeof orderItems.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertAdditional = z.infer<typeof insertAdditionalSchema>;
+
+export type Table = typeof tables.$inferSelect;
+export type InsertTable = z.infer<typeof insertTableSchema>;
+
+export type OpeningHour = typeof openingHours.$inferSelect;
+export type InsertOpeningHour = z.infer<typeof insertOpeningHoursSchema>;
 
 // Relations
 import { relations } from "drizzle-orm";
@@ -265,3 +272,50 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   product: one(products, { fields: [orderItems.productId], references: [products.id] }),
   variation: one(productVariations, { fields: [orderItems.variationId], references: [productVariations.id] }),
 }));
+
+// Tables (mesas)
+export const tables = pgTable("tables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  number: varchar("number").notNull(),
+  name: varchar("name"),
+  capacity: integer("capacity").default(4),
+  isActive: boolean("is_active").default(true),
+  qrCode: varchar("qr_code").unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Opening hours (horários de funcionamento)
+export const openingHours = pgTable("opening_hours", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  dayOfWeek: integer("day_of_week").notNull(), // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  openTime: varchar("open_time"), // "09:00"
+  closeTime: varchar("close_time"), // "22:00"
+  isClosed: boolean("is_closed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for new tables
+export const tablesRelations = relations(tables, ({ one }) => ({
+  restaurant: one(restaurants, { fields: [tables.restaurantId], references: [restaurants.id] }),
+}));
+
+export const openingHoursRelations = relations(openingHours, ({ one }) => ({
+  restaurant: one(restaurants, { fields: [openingHours.restaurantId], references: [restaurants.id] }),
+}));
+
+// Insert schemas for new tables
+export const insertTableSchema = createInsertSchema(tables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOpeningHoursSchema = createInsertSchema(openingHours).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});

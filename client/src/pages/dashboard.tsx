@@ -436,6 +436,54 @@ export default function Dashboard() {
       );
     }
 
+    if (activeSection === "mesas") {
+      return (
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Gerenciar Mesas</h2>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Funcionalidade de Mesas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Aqui você poderá gerenciar as mesas do seu restaurante. Cada mesa terá um QR code único 
+                  que os clientes podem escanear para acessar o cardápio diretamente.
+                </p>
+                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+                  🚧 Esta funcionalidade está sendo implementada e estará disponível em breve!
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "horarios") {
+      return (
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Horários de Funcionamento</h2>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurar Horários por Dia da Semana</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Configure os horários de funcionamento para cada dia da semana. 
+                  Estes horários ficarão visíveis para todos os clientes.
+                </p>
+                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+                  🚧 Esta funcionalidade está sendo implementada e estará disponível em breve!
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-4 capitalize">{activeSection}</h2>
@@ -488,6 +536,16 @@ export default function Dashboard() {
                         if (item.id === "produtos" && index === 0) {
                           setActiveSection("produtos");
                           setExpandedMenu(null);
+                        } else if (item.id === "configuracoes") {
+                          if (index === 0) { // "Meu Cardápio"
+                            window.open(`/menu/${(restaurant as any).id}`, '_blank');
+                          } else if (index === 1) { // "Mesas"
+                            setActiveSection("mesas");
+                            setExpandedMenu(null);
+                          } else if (index === 2) { // "Horários de funcionamento"
+                            setActiveSection("horarios");
+                            setExpandedMenu(null);
+                          }
                         }
                       }}
                       className="w-full text-left p-2 text-sm hover:bg-muted rounded-lg transition-colors"
