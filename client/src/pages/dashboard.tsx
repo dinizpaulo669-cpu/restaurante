@@ -43,6 +43,10 @@ export default function Dashboard() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingAdditional, setEditingAdditional] = useState<any>(null);
   const [productSubSection, setProductSubSection] = useState("produtos");
+  
+  // Estados para mesas
+  const [showTableForm, setShowTableForm] = useState(false);
+  const [editingTable, setEditingTable] = useState<any>(null);
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -71,6 +75,98 @@ export default function Dashboard() {
     enabled: isAuthenticated && !!restaurant,
     retry: false,
   });
+
+  // Queries para mesas
+  const { data: tables = [], isLoading: tablesLoading } = useQuery({
+    queryKey: ["/api/dev/tables"],
+    enabled: !!restaurant,
+    retry: false,
+  });
+
+  // Mutations para mesas
+  const createTableMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/dev/tables", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+      setShowTableForm(false);
+      toast({
+        title: "Mesa criada!",
+        description: "A mesa foi criada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error creating table:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao criar mesa.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTableMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest(`/api/dev/tables/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+      setEditingTable(null);
+      toast({
+        title: "Mesa atualizada!",
+        description: "A mesa foi atualizada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating table:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar mesa.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTableMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/dev/tables/${id}`, {
+      method: "DELETE",
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+      toast({
+        title: "Mesa excluída!",
+        description: "A mesa foi excluída com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting table:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir mesa.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handlers para mesas
+  const handleCreateTable = (formData: any) => {
+    createTableMutation.mutate(formData);
+  };
+
+  const handleUpdateTable = (formData: any) => {
+    if (editingTable) {
+      updateTableMutation.mutate({ id: editingTable.id, data: formData });
+    }
+  };
+
+  const handleDeleteTable = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta mesa?")) {
+      deleteTableMutation.mutate(id);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -442,99 +538,6 @@ export default function Dashboard() {
     }
 
     if (activeSection === "mesas") {
-      const { toast } = useToast();
-      const [showTableForm, setShowTableForm] = useState(false);
-      const [editingTable, setEditingTable] = useState<any>(null);
-
-      const { data: tables = [], isLoading: tablesLoading } = useQuery({
-        queryKey: ["/api/dev/tables"],
-        enabled: !!restaurant,
-        retry: false,
-      });
-
-      const createTableMutation = useMutation({
-        mutationFn: (data: any) => apiRequest("/api/dev/tables", {
-          method: "POST",
-          body: JSON.stringify(data),
-        }),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
-          setShowTableForm(false);
-          toast({
-            title: "Mesa criada!",
-            description: "A mesa foi criada com sucesso.",
-          });
-        },
-        onError: (error) => {
-          console.error("Error creating table:", error);
-          toast({
-            title: "Erro",
-            description: "Falha ao criar mesa.",
-            variant: "destructive",
-          });
-        },
-      });
-
-      const updateTableMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest(`/api/dev/tables/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(data),
-        }),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
-          setEditingTable(null);
-          toast({
-            title: "Mesa atualizada!",
-            description: "A mesa foi atualizada com sucesso.",
-          });
-        },
-        onError: (error) => {
-          console.error("Error updating table:", error);
-          toast({
-            title: "Erro",
-            description: "Falha ao atualizar mesa.",
-            variant: "destructive",
-          });
-        },
-      });
-
-      const deleteTableMutation = useMutation({
-        mutationFn: (id: string) => apiRequest(`/api/dev/tables/${id}`, {
-          method: "DELETE",
-        }),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
-          toast({
-            title: "Mesa excluída!",
-            description: "A mesa foi excluída com sucesso.",
-          });
-        },
-        onError: (error) => {
-          console.error("Error deleting table:", error);
-          toast({
-            title: "Erro",
-            description: "Falha ao excluir mesa.",
-            variant: "destructive",
-          });
-        },
-      });
-
-      const handleCreateTable = (formData: any) => {
-        createTableMutation.mutate(formData);
-      };
-
-      const handleUpdateTable = (formData: any) => {
-        if (editingTable) {
-          updateTableMutation.mutate({ id: editingTable.id, data: formData });
-        }
-      };
-
-      const handleDeleteTable = (id: string) => {
-        if (confirm("Tem certeza que deseja excluir esta mesa?")) {
-          deleteTableMutation.mutate(id);
-        }
-      };
-
       if (tablesLoading) {
         return (
           <div className="p-6">
