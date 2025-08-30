@@ -85,10 +85,7 @@ export default function Dashboard() {
 
   // Mutations para mesas
   const createTableMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/dev/tables", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/dev/tables", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
       setShowTableForm(false);
@@ -108,10 +105,7 @@ export default function Dashboard() {
   });
 
   const updateTableMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest(`/api/dev/tables/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest("PUT", `/api/dev/tables/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
       setEditingTable(null);
@@ -131,9 +125,7 @@ export default function Dashboard() {
   });
 
   const deleteTableMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/dev/tables/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/dev/tables/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
       toast({
