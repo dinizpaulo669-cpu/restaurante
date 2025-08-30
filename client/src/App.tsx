@@ -12,6 +12,7 @@ import Sales from "@/pages/sales";
 import RestaurantRegister from "@/pages/restaurant-register";
 import RestaurantPanel from "@/pages/restaurant-panel";
 import Dashboard from "@/pages/dashboard";
+import Menu from "@/pages/menu";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/restaurant-register" component={RestaurantRegister} />
       <Route path="/restaurant-panel" component={RestaurantPanel} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/menu/:restaurantId" component={Menu} />
       <Route component={NotFound} />
     </Switch>
   );
