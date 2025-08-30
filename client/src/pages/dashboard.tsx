@@ -23,8 +23,13 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
-  Plus
+  Plus,
+  Edit,
+  Trash2,
+  QrCode,
+  Users
 } from "lucide-react";
+
 
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -437,25 +442,312 @@ export default function Dashboard() {
     }
 
     if (activeSection === "mesas") {
-      return (
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Gerenciar Mesas</h2>
-          <div className="space-y-6">
-            <Card>
+      const { toast } = useToast();
+      const [showTableForm, setShowTableForm] = useState(false);
+      const [editingTable, setEditingTable] = useState<any>(null);
+
+      const { data: tables = [], isLoading: tablesLoading } = useQuery({
+        queryKey: ["/api/dev/tables"],
+        enabled: !!restaurant,
+        retry: false,
+      });
+
+      const createTableMutation = useMutation({
+        mutationFn: (data: any) => apiRequest("/api/dev/tables", {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+          setShowTableForm(false);
+          toast({
+            title: "Mesa criada!",
+            description: "A mesa foi criada com sucesso.",
+          });
+        },
+        onError: (error) => {
+          console.error("Error creating table:", error);
+          toast({
+            title: "Erro",
+            description: "Falha ao criar mesa.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const updateTableMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest(`/api/dev/tables/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+          setEditingTable(null);
+          toast({
+            title: "Mesa atualizada!",
+            description: "A mesa foi atualizada com sucesso.",
+          });
+        },
+        onError: (error) => {
+          console.error("Error updating table:", error);
+          toast({
+            title: "Erro",
+            description: "Falha ao atualizar mesa.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const deleteTableMutation = useMutation({
+        mutationFn: (id: string) => apiRequest(`/api/dev/tables/${id}`, {
+          method: "DELETE",
+        }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+          toast({
+            title: "Mesa excluída!",
+            description: "A mesa foi excluída com sucesso.",
+          });
+        },
+        onError: (error) => {
+          console.error("Error deleting table:", error);
+          toast({
+            title: "Erro",
+            description: "Falha ao excluir mesa.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const handleCreateTable = (formData: any) => {
+        createTableMutation.mutate(formData);
+      };
+
+      const handleUpdateTable = (formData: any) => {
+        if (editingTable) {
+          updateTableMutation.mutate({ id: editingTable.id, data: formData });
+        }
+      };
+
+      const handleDeleteTable = (id: string) => {
+        if (confirm("Tem certeza que deseja excluir esta mesa?")) {
+          deleteTableMutation.mutate(id);
+        }
+      };
+
+      if (tablesLoading) {
+        return (
+          <div className="p-6">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          </div>
+        );
+      }
+
+      const TableForm = ({ table, onSubmit, onCancel, isLoading }: { 
+        table?: any, 
+        onSubmit: (data: any) => void, 
+        onCancel: () => void,
+        isLoading: boolean 
+      }) => {
+        const [formData, setFormData] = useState({
+          number: table?.number || "",
+          name: table?.name || "",
+          capacity: table?.capacity || 4,
+          isActive: table?.isActive ?? true,
+        });
+
+        const handleSubmit = (e: React.FormEvent) => {
+          e.preventDefault();
+          
+          if (!formData.number) {
+            return;
+          }
+
+          onSubmit(formData);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="w-full max-w-md">
               <CardHeader>
-                <CardTitle>Funcionalidade de Mesas</CardTitle>
+                <CardTitle>
+                  {table ? "Editar Mesa" : "Adicionar Mesa"}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Aqui você poderá gerenciar as mesas do seu restaurante. Cada mesa terá um QR code único 
-                  que os clientes podem escanear para acessar o cardápio diretamente.
-                </p>
-                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
-                  🚧 Esta funcionalidade está sendo implementada e estará disponível em breve!
-                </p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Número da Mesa *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, number: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="Ex: 1, A1, VIP1"
+                      data-testid="input-table-number"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Nome da Mesa (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="Ex: Mesa da Janela, VIP"
+                      data-testid="input-table-name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Capacidade (pessoas)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.capacity}
+                      onChange={(e) => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 1 }))}
+                      className="w-full border rounded-lg px-3 py-2"
+                      min="1"
+                      max="20"
+                      data-testid="input-table-capacity"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                      data-testid="checkbox-table-active"
+                    />
+                    <label htmlFor="isActive" className="text-sm">
+                      Mesa ativa
+                    </label>
+                  </div>
+                  
+                  <div className="flex space-x-2 pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={isLoading}
+                      className="flex-1"
+                      data-testid="button-save-table"
+                    >
+                      {isLoading ? "Salvando..." : (table ? "Atualizar" : "Criar Mesa")}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={onCancel}
+                      disabled={isLoading}
+                      data-testid="button-cancel-table"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </div>
+        );
+      };
+
+      return (
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Gerenciar Mesas</h2>
+            <Button 
+              onClick={() => setShowTableForm(true)}
+              data-testid="button-add-table"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Mesa
+            </Button>
+          </div>
+
+          {/* Lista de mesas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tables.map((table: any) => (
+              <Card key={table.id} className="p-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Mesa {table.number}</span>
+                    <Badge variant={table.isActive ? "default" : "secondary"}>
+                      {table.isActive ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{table.capacity} pessoas</span>
+                  </div>
+                  {table.name && (
+                    <div className="text-sm text-muted-foreground">
+                      Nome: {table.name}
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2 pt-2">
+                    <QrCode className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                      {table.qrCode}
+                    </span>
+                  </div>
+                  
+                  <div className="flex space-x-2 pt-3">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setEditingTable(table)}
+                      data-testid={`button-edit-table-${table.id}`}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleDeleteTable(table.id)}
+                      data-testid={`button-delete-table-${table.id}`}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Excluir
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {tables.length === 0 && (
+              <Card className="col-span-full p-8 text-center">
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Nenhuma mesa cadastrada ainda. Clique em "Adicionar Mesa" para começar.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Formulário de criar/editar mesa */}
+          {(showTableForm || editingTable) && (
+            <TableForm
+              table={editingTable}
+              onSubmit={editingTable ? handleUpdateTable : handleCreateTable}
+              onCancel={() => {
+                setShowTableForm(false);
+                setEditingTable(null);
+              }}
+              isLoading={createTableMutation.isPending || updateTableMutation.isPending}
+            />
+          )}
         </div>
       );
     }

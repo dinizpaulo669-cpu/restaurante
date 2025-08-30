@@ -554,6 +554,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development routes for tables
+  app.get("/api/dev/tables", async (req, res) => {
+    try {
+      const tables = await dbStorage.getTables("dev-restaurant-123");
+      res.json(tables);
+    } catch (error) {
+      console.error("Error fetching dev tables:", error);
+      res.status(500).json({ message: "Failed to fetch tables" });
+    }
+  });
+
+  app.post("/api/dev/tables", async (req, res) => {
+    try {
+      // Generate unique QR code
+      const qrCode = `table-dev-restaurant-123-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const tableData = insertTableSchema.parse({
+        ...req.body,
+        restaurantId: "dev-restaurant-123",
+        qrCode,
+      });
+
+      const table = await dbStorage.createTable(tableData);
+      res.json(table);
+    } catch (error) {
+      console.error("Error creating dev table:", error);
+      res.status(500).json({ message: "Failed to create table" });
+    }
+  });
+
+  app.put("/api/dev/tables/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const table = await dbStorage.updateTable(req.params.id, updates);
+      res.json(table);
+    } catch (error) {
+      console.error("Error updating dev table:", error);
+      res.status(500).json({ message: "Failed to update table" });
+    }
+  });
+
+  app.delete("/api/dev/tables/:id", async (req, res) => {
+    try {
+      await dbStorage.deleteTable(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dev table:", error);
+      res.status(500).json({ message: "Failed to delete table" });
+    }
+  });
+
   // Opening hours routes
   app.get("/api/restaurants/:id/opening-hours", async (req, res) => {
     try {
