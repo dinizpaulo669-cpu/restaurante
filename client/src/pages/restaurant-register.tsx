@@ -71,7 +71,7 @@ export default function RestaurantRegister() {
     });
 
     // Redirecionar para o painel do restaurante
-    setLocation("/restaurant-panel");
+    setLocation("/dashboard");
   };
 
   const handleInputChange = (field: string, value: string) => {

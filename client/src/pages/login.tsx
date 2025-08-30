@@ -1,74 +1,37 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { LogIn } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.email || !formData.password) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha email e senha",
-        variant: "destructive",
-      });
-      return;
+  // Redirecionar usuários já autenticados
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if ((user as any)?.role === "restaurant_owner") {
+        setLocation("/dashboard");
+      } else {
+        setLocation("/customer-panel");
+      }
     }
+  }, [isAuthenticated, user, setLocation]);
 
-    // Verificar se existe um usuário cadastrado com este email
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      toast({
-        title: "Usuário não encontrado",
-        description: "Email não cadastrado. Faça seu cadastro primeiro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const user = JSON.parse(currentUser);
-    if (user.email !== formData.email) {
-      toast({
-        title: "Email incorreto",
-        description: "Email não encontrado em nossos registros.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Login realizado!",
-      description: `Bem-vindo de volta, ${user.name}!`,
-    });
-
-    // Redirecionar baseado no tipo do usuário
-    if (user.type === 'customer') {
-      setLocation("/customer-panel");
-    } else if (user.type === 'restaurant') {
-      setLocation("/restaurant-panel");
-    } else {
-      setLocation("/customer-panel"); // padrão
-    }
+  const handleLogin = () => {
+    // Redirecionar para a rota de autenticação Replit
+    window.location.href = "/api/login";
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -83,58 +46,23 @@ export default function Login() {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="pl-10"
-                    data-testid="input-email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Senha
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Digite sua senha"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    className="pl-10"
-                    data-testid="input-password"
-                  />
-                </div>
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <p className="text-muted-foreground">
+                  Faça login com sua conta Replit para acessar o RestaurantePro
+                </p>
               </div>
 
               <Button
-                type="submit"
+                onClick={handleLogin}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 data-testid="button-login"
               >
-                Entrar
+                <LogIn className="mr-2 h-4 w-4" />
+                Entrar com Replit
               </Button>
 
               <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Não tem uma conta?{" "}
-                  <Link href="/register" className="text-primary hover:underline" data-testid="link-register">
-                    Cadastre-se
-                  </Link>
-                </p>
                 <Button
                   type="button"
                   variant="ghost"
@@ -145,7 +73,7 @@ export default function Login() {
                   ← Voltar para início
                 </Button>
               </div>
-            </form>
+            </div>
           </CardContent>
         </Card>
       </div>
