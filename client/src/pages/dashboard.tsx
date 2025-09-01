@@ -27,7 +27,10 @@ import {
   Edit,
   Trash2,
   QrCode,
-  Users
+  Users,
+  Search,
+  AlertTriangle,
+  Package2
 } from "lucide-react";
 
 
@@ -47,6 +50,10 @@ export default function Dashboard() {
   // Estados para mesas
   const [showTableForm, setShowTableForm] = useState(false);
   const [editingTable, setEditingTable] = useState<any>(null);
+  
+  // Estados para consulta de estoque
+  const [stockSearchTerm, setStockSearchTerm] = useState("");
+  const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -209,9 +216,6 @@ export default function Dashboard() {
       hasSubmenu: true,
       submenu: [
         "Gerenciar produtos",
-        "Categorias", 
-        "Adicionais",
-        "Variações",
         "Consultar o estoque"
       ]
     },
@@ -481,50 +485,170 @@ export default function Dashboard() {
         <div className="p-6">
           <div className="mb-6">
             <div className="mb-4">
-              <h2 className="text-2xl font-bold text-green-600">🎉 PRODUTOS - SISTEMA ATUALIZADO COM SUCESSO! 🎉</h2>
-              <p className="text-sm text-green-500 font-semibold">Agora você pode gerenciar Produtos, Categorias e Adicionais nas abas abaixo!</p>
+              <h2 className="text-2xl font-bold text-primary">Gerenciar Produtos</h2>
+              <p className="text-sm text-muted-foreground">Gerencie seu cardápio de produtos de forma simples e eficiente.</p>
             </div>
             
-            {/* Abas de navegação */}
+            {/* Abas de navegação simplificadas */}
             <div className="flex border-b border-border">
-              <button
-                onClick={() => setProductSubSection("produtos")}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  productSubSection === "produtos"
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="tab-produtos"
-              >
+              <div className="px-4 py-2 font-medium border-b-2 border-primary text-primary">
                 Produtos
-              </button>
-              <button
-                onClick={() => setProductSubSection("categorias")}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  productSubSection === "categorias"
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="tab-categorias"
-              >
-                Categorias
-              </button>
-              <button
-                onClick={() => setProductSubSection("adicionais")}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  productSubSection === "adicionais"
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="tab-adicionais"
-              >
-                Adicionais
-              </button>
+              </div>
             </div>
           </div>
 
           {/* Conteúdo da aba ativa */}
           {renderProductSubContent()}
+        </div>
+      );
+    }
+
+    // Seção de consulta de estoque
+    if (activeSection === "estoque") {
+      const filteredProducts = (products as any[])
+        .filter(product => 
+          product.name.toLowerCase().includes(stockSearchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+          if (stockSortBy === "stock") {
+            return (a.stock || 0) - (b.stock || 0); // Menor estoque primeiro
+          } else {
+            return a.name.localeCompare(b.name);
+          }
+        });
+
+      const lowStockProducts = filteredProducts.filter(product => (product.stock || 0) < 10);
+
+      return (
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <Package2 className="w-6 h-6 mr-2" />
+            Consultar Estoque
+          </h2>
+
+          {/* Alertas de estoque baixo */}
+          {lowStockProducts.length > 0 && (
+            <Card className="mb-6 bg-orange-50 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-center mb-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 mr-2" />
+                  <h3 className="text-lg font-semibold text-orange-800">
+                    Alerta de Estoque Baixo
+                  </h3>
+                </div>
+                <p className="text-orange-700 mb-3">
+                  {lowStockProducts.length} produto(s) com menos de 10 unidades em estoque:
+                </p>
+                <div className="space-y-2">
+                  {lowStockProducts.map(product => (
+                    <div key={product.id} className="flex justify-between items-center bg-white rounded-lg p-2 border border-orange-200">
+                      <span className="font-medium">{product.name}</span>
+                      <Badge variant="destructive" data-testid={`low-stock-${product.id}`}>
+                        {product.stock || 0} unidades
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Controles de filtro e busca */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Pesquisar produtos..."
+                value={stockSearchTerm}
+                onChange={(e) => setStockSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                data-testid="input-stock-search"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={stockSortBy === "stock" ? "default" : "outline"}
+                onClick={() => setStockSortBy("stock")}
+                data-testid="button-sort-stock"
+              >
+                Ordenar por Estoque
+              </Button>
+              <Button
+                variant={stockSortBy === "name" ? "default" : "outline"}
+                onClick={() => setStockSortBy("name")}
+                data-testid="button-sort-name"
+              >
+                Ordenar por Nome
+              </Button>
+            </div>
+          </div>
+
+          {/* Lista de produtos com estoque */}
+          {productsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">
+                  {stockSearchTerm ? "Nenhum produto encontrado" : "Nenhum produto cadastrado"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {stockSearchTerm 
+                    ? "Tente ajustar sua pesquisa ou cadastre novos produtos"
+                    : "Adicione produtos ao seu cardápio para visualizar o estoque"
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredProducts.map((product: any) => (
+                <Card key={product.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{product.name}</h3>
+                        {product.description && (
+                          <p className="text-muted-foreground text-sm mt-1">
+                            {product.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 mt-2">
+                          <span className="text-sm text-muted-foreground">
+                            Preço: R$ {Number(product.price).toFixed(2)}
+                          </span>
+                          {product.costPrice && (
+                            <span className="text-sm text-muted-foreground">
+                              Custo: R$ {Number(product.costPrice).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Estoque:</span>
+                        </div>
+                        <div className="mt-1">
+                          <Badge 
+                            variant={(product.stock || 0) < 10 ? "destructive" : "secondary"}
+                            className="text-base px-3 py-1"
+                            data-testid={`stock-${product.id}`}
+                          >
+                            {product.stock || 0} unidades
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -669,7 +793,7 @@ export default function Dashboard() {
 
           {/* Lista de mesas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tables.map((table: any) => (
+            {(tables as any[]).map((table: any) => (
               <Card key={table.id} className="p-4">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center justify-between">
@@ -720,7 +844,7 @@ export default function Dashboard() {
               </Card>
             ))}
             
-            {tables.length === 0 && (
+            {(tables as any[]).length === 0 && (
               <Card className="col-span-full p-8 text-center">
                 <CardContent>
                   <p className="text-muted-foreground">
@@ -820,9 +944,14 @@ export default function Dashboard() {
                     <button
                       key={index}
                       onClick={() => {
-                        if (item.id === "produtos" && index === 0) {
-                          setActiveSection("produtos");
-                          setExpandedMenu(null);
+                        if (item.id === "produtos") {
+                          if (index === 0) { // "Gerenciar produtos"
+                            setActiveSection("produtos");
+                            setExpandedMenu(null);
+                          } else if (index === 1) { // "Consultar o estoque"
+                            setActiveSection("estoque");
+                            setExpandedMenu(null);
+                          }
                         } else if (item.id === "configuracoes") {
                           if (index === 0) { // "Meu Cardápio"
                             window.open(`/menu/${(restaurant as any).id}`, '_blank');
