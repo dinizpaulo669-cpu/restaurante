@@ -217,6 +217,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/my-restaurant", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Primeiro verifica se o usuário existe no banco
+      let user = await dbStorage.getUser(userId);
+      if (!user) {
+        // Se o usuário não existe no banco, cria ele
+        const userData = {
+          id: userId,
+          email: req.user.claims.email || "",
+          firstName: req.user.claims.firstName || "",
+          lastName: req.user.claims.lastName || "",
+          role: "restaurant_owner",
+          subscriptionPlan: "basic",
+          isTrialActive: true,
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 dias
+        };
+        
+        user = await dbStorage.upsertUser(userData);
+      }
+      
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
@@ -228,10 +247,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Função para criar/buscar restaurante de desenvolvimento
-  async function ensureDevRestaurant() {
+  // Função para criar/buscar usuário e restaurante de desenvolvimento
+  async function ensureDevData() {
     try {
-      // Primeiro tenta buscar o restaurante existente
+      // Primeiro garante que o usuário de desenvolvimento existe
+      let user = await dbStorage.getUser("dev-user-123");
+      
+      if (!user) {
+        // Cria o usuário de desenvolvimento
+        const devUserData = {
+          id: "dev-user-123",
+          email: "test@restaurant.com",
+          firstName: "Usuário",
+          lastName: "Teste",
+          role: "restaurant_owner",
+          subscriptionPlan: "pro",
+          isTrialActive: true,
+          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
+        };
+        
+        user = await dbStorage.upsertUser(devUserData);
+      }
+      
+      // Depois garante que o restaurante de desenvolvimento existe
       let restaurant = await dbStorage.getRestaurant("dev-restaurant-123");
       
       if (!restaurant) {
@@ -257,9 +295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         restaurant = await dbStorage.createRestaurant(devRestaurantData);
       }
       
-      return restaurant;
+      return { user, restaurant };
     } catch (error) {
-      console.error("Error ensuring dev restaurant:", error);
+      console.error("Error ensuring dev data:", error);
       throw error;
     }
   }
@@ -267,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de desenvolvimento para restaurante de teste
   app.get("/api/dev/my-restaurant", async (req: any, res) => {
     try {
-      const restaurant = await ensureDevRestaurant();
+      const { restaurant } = await ensureDevData();
       res.json(restaurant);
     } catch (error) {
       console.error("Error fetching dev restaurant:", error);
@@ -582,8 +620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dev/tables", async (req, res) => {
     try {
-      // Garantir que o restaurante de desenvolvimento existe
-      await ensureDevRestaurant();
+      // Garantir que o usuário e restaurante de desenvolvimento existem
+      await ensureDevData();
       
       // Generate unique QR code
       const qrCode = `table-dev-restaurant-123-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
