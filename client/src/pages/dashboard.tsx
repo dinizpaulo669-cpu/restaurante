@@ -66,6 +66,12 @@ export default function Dashboard() {
     domingo: { isOpen: false, openTime: '09:00', closeTime: '16:00' }
   });
   const [isEditingHours, setIsEditingHours] = useState(false);
+  
+  // Estados para abas extras - movidos para o topo para evitar erro de hooks
+  const [description, setDescription] = useState("");
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -101,6 +107,15 @@ export default function Dashboard() {
     enabled: !!restaurant,
     retry: false,
   });
+
+  // Atualizar estados quando restaurant carrega
+  useEffect(() => {
+    if (restaurant) {
+      setDescription((restaurant as any)?.description || "");
+      setLogoUrl((restaurant as any)?.logoUrl || "");
+      setBannerUrl((restaurant as any)?.bannerUrl || "");
+    }
+  }, [restaurant]);
 
   // Mutations para mesas
   const createTableMutation = useMutation({
@@ -916,6 +931,25 @@ export default function Dashboard() {
                     </span>
                   </div>
                   
+                  <div className="mt-3 pt-3 border-t">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/menu/' + (restaurant as any).id + '?table=' + table.qrCode)}`;
+                        const link = document.createElement('a');
+                        link.href = qrUrl;
+                        link.download = `qr-mesa-${table.number}.png`;
+                        link.click();
+                      }}
+                      className="w-full"
+                      data-testid={`button-download-qr-${table.id}`}
+                    >
+                      <QrCode className="w-3 h-3 mr-1" />
+                      Baixar QR Code
+                    </Button>
+                  </div>
+                  
                   <div className="flex space-x-2 pt-3">
                     <Button 
                       size="sm" 
@@ -1108,12 +1142,9 @@ export default function Dashboard() {
     }
 
     if (activeSection === "sobre-nos") {
-      const [description, setDescription] = useState((restaurant as any)?.description || "");
-      const [isEditing, setIsEditing] = useState(false);
-
       const handleSave = () => {
         updateAboutMutation.mutate(description);
-        setIsEditing(false);
+        setIsEditingAbout(false);
       };
 
       return (
@@ -1129,11 +1160,11 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Descrição do Restaurante</h3>
                   <Button
-                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                    onClick={() => isEditingAbout ? handleSave() : setIsEditingAbout(true)}
                     disabled={updateAboutMutation.isPending}
                     data-testid="button-edit-about"
                   >
-                    {isEditing ? (
+                    {isEditingAbout ? (
                       updateAboutMutation.isPending ? "Salvando..." : "Salvar"
                     ) : (
                       <>
@@ -1144,7 +1175,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
                 
-                {isEditing ? (
+                {isEditingAbout ? (
                   <div className="space-y-4">
                     <textarea
                       value={description}
@@ -1157,7 +1188,7 @@ export default function Dashboard() {
                       <Button onClick={handleSave} disabled={updateAboutMutation.isPending}>
                         Salvar
                       </Button>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      <Button variant="outline" onClick={() => setIsEditingAbout(false)}>
                         Cancelar
                       </Button>
                     </div>
@@ -1181,9 +1212,7 @@ export default function Dashboard() {
     }
 
     if (activeSection === "logo") {
-      const [logoUrl, setLogoUrl] = useState((restaurant as any)?.logoUrl || "");
-
-      const handleSave = () => {
+      const handleSaveLogo = () => {
         if (logoUrl.trim()) {
           updateLogoMutation.mutate(logoUrl.trim());
         }
@@ -1218,7 +1247,7 @@ export default function Dashboard() {
                     </div>
                     
                     <Button 
-                      onClick={handleSave} 
+                      onClick={handleSaveLogo} 
                       disabled={!logoUrl.trim() || updateLogoMutation.isPending}
                       className="w-full"
                       data-testid="button-save-logo"
@@ -1259,9 +1288,7 @@ export default function Dashboard() {
     }
 
     if (activeSection === "banner") {
-      const [bannerUrl, setBannerUrl] = useState((restaurant as any)?.bannerUrl || "");
-
-      const handleSave = () => {
+      const handleSaveBanner = () => {
         if (bannerUrl.trim()) {
           updateBannerMutation.mutate(bannerUrl.trim());
         }
@@ -1299,7 +1326,7 @@ export default function Dashboard() {
                     </div>
                     
                     <Button 
-                      onClick={handleSave} 
+                      onClick={handleSaveBanner} 
                       disabled={!bannerUrl.trim() || updateBannerMutation.isPending}
                       className="w-full"
                       data-testid="button-save-banner"

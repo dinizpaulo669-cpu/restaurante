@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Depois garante que o restaurante de desenvolvimento existe
-      let restaurant = await dbStorage.getRestaurant("dev-restaurant-123");
+      let restaurant = await dbStorage.getRestaurantByOwner("dev-user-123");
       
       if (!restaurant) {
         // Se não existir, cria o restaurante de desenvolvimento
