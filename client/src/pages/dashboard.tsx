@@ -162,6 +162,61 @@ export default function Dashboard() {
     },
   });
 
+  // Mutations para atualizar informações do restaurante
+  const updateAboutMutation = useMutation({
+    mutationFn: (description: string) => apiRequest("PUT", "/api/dev/restaurant/about", { description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Descrição atualizada!",
+        description: "A descrição 'Sobre Nós' foi atualizada com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar descrição.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateLogoMutation = useMutation({
+    mutationFn: (logoUrl: string) => apiRequest("PUT", "/api/dev/restaurant/logo", { logoUrl }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Logo atualizado!",
+        description: "O logo do restaurante foi atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar logo.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBannerMutation = useMutation({
+    mutationFn: (bannerUrl: string) => apiRequest("PUT", "/api/dev/restaurant/banner", { bannerUrl }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Banner atualizado!",
+        description: "O banner do restaurante foi atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar banner.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers para mesas
   const handleCreateTable = (formData: any) => {
     createTableMutation.mutate(formData);
@@ -231,18 +286,18 @@ export default function Dashboard() {
         "Consultar o estoque"
       ]
     },
+    { id: "mesas", label: "Mesas", icon: Users, hasSubmenu: false },
+    { id: "horarios", label: "Horários", icon: Clock, hasSubmenu: false },
+    { id: "sobre-nos", label: "Sobre Nós", icon: FileText, hasSubmenu: false },
+    { id: "logo", label: "Logo", icon: Edit, hasSubmenu: false },
+    { id: "banner", label: "Banner", icon: Package, hasSubmenu: false },
+    { id: "comandas", label: "Comandas", icon: FileText, hasSubmenu: false },
     { 
       id: "configuracoes", 
       label: "Configurações", 
       icon: Settings, 
       hasSubmenu: true,
       submenu: [
-        "Meu Cardápio",
-        "Mesas",
-        "Horarios de funcionamento",
-        "Sobre nós",
-        "Logo",
-        "Banner",
         "Dados da empresa",
         "Configurar WhatsApp",
         "Configurar SEO",
@@ -250,7 +305,6 @@ export default function Dashboard() {
         "Faixa de Cep"
       ]
     },
-    { id: "comandas", label: "Comandas", icon: FileText, hasSubmenu: false },
     { id: "plano", label: "Plano", icon: CreditCard, hasSubmenu: false },
   ];
 
@@ -1049,6 +1103,249 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      );
+    }
+
+    if (activeSection === "sobre-nos") {
+      const [description, setDescription] = useState((restaurant as any)?.description || "");
+      const [isEditing, setIsEditing] = useState(false);
+
+      const handleSave = () => {
+        updateAboutMutation.mutate(description);
+        setIsEditing(false);
+      };
+
+      return (
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <FileText className="w-6 h-6 mr-2" />
+              Sobre Nós
+            </h2>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Descrição do Restaurante</h3>
+                  <Button
+                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                    disabled={updateAboutMutation.isPending}
+                    data-testid="button-edit-about"
+                  >
+                    {isEditing ? (
+                      updateAboutMutation.isPending ? "Salvando..." : "Salvar"
+                    ) : (
+                      <>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Conte sobre seu restaurante, especialidades, história..."
+                      className="w-full h-32 p-3 border rounded-lg resize-none"
+                      data-testid="textarea-about"
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={handleSave} disabled={updateAboutMutation.isPending}>
+                        Salvar
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {description ? (
+                      <p className="text-muted-foreground whitespace-pre-wrap">{description}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">
+                        Nenhuma descrição cadastrada. Clique em "Editar" para adicionar uma descrição sobre seu restaurante.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "logo") {
+      const [logoUrl, setLogoUrl] = useState((restaurant as any)?.logoUrl || "");
+
+      const handleSave = () => {
+        if (logoUrl.trim()) {
+          updateLogoMutation.mutate(logoUrl.trim());
+        }
+      };
+
+      return (
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Edit className="w-6 h-6 mr-2" />
+              Logo do Restaurante
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Configurar Logo</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        URL da Imagem
+                      </label>
+                      <input
+                        type="url"
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        placeholder="https://exemplo.com/logo.png"
+                        className="w-full p-3 border rounded-lg"
+                        data-testid="input-logo-url"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={!logoUrl.trim() || updateLogoMutation.isPending}
+                      className="w-full"
+                      data-testid="button-save-logo"
+                    >
+                      {updateLogoMutation.isPending ? "Salvando..." : "Salvar Logo"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
+                  
+                  <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                    {logoUrl ? (
+                      <img 
+                        src={logoUrl} 
+                        alt="Logo do restaurante" 
+                        className="max-w-full max-h-48 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Edit className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Pré-visualização do logo</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "banner") {
+      const [bannerUrl, setBannerUrl] = useState((restaurant as any)?.bannerUrl || "");
+
+      const handleSave = () => {
+        if (bannerUrl.trim()) {
+          updateBannerMutation.mutate(bannerUrl.trim());
+        }
+      };
+
+      return (
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Package className="w-6 h-6 mr-2" />
+              Banner do Restaurante
+            </h2>
+            
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Configurar Banner</h3>
+                  <p className="text-muted-foreground mb-4">
+                    O banner será usado como imagem de fundo na parte superior do seu cardápio.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        URL da Imagem do Banner
+                      </label>
+                      <input
+                        type="url"
+                        value={bannerUrl}
+                        onChange={(e) => setBannerUrl(e.target.value)}
+                        placeholder="https://exemplo.com/banner.jpg"
+                        className="w-full p-3 border rounded-lg"
+                        data-testid="input-banner-url"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={!bannerUrl.trim() || updateBannerMutation.isPending}
+                      className="w-full"
+                      data-testid="button-save-banner"
+                    >
+                      {updateBannerMutation.isPending ? "Salvando..." : "Salvar Banner"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
+                  
+                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                    {bannerUrl ? (
+                      <div className="relative h-48 w-full">
+                        <img 
+                          src={bannerUrl} 
+                          alt="Banner do restaurante" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                          <div className="text-white text-center">
+                            <h3 className="text-2xl font-bold">{(restaurant as any)?.name}</h3>
+                            <p className="text-lg">{(restaurant as any)?.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-center text-muted-foreground">
+                        <div>
+                          <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>Pré-visualização do banner</p>
+                          <p className="text-sm">Será exibido no topo do cardápio</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       );
     }

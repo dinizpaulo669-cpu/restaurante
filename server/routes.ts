@@ -610,7 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Development routes for tables
   app.get("/api/dev/tables", async (req, res) => {
     try {
-      const tables = await dbStorage.getTables("dev-restaurant-123");
+      const { restaurant } = await ensureDevData();
+      const tables = await dbStorage.getTables(restaurant.id);
       res.json(tables);
     } catch (error) {
       console.error("Error fetching dev tables:", error);
@@ -621,14 +622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/dev/tables", async (req, res) => {
     try {
       // Garantir que o usuário e restaurante de desenvolvimento existem
-      await ensureDevData();
+      const { restaurant } = await ensureDevData();
       
       // Generate unique QR code
-      const qrCode = `table-dev-restaurant-123-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const qrCode = `table-${restaurant.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       const tableData = insertTableSchema.parse({
         ...req.body,
-        restaurantId: "dev-restaurant-123",
+        restaurantId: restaurant.id,
         qrCode,
       });
 
@@ -658,6 +659,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting dev table:", error);
       res.status(500).json({ message: "Failed to delete table" });
+    }
+  });
+
+  // Rotas para atualizar informações do restaurante
+  app.put("/api/restaurants/:id/about", isAuthenticated, async (req: any, res) => {
+    try {
+      const { description } = req.body;
+      const restaurantId = req.params.id;
+      
+      const restaurant = await dbStorage.updateRestaurant(restaurantId, {
+        description: description
+      });
+      
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error updating restaurant description:", error);
+      res.status(500).json({ message: "Failed to update description" });
+    }
+  });
+
+  app.put("/api/restaurants/:id/logo", isAuthenticated, async (req: any, res) => {
+    try {
+      const { logoUrl } = req.body;
+      const restaurantId = req.params.id;
+      
+      const restaurant = await dbStorage.updateRestaurant(restaurantId, {
+        logoUrl: logoUrl
+      });
+      
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error updating restaurant logo:", error);
+      res.status(500).json({ message: "Failed to update logo" });
+    }
+  });
+
+  app.put("/api/restaurants/:id/banner", isAuthenticated, async (req: any, res) => {
+    try {
+      const { bannerUrl } = req.body;
+      const restaurantId = req.params.id;
+      
+      const restaurant = await dbStorage.updateRestaurant(restaurantId, {
+        bannerUrl: bannerUrl
+      });
+      
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error updating restaurant banner:", error);
+      res.status(500).json({ message: "Failed to update banner" });
+    }
+  });
+
+  // Rotas de desenvolvimento para atualizar informações do restaurante
+  app.put("/api/dev/restaurant/about", async (req, res) => {
+    try {
+      const { description } = req.body;
+      const { restaurant } = await ensureDevData();
+      
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, {
+        description: description
+      });
+      
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating dev restaurant description:", error);
+      res.status(500).json({ message: "Failed to update description" });
+    }
+  });
+
+  app.put("/api/dev/restaurant/logo", async (req, res) => {
+    try {
+      const { logoUrl } = req.body;
+      const { restaurant } = await ensureDevData();
+      
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, {
+        logoUrl: logoUrl
+      });
+      
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating dev restaurant logo:", error);
+      res.status(500).json({ message: "Failed to update logo" });
+    }
+  });
+
+  app.put("/api/dev/restaurant/banner", async (req, res) => {
+    try {
+      const { bannerUrl } = req.body;
+      const { restaurant } = await ensureDevData();
+      
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, {
+        bannerUrl: bannerUrl
+      });
+      
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating dev restaurant banner:", error);
+      res.status(500).json({ message: "Failed to update banner" });
     }
   });
 
