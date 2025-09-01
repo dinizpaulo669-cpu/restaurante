@@ -228,32 +228,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Função para criar/buscar restaurante de desenvolvimento
+  async function ensureDevRestaurant() {
+    try {
+      // Primeiro tenta buscar o restaurante existente
+      let restaurant = await dbStorage.getRestaurant("dev-restaurant-123");
+      
+      if (!restaurant) {
+        // Se não existir, cria o restaurante de desenvolvimento
+        const devRestaurantData = {
+          ownerId: "dev-user-123",
+          name: "Restaurante Teste",
+          description: "Restaurante para testes de desenvolvimento",
+          category: "italiana",
+          address: "Rua Teste, 123 - Centro",
+          phone: "(11) 99999-9999",
+          email: "contato@restauranteteste.com",
+          rating: "4.5",
+          deliveryFee: "5.00",
+          minDeliveryTime: 20,
+          maxDeliveryTime: 40,
+          isActive: true,
+          openingTime: "11:00",
+          closingTime: "23:00",
+          deliveryTime: 30
+        };
+        
+        restaurant = await dbStorage.createRestaurant(devRestaurantData);
+      }
+      
+      return restaurant;
+    } catch (error) {
+      console.error("Error ensuring dev restaurant:", error);
+      throw error;
+    }
+  }
+
   // Rota de desenvolvimento para restaurante de teste
   app.get("/api/dev/my-restaurant", async (req: any, res) => {
     try {
-      const devRestaurant = {
-        id: "dev-restaurant-123",
-        ownerId: "dev-user-123",
-        name: "Restaurante Teste",
-        description: "Restaurante para testes de desenvolvimento",
-        category: "italiana",
-        address: "Rua Teste, 123 - Centro",
-        phone: "(11) 99999-9999",
-        email: "contato@restauranteteste.com",
-        logoUrl: null,
-        bannerUrl: null,
-        rating: "4.5",
-        deliveryFee: "5.00",
-        minDeliveryTime: 20,
-        maxDeliveryTime: 40,
-        isActive: true,
-        openingTime: "11:00",
-        closingTime: "23:00",
-        deliveryTime: 30,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      res.json(devRestaurant);
+      const restaurant = await ensureDevRestaurant();
+      res.json(restaurant);
     } catch (error) {
       console.error("Error fetching dev restaurant:", error);
       res.status(500).json({ message: "Failed to fetch dev restaurant" });
@@ -567,6 +582,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dev/tables", async (req, res) => {
     try {
+      // Garantir que o restaurante de desenvolvimento existe
+      await ensureDevRestaurant();
+      
       // Generate unique QR code
       const qrCode = `table-dev-restaurant-123-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 

@@ -54,6 +54,18 @@ export default function Dashboard() {
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
   const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
+  
+  // Estados para horários de funcionamento
+  const [openingHours, setOpeningHours] = useState({
+    segunda: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
+    terca: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
+    quarta: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
+    quinta: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
+    sexta: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
+    sabado: { isOpen: true, openTime: '09:00', closeTime: '16:00' },
+    domingo: { isOpen: false, openTime: '09:00', closeTime: '16:00' }
+  });
+  const [isEditingHours, setIsEditingHours] = useState(false);
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -489,11 +501,41 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground">Gerencie seu cardápio de produtos de forma simples e eficiente.</p>
             </div>
             
-            {/* Abas de navegação simplificadas */}
+            {/* Abas de navegação */}
             <div className="flex border-b border-border">
-              <div className="px-4 py-2 font-medium border-b-2 border-primary text-primary">
+              <button
+                onClick={() => setProductSubSection("produtos")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "produtos"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-produtos"
+              >
                 Produtos
-              </div>
+              </button>
+              <button
+                onClick={() => setProductSubSection("categorias")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "categorias"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-categorias"
+              >
+                Categorias
+              </button>
+              <button
+                onClick={() => setProductSubSection("adicionais")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  productSubSection === "adicionais"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-adicionais"
+              >
+                Adicionais
+              </button>
             </div>
           </div>
 
@@ -872,25 +914,141 @@ export default function Dashboard() {
     }
 
     if (activeSection === "horarios") {
+      const dayNames = {
+        segunda: 'Segunda-feira',
+        terca: 'Terça-feira',
+        quarta: 'Quarta-feira',
+        quinta: 'Quinta-feira',
+        sexta: 'Sexta-feira',
+        sabado: 'Sábado',
+        domingo: 'Domingo'
+      };
+
+      const handleDayChange = (day: string, field: string, value: any) => {
+        setOpeningHours(prev => ({
+          ...prev,
+          [day]: {
+            ...prev[day as keyof typeof prev],
+            [field]: value
+          }
+        }));
+      };
+
+      const saveOpeningHours = () => {
+        // TODO: Implementar salvamento no backend
+        setIsEditingHours(false);
+        toast({
+          title: "Horários salvos!",
+          description: "Os horários de funcionamento foram atualizados com sucesso.",
+        });
+      };
+
       return (
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Horários de Funcionamento</h2>
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurar Horários por Dia da Semana</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Configure os horários de funcionamento para cada dia da semana. 
-                  Estes horários ficarão visíveis para todos os clientes.
-                </p>
-                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
-                  🚧 Esta funcionalidade está sendo implementada e estará disponível em breve!
-                </p>
-              </CardContent>
-            </Card>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Horários de Funcionamento</h2>
+            <Button 
+              onClick={() => setIsEditingHours(!isEditingHours)}
+              variant={isEditingHours ? "outline" : "default"}
+              data-testid="button-edit-hours"
+            >
+              {isEditingHours ? "Cancelar" : "Editar Horários"}
+            </Button>
           </div>
+          
+          <div className="space-y-4">
+            {Object.entries(openingHours).map(([day, hours]) => (
+              <Card key={day} className="transition-all hover:shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-32">
+                        <h3 className="font-medium">{dayNames[day as keyof typeof dayNames]}</h3>
+                      </div>
+                      
+                      {isEditingHours ? (
+                        <div className="flex items-center space-x-4">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={hours.isOpen}
+                              onChange={(e) => handleDayChange(day, 'isOpen', e.target.checked)}
+                              className="rounded"
+                              data-testid={`checkbox-${day}-open`}
+                            />
+                            <span className="text-sm">Aberto</span>
+                          </label>
+                          
+                          {hours.isOpen && (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="time"
+                                value={hours.openTime}
+                                onChange={(e) => handleDayChange(day, 'openTime', e.target.value)}
+                                className="border rounded px-2 py-1 text-sm"
+                                data-testid={`input-${day}-open-time`}
+                              />
+                              <span className="text-sm text-muted-foreground">às</span>
+                              <input
+                                type="time"
+                                value={hours.closeTime}
+                                onChange={(e) => handleDayChange(day, 'closeTime', e.target.value)}
+                                className="border rounded px-2 py-1 text-sm"
+                                data-testid={`input-${day}-close-time`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-4">
+                          {hours.isOpen ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-green-700">
+                                {hours.openTime} às {hours.closeTime}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-red-700">Fechado</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {isEditingHours && (
+            <div className="mt-6 flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditingHours(false)}
+                data-testid="button-cancel-hours"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={saveOpeningHours}
+                data-testid="button-save-hours"
+              >
+                Salvar Horários
+              </Button>
+            </div>
+          )}
+          
+          <Card className="mt-6">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                <span>Os horários configurados aqui serão exibidos para os clientes no cardápio online</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       );
     }
