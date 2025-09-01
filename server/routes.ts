@@ -18,7 +18,14 @@ if (process.env.STRIPE_SECRET_KEY) {
 // Configuração do multer para upload de imagens
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    // Determinar diretório baseado no tipo de upload
+    let uploadDir;
+    if (req.path.includes('/logo') || req.path.includes('/banner')) {
+      uploadDir = path.join(process.cwd(), 'public', 'uploads', 'restaurant');
+    } else {
+      uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    }
+    
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -662,6 +669,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload de logo e banner do restaurante
+  app.post("/api/restaurants/:id/logo", isAuthenticated, upload.single('logo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant || restaurant.id !== req.params.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const logoUrl = `/uploads/restaurant/${req.file.filename}`;
+      const updatedRestaurant = await dbStorage.updateRestaurant(req.params.id, { logoUrl });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
+  app.post("/api/restaurants/:id/banner", isAuthenticated, upload.single('banner'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant || restaurant.id !== req.params.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const bannerUrl = `/uploads/restaurant/${req.file.filename}`;
+      const updatedRestaurant = await dbStorage.updateRestaurant(req.params.id, { bannerUrl });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading banner:", error);
+      res.status(500).json({ message: "Failed to upload banner" });
+    }
+  });
+
+  // Rotas de desenvolvimento para upload
+  app.post("/api/dev/restaurants/logo", upload.single('logo'), async (req: any, res) => {
+    try {
+      const { restaurant } = await ensureDevData();
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const logoUrl = `/uploads/restaurant/${req.file.filename}`;
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, { logoUrl });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading dev logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
+  app.post("/api/dev/restaurants/banner", upload.single('banner'), async (req: any, res) => {
+    try {
+      const { restaurant } = await ensureDevData();
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const bannerUrl = `/uploads/restaurant/${req.file.filename}`;
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, { bannerUrl });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading dev banner:", error);
+      res.status(500).json({ message: "Failed to upload banner" });
+    }
+  });
+
   // Rotas para atualizar informações do restaurante
   app.put("/api/restaurants/:id/about", isAuthenticated, async (req: any, res) => {
     try {
@@ -757,6 +844,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating dev restaurant banner:", error);
       res.status(500).json({ message: "Failed to update banner" });
+    }
+  });
+
+  // Rota para editar dados da empresa
+  app.put("/api/restaurants/:id/company-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant || restaurant.id !== req.params.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const updates = req.body;
+      const updatedRestaurant = await dbStorage.updateRestaurant(req.params.id, updates);
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating company data:", error);
+      res.status(500).json({ message: "Failed to update company data" });
+    }
+  });
+
+  app.put("/api/dev/restaurant/company-data", async (req, res) => {
+    try {
+      const { restaurant } = await ensureDevData();
+      const updates = req.body;
+      
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, updates);
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating dev company data:", error);
+      res.status(500).json({ message: "Failed to update company data" });
+    }
+  });
+
+  // Rota para configurar WhatsApp
+  app.put("/api/restaurants/:id/whatsapp", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const restaurant = await dbStorage.getRestaurantByOwner(userId);
+      
+      if (!restaurant || restaurant.id !== req.params.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { whatsappNumber } = req.body;
+      const updatedRestaurant = await dbStorage.updateRestaurant(req.params.id, { whatsappNumber });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating WhatsApp number:", error);
+      res.status(500).json({ message: "Failed to update WhatsApp number" });
+    }
+  });
+
+  app.put("/api/dev/restaurant/whatsapp", async (req, res) => {
+    try {
+      const { restaurant } = await ensureDevData();
+      const { whatsappNumber } = req.body;
+      
+      const updatedRestaurant = await dbStorage.updateRestaurant(restaurant.id, { whatsappNumber });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error updating dev WhatsApp number:", error);
+      res.status(500).json({ message: "Failed to update WhatsApp number" });
     }
   });
 

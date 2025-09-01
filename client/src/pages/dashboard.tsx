@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingAdditional, setEditingAdditional] = useState<any>(null);
   const [productSubSection, setProductSubSection] = useState("produtos");
+  const [configurationSubSection, setConfigurationSubSection] = useState("dados-empresa");
   
   // Estados para mesas
   const [showTableForm, setShowTableForm] = useState(false);
@@ -1212,9 +1213,60 @@ export default function Dashboard() {
     }
 
     if (activeSection === "logo") {
-      const handleSaveLogo = () => {
-        if (logoUrl.trim()) {
-          updateLogoMutation.mutate(logoUrl.trim());
+      const uploadLogoMutation = useMutation({
+        mutationFn: async (file: File) => {
+          const formData = new FormData();
+          formData.append('logo', file);
+          
+          const response = await fetch('/api/dev/restaurants/logo', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error('Falha ao fazer upload do logo');
+          }
+          
+          return response.json();
+        },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+          toast({
+            title: "Logo atualizado!",
+            description: "O logo foi enviado e atualizado com sucesso.",
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro no upload",
+            description: "Não foi possível fazer upload do logo. Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+              title: "Arquivo muito grande",
+              description: "O arquivo deve ter no máximo 5MB.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (!file.type.startsWith('image/')) {
+            toast({
+              title: "Formato inválido",
+              description: "Por favor, selecione uma imagem válida.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          uploadLogoMutation.mutate(file);
         }
       };
 
@@ -1229,31 +1281,31 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Configurar Logo</h3>
+                  <h3 className="text-lg font-semibold mb-4">Enviar Logo</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Escolha uma imagem do seu dispositivo para usar como logo (máximo 5MB).
+                  </p>
                   
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        URL da Imagem
+                        Selecionar Arquivo de Imagem
                       </label>
                       <input
-                        type="url"
-                        value={logoUrl}
-                        onChange={(e) => setLogoUrl(e.target.value)}
-                        placeholder="https://exemplo.com/logo.png"
-                        className="w-full p-3 border rounded-lg"
-                        data-testid="input-logo-url"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={uploadLogoMutation.isPending}
+                        className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        data-testid="input-logo-file"
                       />
                     </div>
                     
-                    <Button 
-                      onClick={handleSaveLogo} 
-                      disabled={!logoUrl.trim() || updateLogoMutation.isPending}
-                      className="w-full"
-                      data-testid="button-save-logo"
-                    >
-                      {updateLogoMutation.isPending ? "Salvando..." : "Salvar Logo"}
-                    </Button>
+                    {uploadLogoMutation.isPending && (
+                      <div className="text-sm text-muted-foreground">
+                        Fazendo upload do logo...
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1263,9 +1315,9 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
                   
                   <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
-                    {logoUrl ? (
+                    {(restaurant as any)?.logoUrl ? (
                       <img 
-                        src={logoUrl} 
+                        src={(restaurant as any).logoUrl} 
                         alt="Logo do restaurante" 
                         className="max-w-full max-h-48 object-contain"
                         onError={(e) => {
@@ -1275,7 +1327,8 @@ export default function Dashboard() {
                     ) : (
                       <div className="text-center text-muted-foreground">
                         <Edit className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Pré-visualização do logo</p>
+                        <p>Nenhum logo configurado ainda</p>
+                        <p className="text-sm">Faça upload de uma imagem</p>
                       </div>
                     )}
                   </div>
@@ -1288,9 +1341,60 @@ export default function Dashboard() {
     }
 
     if (activeSection === "banner") {
-      const handleSaveBanner = () => {
-        if (bannerUrl.trim()) {
-          updateBannerMutation.mutate(bannerUrl.trim());
+      const uploadBannerMutation = useMutation({
+        mutationFn: async (file: File) => {
+          const formData = new FormData();
+          formData.append('banner', file);
+          
+          const response = await fetch('/api/dev/restaurants/banner', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error('Falha ao fazer upload do banner');
+          }
+          
+          return response.json();
+        },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+          toast({
+            title: "Banner atualizado!",
+            description: "O banner foi enviado e atualizado com sucesso.",
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro no upload",
+            description: "Não foi possível fazer upload do banner. Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+              title: "Arquivo muito grande",
+              description: "O arquivo deve ter no máximo 5MB.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (!file.type.startsWith('image/')) {
+            toast({
+              title: "Formato inválido",
+              description: "Por favor, selecione uma imagem válida.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          uploadBannerMutation.mutate(file);
         }
       };
 
@@ -1305,34 +1409,32 @@ export default function Dashboard() {
             <div className="space-y-6">
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Configurar Banner</h3>
+                  <h3 className="text-lg font-semibold mb-4">Enviar Banner</h3>
                   <p className="text-muted-foreground mb-4">
+                    Escolha uma imagem do seu dispositivo para usar como banner (máximo 5MB).
                     O banner será usado como imagem de fundo na parte superior do seu cardápio.
                   </p>
                   
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        URL da Imagem do Banner
+                        Selecionar Arquivo de Imagem
                       </label>
                       <input
-                        type="url"
-                        value={bannerUrl}
-                        onChange={(e) => setBannerUrl(e.target.value)}
-                        placeholder="https://exemplo.com/banner.jpg"
-                        className="w-full p-3 border rounded-lg"
-                        data-testid="input-banner-url"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={uploadBannerMutation.isPending}
+                        className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        data-testid="input-banner-file"
                       />
                     </div>
                     
-                    <Button 
-                      onClick={handleSaveBanner} 
-                      disabled={!bannerUrl.trim() || updateBannerMutation.isPending}
-                      className="w-full"
-                      data-testid="button-save-banner"
-                    >
-                      {updateBannerMutation.isPending ? "Salvando..." : "Salvar Banner"}
-                    </Button>
+                    {uploadBannerMutation.isPending && (
+                      <div className="text-sm text-muted-foreground">
+                        Fazendo upload do banner...
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1342,10 +1444,10 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
                   
                   <div className="border rounded-lg overflow-hidden bg-gray-50">
-                    {bannerUrl ? (
+                    {(restaurant as any)?.bannerUrl ? (
                       <div className="relative h-48 w-full">
                         <img 
-                          src={bannerUrl} 
+                          src={(restaurant as any).bannerUrl} 
                           alt="Banner do restaurante" 
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -1363,8 +1465,8 @@ export default function Dashboard() {
                       <div className="h-48 flex items-center justify-center text-center text-muted-foreground">
                         <div>
                           <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                          <p>Pré-visualização do banner</p>
-                          <p className="text-sm">Será exibido no topo do cardápio</p>
+                          <p>Nenhum banner configurado ainda</p>
+                          <p className="text-sm">Faça upload de uma imagem</p>
                         </div>
                       </div>
                     )}
@@ -1372,6 +1474,388 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "configuracoes") {
+      const updateCompanyDataMutation = useMutation({
+        mutationFn: (data: any) => apiRequest("PUT", "/api/dev/restaurant/company-data", data),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+          toast({
+            title: "Dados atualizados!",
+            description: "Os dados da empresa foram atualizados com sucesso.",
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro ao atualizar",
+            description: "Não foi possível atualizar os dados. Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const updateWhatsAppMutation = useMutation({
+        mutationFn: (whatsappNumber: string) => apiRequest("PUT", "/api/dev/restaurant/whatsapp", { whatsappNumber }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+          toast({
+            title: "WhatsApp configurado!",
+            description: "O número do WhatsApp foi configurado com sucesso.",
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro ao configurar",
+            description: "Não foi possível configurar o WhatsApp. Tente novamente.",
+            variant: "destructive",
+          });
+        },
+      });
+
+      const renderConfigurationContent = () => {
+        if (configurationSubSection === "dados-empresa") {
+          const [isEditing, setIsEditing] = useState(false);
+          const [formData, setFormData] = useState({
+            name: (restaurant as any)?.name || "",
+            description: (restaurant as any)?.description || "",
+            category: (restaurant as any)?.category || "",
+            address: (restaurant as any)?.address || "",
+            phone: (restaurant as any)?.phone || "",
+            email: (restaurant as any)?.email || "",
+          });
+
+          useEffect(() => {
+            if (restaurant) {
+              setFormData({
+                name: (restaurant as any)?.name || "",
+                description: (restaurant as any)?.description || "",
+                category: (restaurant as any)?.category || "",
+                address: (restaurant as any)?.address || "",
+                phone: (restaurant as any)?.phone || "",
+                email: (restaurant as any)?.email || "",
+              });
+            }
+          }, [restaurant]);
+
+          const handleSave = () => {
+            updateCompanyDataMutation.mutate(formData);
+            setIsEditing(false);
+          };
+
+          return (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold">Dados da Empresa</h3>
+                <Button
+                  onClick={() => setIsEditing(!isEditing)}
+                  variant="outline"
+                  data-testid="button-edit-company-data"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  {isEditing ? "Cancelar" : "Editar"}
+                </Button>
+              </div>
+
+              <Card>
+                <CardContent className="p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Nome do Restaurante</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-company-name"
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-name">
+                          {formData.name || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Categoria</label>
+                      {isEditing ? (
+                        <select
+                          value={formData.category}
+                          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="select-company-category"
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          <option value="italiana">Italiana</option>
+                          <option value="brasileira">Brasileira</option>
+                          <option value="japonesa">Japonesa</option>
+                          <option value="mexicana">Mexicana</option>
+                          <option value="pizza">Pizza</option>
+                          <option value="hamburguer">Hambúrguer</option>
+                          <option value="vegetariana">Vegetariana</option>
+                          <option value="doces">Doces</option>
+                        </select>
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-category">
+                          {formData.category || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-2">Descrição</label>
+                      {isEditing ? (
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          rows={3}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="textarea-company-description"
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-description">
+                          {formData.description || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-2">Endereço</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData.address}
+                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-company-address"
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-address">
+                          {formData.address || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Telefone</label>
+                      {isEditing ? (
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-company-phone"
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-phone">
+                          {formData.phone || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email</label>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-company-email"
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg" data-testid="text-company-email">
+                          {formData.email || "Não informado"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {isEditing && (
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={handleSave}
+                        disabled={updateCompanyDataMutation.isPending}
+                        data-testid="button-save-company-data"
+                      >
+                        {updateCompanyDataMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsEditing(false)}
+                        data-testid="button-cancel-company-data"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          );
+        }
+
+        if (configurationSubSection === "whatsapp") {
+          const [whatsappNumber, setWhatsappNumber] = useState((restaurant as any)?.whatsappNumber || "");
+
+          useEffect(() => {
+            if (restaurant) {
+              setWhatsappNumber((restaurant as any)?.whatsappNumber || "");
+            }
+          }, [restaurant]);
+
+          const handleSaveWhatsApp = () => {
+            if (whatsappNumber.trim()) {
+              updateWhatsAppMutation.mutate(whatsappNumber.trim());
+            }
+          };
+
+          return (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Configurar WhatsApp</h3>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h4 className="text-lg font-semibold mb-4">Número para Notificações</h4>
+                  <p className="text-muted-foreground mb-4">
+                    Configure o número do WhatsApp que será usado para enviar notificações aos clientes sobre seus pedidos.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Número do WhatsApp
+                      </label>
+                      <input
+                        type="tel"
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        placeholder="(11) 99999-9999"
+                        className="w-full p-3 border rounded-lg"
+                        data-testid="input-whatsapp-number"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Use o formato: (11) 99999-9999 ou +55 11 99999-9999
+                      </p>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSaveWhatsApp}
+                      disabled={!whatsappNumber.trim() || updateWhatsAppMutation.isPending}
+                      className="w-full"
+                      data-testid="button-save-whatsapp"
+                    >
+                      {updateWhatsAppMutation.isPending ? "Salvando..." : "Salvar Número"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {whatsappNumber && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Preview da Notificação</h4>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">📱</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">Notificação para: {whatsappNumber}</p>
+                          <p className="text-sm text-green-700 mt-1">
+                            "Olá! Seu pedido #{"{"}orderId{"}"} foi confirmado e está sendo preparado. 
+                            Tempo estimado: 30-45 minutos. - {(restaurant as any)?.name}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div className="p-6">
+            <h4 className="text-lg font-semibold mb-4">Seção em Desenvolvimento</h4>
+            <p className="text-muted-foreground">Esta funcionalidade será implementada em breve.</p>
+          </div>
+        );
+      };
+
+      return (
+        <div className="p-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Settings className="w-6 h-6 mr-2" />
+              Configurações
+            </h2>
+            
+            {/* Abas de navegação */}
+            <div className="flex border-b border-border mb-6">
+              <button
+                onClick={() => setConfigurationSubSection("dados-empresa")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  configurationSubSection === "dados-empresa"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-dados-empresa"
+              >
+                Dados da Empresa
+              </button>
+              <button
+                onClick={() => setConfigurationSubSection("whatsapp")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  configurationSubSection === "whatsapp"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-whatsapp"
+              >
+                Configurar WhatsApp
+              </button>
+              <button
+                onClick={() => setConfigurationSubSection("seo")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  configurationSubSection === "seo"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-seo"
+              >
+                Configurar SEO
+              </button>
+              <button
+                onClick={() => setConfigurationSubSection("usuarios")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  configurationSubSection === "usuarios"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-usuarios"
+              >
+                Usuários
+              </button>
+              <button
+                onClick={() => setConfigurationSubSection("cep")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  configurationSubSection === "cep"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-cep"
+              >
+                Faixa de CEP
+              </button>
+            </div>
+
+            {renderConfigurationContent()}
           </div>
         </div>
       );
@@ -1435,13 +1919,25 @@ export default function Dashboard() {
                             setExpandedMenu(null);
                           }
                         } else if (item.id === "configuracoes") {
-                          if (index === 0) { // "Meu Cardápio"
-                            window.open(`/menu/${(restaurant as any).id}`, '_blank');
-                          } else if (index === 1) { // "Mesas"
-                            setActiveSection("mesas");
+                          if (index === 0) { // "Dados da empresa"
+                            setActiveSection("configuracoes");
+                            setConfigurationSubSection("dados-empresa");
                             setExpandedMenu(null);
-                          } else if (index === 2) { // "Horários de funcionamento"
-                            setActiveSection("horarios");
+                          } else if (index === 1) { // "Configurar WhatsApp"
+                            setActiveSection("configuracoes");
+                            setConfigurationSubSection("whatsapp");
+                            setExpandedMenu(null);
+                          } else if (index === 2) { // "Configurar SEO"
+                            setActiveSection("configuracoes");
+                            setConfigurationSubSection("seo");
+                            setExpandedMenu(null);
+                          } else if (index === 3) { // "Usuários"
+                            setActiveSection("configuracoes");
+                            setConfigurationSubSection("usuarios");
+                            setExpandedMenu(null);
+                          } else if (index === 4) { // "Faixa de Cep"
+                            setActiveSection("configuracoes");
+                            setConfigurationSubSection("cep");
                             setExpandedMenu(null);
                           }
                         }
