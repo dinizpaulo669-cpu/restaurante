@@ -35,13 +35,22 @@ export default function SetupRestaurant() {
     name: "",
     description: "",
     category: "",
-    address: "",
+    cep: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
     phone: "",
     email: "",
+    senha: "",
+    confirmarSenha: "",
     deliveryFee: "0.00",
     minDeliveryTime: 20,
     maxDeliveryTime: 40,
   });
+  
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   // Check for selected plan from localStorage
   useEffect(() => {
@@ -92,19 +101,86 @@ export default function SetupRestaurant() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.category || !formData.address) {
+    
+    if (!formData.name || !formData.category || !formData.cep || !formData.rua || !formData.numero) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha nome, categoria e endereço",
+        description: "Preencha nome, categoria, CEP, rua e número",
         variant: "destructive",
       });
       return;
     }
-    createRestaurantMutation.mutate(formData);
+    
+    if (!formData.senha || formData.senha.length < 6) {
+      toast({
+        title: "Senha inválida",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (formData.senha !== formData.confirmarSenha) {
+      toast({
+        title: "Senhas não coincidem",
+        description: "A confirmação de senha deve ser igual à senha",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Concatenar endereço completo
+    const endereco = `${formData.rua}, ${formData.numero} - ${formData.bairro}, ${formData.cidade} - ${formData.estado}, CEP: ${formData.cep}`;
+    
+    const dataToSubmit = {
+      ...formData,
+      address: endereco
+    };
+    
+    createRestaurantMutation.mutate(dataToSubmit);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCepChange = async (cep: string) => {
+    setFormData(prev => ({ ...prev, cep }));
+    
+    // Remove caracteres não numéricos do CEP
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            rua: data.logradouro || '',
+            bairro: data.bairro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || ''
+          }));
+        } else {
+          toast({
+            title: "CEP não encontrado",
+            description: "Verifique se o CEP está correto",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro ao buscar CEP",
+          description: "Não foi possível consultar o endereço",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingCep(false);
+      }
+    }
   };
 
   if (!isAuthenticated) {
@@ -206,41 +282,153 @@ export default function SetupRestaurant() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Endereço Completo *</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="Rua, número, bairro, cidade, CEP"
-                  rows={2}
-                  required
-                  data-testid="input-address"
-                />
+              {/* Seção de Endereço */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Endereço</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cep">CEP *</Label>
+                    <div className="relative">
+                      <Input
+                        id="cep"
+                        value={formData.cep}
+                        onChange={(e) => handleCepChange(e.target.value)}
+                        placeholder="00000-000"
+                        maxLength={9}
+                        data-testid="input-cep"
+                      />
+                      {isLoadingCep && (
+                        <div className="absolute right-3 top-3">
+                          <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="rua">Rua *</Label>
+                    <Input
+                      id="rua"
+                      value={formData.rua}
+                      onChange={(e) => handleInputChange("rua", e.target.value)}
+                      placeholder="Nome da rua"
+                      required
+                      data-testid="input-rua"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="numero">Número *</Label>
+                    <Input
+                      id="numero"
+                      value={formData.numero}
+                      onChange={(e) => handleInputChange("numero", e.target.value)}
+                      placeholder="123"
+                      required
+                      data-testid="input-numero"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bairro">Bairro</Label>
+                    <Input
+                      id="bairro"
+                      value={formData.bairro}
+                      onChange={(e) => handleInputChange("bairro", e.target.value)}
+                      placeholder="Bairro"
+                      data-testid="input-bairro"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="cidade">Cidade</Label>
+                    <Input
+                      id="cidade"
+                      value={formData.cidade}
+                      onChange={(e) => handleInputChange("cidade", e.target.value)}
+                      placeholder="Cidade"
+                      data-testid="input-cidade"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="estado">Estado</Label>
+                    <Input
+                      id="estado"
+                      value={formData.estado}
+                      onChange={(e) => handleInputChange("estado", e.target.value)}
+                      placeholder="SP"
+                      maxLength={2}
+                      data-testid="input-estado"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    data-testid="input-phone"
-                  />
-                </div>
+              {/* Seção de Contato */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Informações de Contato</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      data-testid="input-phone"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email do Restaurante</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="contato@meurestaurante.com"
-                    data-testid="input-email"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email do Restaurante</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      placeholder="contato@meurestaurante.com"
+                      data-testid="input-email"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Seção de Segurança */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Dados de Acesso</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="senha">Senha *</Label>
+                    <Input
+                      id="senha"
+                      type="password"
+                      value={formData.senha}
+                      onChange={(e) => handleInputChange("senha", e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      minLength={6}
+                      required
+                      data-testid="input-senha"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmarSenha">Confirmar Senha *</Label>
+                    <Input
+                      id="confirmarSenha"
+                      type="password"
+                      value={formData.confirmarSenha}
+                      onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
+                      placeholder="Repita a senha"
+                      required
+                      data-testid="input-confirmar-senha"
+                    />
+                  </div>
                 </div>
               </div>
 
