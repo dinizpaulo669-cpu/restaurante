@@ -13,6 +13,7 @@ import RestaurantRegister from "@/pages/restaurant-register";
 import RestaurantPanel from "@/pages/restaurant-panel";
 import Dashboard from "@/pages/dashboard";
 import Menu from "@/pages/menu";
+import SetupRestaurant from "@/pages/setup-restaurant";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/sales" component={Sales} />
       <Route path="/restaurant-register" component={RestaurantRegister} />
       <Route path="/restaurant-panel" component={RestaurantPanel} />
+      <Route path="/setup-restaurant" component={SetupRestaurant} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/menu/:restaurantId" component={Menu} />
       <Route component={NotFound} />
