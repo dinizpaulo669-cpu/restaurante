@@ -74,6 +74,18 @@ export default function Dashboard() {
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
 
+  // Estados para configurações - movidos para o topo para evitar erro de hooks
+  const [isEditingCompanyData, setIsEditingCompanyData] = useState(false);
+  const [companyFormData, setCompanyFormData] = useState({
+    name: "",
+    description: "",
+    category: "",
+    address: "",
+    phone: "",
+    email: "",
+  });
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
     enabled: isAuthenticated && (user as any)?.role === "restaurant_owner",
@@ -115,6 +127,15 @@ export default function Dashboard() {
       setDescription((restaurant as any)?.description || "");
       setLogoUrl((restaurant as any)?.logoUrl || "");
       setBannerUrl((restaurant as any)?.bannerUrl || "");
+      setCompanyFormData({
+        name: (restaurant as any)?.name || "",
+        description: (restaurant as any)?.description || "",
+        category: (restaurant as any)?.category || "",
+        address: (restaurant as any)?.address || "",
+        phone: (restaurant as any)?.phone || "",
+        email: (restaurant as any)?.email || "",
+      });
+      setWhatsappNumber((restaurant as any)?.whatsappNumber || "");
     }
   }, [restaurant]);
 
@@ -1518,32 +1539,9 @@ export default function Dashboard() {
 
       const renderConfigurationContent = () => {
         if (configurationSubSection === "dados-empresa") {
-          const [isEditing, setIsEditing] = useState(false);
-          const [formData, setFormData] = useState({
-            name: (restaurant as any)?.name || "",
-            description: (restaurant as any)?.description || "",
-            category: (restaurant as any)?.category || "",
-            address: (restaurant as any)?.address || "",
-            phone: (restaurant as any)?.phone || "",
-            email: (restaurant as any)?.email || "",
-          });
-
-          useEffect(() => {
-            if (restaurant) {
-              setFormData({
-                name: (restaurant as any)?.name || "",
-                description: (restaurant as any)?.description || "",
-                category: (restaurant as any)?.category || "",
-                address: (restaurant as any)?.address || "",
-                phone: (restaurant as any)?.phone || "",
-                email: (restaurant as any)?.email || "",
-              });
-            }
-          }, [restaurant]);
-
           const handleSave = () => {
-            updateCompanyDataMutation.mutate(formData);
-            setIsEditing(false);
+            updateCompanyDataMutation.mutate(companyFormData);
+            setIsEditingCompanyData(false);
           };
 
           return (
@@ -1551,12 +1549,12 @@ export default function Dashboard() {
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold">Dados da Empresa</h3>
                 <Button
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={() => setIsEditingCompanyData(!isEditingCompanyData)}
                   variant="outline"
                   data-testid="button-edit-company-data"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? "Cancelar" : "Editar"}
+                  {isEditingCompanyData ? "Cancelar" : "Editar"}
                 </Button>
               </div>
 
@@ -1565,27 +1563,27 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">Nome do Restaurante</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <input
                           type="text"
-                          value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          value={companyFormData.name}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, name: e.target.value }))}
                           className="w-full p-3 border rounded-lg"
                           data-testid="input-company-name"
                         />
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-name">
-                          {formData.name || "Não informado"}
+                          {companyFormData.name || "Não informado"}
                         </div>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium mb-2">Categoria</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <select
-                          value={formData.category}
-                          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                          value={companyFormData.category}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, category: e.target.value }))}
                           className="w-full p-3 border rounded-lg"
                           data-testid="select-company-category"
                         >
@@ -1601,81 +1599,81 @@ export default function Dashboard() {
                         </select>
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-category">
-                          {formData.category || "Não informado"}
+                          {companyFormData.category || "Não informado"}
                         </div>
                       )}
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium mb-2">Descrição</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <textarea
-                          value={formData.description}
-                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          value={companyFormData.description}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, description: e.target.value }))}
                           rows={3}
                           className="w-full p-3 border rounded-lg"
                           data-testid="textarea-company-description"
                         />
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-description">
-                          {formData.description || "Não informado"}
+                          {companyFormData.description || "Não informado"}
                         </div>
                       )}
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium mb-2">Endereço</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <input
                           type="text"
-                          value={formData.address}
-                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          value={companyFormData.address}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, address: e.target.value }))}
                           className="w-full p-3 border rounded-lg"
                           data-testid="input-company-address"
                         />
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-address">
-                          {formData.address || "Não informado"}
+                          {companyFormData.address || "Não informado"}
                         </div>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium mb-2">Telefone</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <input
                           type="tel"
-                          value={formData.phone}
-                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          value={companyFormData.phone}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, phone: e.target.value }))}
                           className="w-full p-3 border rounded-lg"
                           data-testid="input-company-phone"
                         />
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-phone">
-                          {formData.phone || "Não informado"}
+                          {companyFormData.phone || "Não informado"}
                         </div>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium mb-2">Email</label>
-                      {isEditing ? (
+                      {isEditingCompanyData ? (
                         <input
                           type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                          value={companyFormData.email}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, email: e.target.value }))}
                           className="w-full p-3 border rounded-lg"
                           data-testid="input-company-email"
                         />
                       ) : (
                         <div className="p-3 bg-muted rounded-lg" data-testid="text-company-email">
-                          {formData.email || "Não informado"}
+                          {companyFormData.email || "Não informado"}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {isEditing && (
+                  {isEditingCompanyData && (
                     <div className="flex gap-2 pt-4">
                       <Button 
                         onClick={handleSave}
@@ -1686,7 +1684,7 @@ export default function Dashboard() {
                       </Button>
                       <Button 
                         variant="outline" 
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => setIsEditingCompanyData(false)}
                         data-testid="button-cancel-company-data"
                       >
                         Cancelar
@@ -1700,14 +1698,6 @@ export default function Dashboard() {
         }
 
         if (configurationSubSection === "whatsapp") {
-          const [whatsappNumber, setWhatsappNumber] = useState((restaurant as any)?.whatsappNumber || "");
-
-          useEffect(() => {
-            if (restaurant) {
-              setWhatsappNumber((restaurant as any)?.whatsappNumber || "");
-            }
-          }, [restaurant]);
-
           const handleSaveWhatsApp = () => {
             if (whatsappNumber.trim()) {
               updateWhatsAppMutation.mutate(whatsappNumber.trim());
