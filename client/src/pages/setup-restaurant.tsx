@@ -45,9 +45,6 @@ export default function SetupRestaurant() {
     email: "",
     senha: "",
     confirmarSenha: "",
-    deliveryFee: "0.00",
-    minDeliveryTime: 20,
-    maxDeliveryTime: 40,
   });
   
   const [isLoadingCep, setIsLoadingCep] = useState(false);
@@ -432,46 +429,6 @@ export default function SetupRestaurant() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryFee">Taxa de Entrega (R$)</Label>
-                  <Input
-                    id="deliveryFee"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.deliveryFee}
-                    onChange={(e) => handleInputChange("deliveryFee", e.target.value)}
-                    data-testid="input-delivery-fee"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="minTime">Tempo Mín. (min)</Label>
-                  <Input
-                    id="minTime"
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={formData.minDeliveryTime}
-                    onChange={(e) => handleInputChange("minDeliveryTime", parseInt(e.target.value))}
-                    data-testid="input-min-time"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxTime">Tempo Máx. (min)</Label>
-                  <Input
-                    id="maxTime"
-                    type="number"
-                    min="10"
-                    max="180"
-                    value={formData.maxDeliveryTime}
-                    onChange={(e) => handleInputChange("maxDeliveryTime", parseInt(e.target.value))}
-                    data-testid="input-max-time"
-                  />
-                </div>
-              </div>
 
               <div className="flex gap-4">
                 <Button

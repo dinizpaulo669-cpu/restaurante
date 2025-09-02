@@ -1044,37 +1044,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rotas para zonas de entrega
-  app.post("/api/delivery-zones", async (req: any, res) => {
+  // Rotas para áreas de atendimento
+  app.post("/api/service-areas", async (req: any, res) => {
     try {
-      const { startZipCode, endZipCode, deliveryFee, minTime, maxTime, restaurantId } = req.body;
+      const { neighborhood, city, state, deliveryFee, restaurantId } = req.body;
       
-      const zoneData = {
+      const areaData = {
         restaurantId,
-        startZipCode,
-        endZipCode,
+        neighborhood,
+        city,
+        state,
         deliveryFee: parseFloat(deliveryFee),
-        minDeliveryTime: parseInt(minTime),
-        maxDeliveryTime: parseInt(maxTime),
         isActive: true
       };
       
-      const zone = await dbStorage.createDeliveryZone(zoneData);
-      res.json(zone);
+      const area = await dbStorage.createServiceArea(areaData);
+      res.json(area);
     } catch (error) {
-      console.error("Error creating delivery zone:", error);
-      res.status(500).json({ message: "Failed to create delivery zone" });
+      console.error("Error creating service area:", error);
+      res.status(500).json({ message: "Failed to create service area" });
     }
   });
 
-  app.get("/api/delivery-zones/:restaurantId", async (req: any, res) => {
+  app.get("/api/service-areas/:restaurantId", async (req: any, res) => {
     try {
       const { restaurantId } = req.params;
-      const zones = await dbStorage.getDeliveryZones(restaurantId);
-      res.json(zones);
+      const areas = await dbStorage.getServiceAreas(restaurantId);
+      res.json(areas);
     } catch (error) {
-      console.error("Error fetching delivery zones:", error);
-      res.status(500).json({ message: "Failed to fetch delivery zones" });
+      console.error("Error fetching service areas:", error);
+      res.status(500).json({ message: "Failed to fetch service areas" });
+    }
+  });
+
+  app.get("/api/neighborhoods/:city/:state", async (req: any, res) => {
+    try {
+      const { city, state } = req.params;
+      const neighborhoods = await dbStorage.getCityNeighborhoods(city, state);
+      res.json(neighborhoods);
+    } catch (error) {
+      console.error("Error fetching neighborhoods:", error);
+      res.status(500).json({ message: "Failed to fetch neighborhoods" });
+    }
+  });
+
+  app.put("/api/service-areas/:id", async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const area = await dbStorage.updateServiceArea(id, updates);
+      res.json(area);
+    } catch (error) {
+      console.error("Error updating service area:", error);
+      res.status(500).json({ message: "Failed to update service area" });
+    }
+  });
+
+  app.delete("/api/service-areas/:id", async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await dbStorage.deleteServiceArea(id);
+      res.json({ message: "Service area deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting service area:", error);
+      res.status(500).json({ message: "Failed to delete service area" });
     }
   });
 

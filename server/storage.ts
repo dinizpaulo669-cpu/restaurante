@@ -9,7 +9,7 @@ import {
   productVariations,
   tables,
   openingHours,
-  deliveryZones,
+  serviceAreas,
   type User,
   type UpsertUser,
   type Restaurant,
@@ -28,8 +28,8 @@ import {
   type InsertTable,
   type OpeningHour,
   type InsertOpeningHour,
-  type DeliveryZone,
-  type InsertDeliveryZone,
+  type ServiceArea,
+  type InsertServiceArea,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, sql } from "drizzle-orm";
@@ -95,11 +95,12 @@ export interface IStorage {
   updateEmployee(id: string, updates: Partial<UpsertUser>): Promise<User>;
   deleteEmployee(id: string): Promise<void>;
   
-  // Delivery zone operations
-  getDeliveryZones(restaurantId: string): Promise<DeliveryZone[]>;
-  createDeliveryZone(zone: InsertDeliveryZone): Promise<DeliveryZone>;
-  updateDeliveryZone(id: string, updates: Partial<InsertDeliveryZone>): Promise<DeliveryZone>;
-  deleteDeliveryZone(id: string): Promise<void>;
+  // Service area operations (substituindo delivery zones)
+  getServiceAreas(restaurantId: string): Promise<ServiceArea[]>;
+  createServiceArea(area: InsertServiceArea): Promise<ServiceArea>;
+  updateServiceArea(id: string, updates: Partial<InsertServiceArea>): Promise<ServiceArea>;
+  deleteServiceArea(id: string): Promise<void>;
+  getCityNeighborhoods(city: string, state: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -469,34 +470,54 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, id));
   }
 
-  // Delivery zone operations
-  async getDeliveryZones(restaurantId: string): Promise<DeliveryZone[]> {
+  // Service area operations (substituindo delivery zones)
+  async getServiceAreas(restaurantId: string): Promise<ServiceArea[]> {
     return await db
       .select()
-      .from(deliveryZones)
-      .where(eq(deliveryZones.restaurantId, restaurantId))
-      .orderBy(deliveryZones.startZipCode);
+      .from(serviceAreas)
+      .where(eq(serviceAreas.restaurantId, restaurantId))
+      .orderBy(serviceAreas.neighborhood);
   }
 
-  async createDeliveryZone(zone: InsertDeliveryZone): Promise<DeliveryZone> {
-    const [newZone] = await db
-      .insert(deliveryZones)
-      .values(zone)
+  async createServiceArea(area: InsertServiceArea): Promise<ServiceArea> {
+    const [newArea] = await db
+      .insert(serviceAreas)
+      .values(area)
       .returning();
-    return newZone;
+    return newArea;
   }
 
-  async updateDeliveryZone(id: string, updates: Partial<InsertDeliveryZone>): Promise<DeliveryZone> {
-    const [zone] = await db
-      .update(deliveryZones)
+  async updateServiceArea(id: string, updates: Partial<InsertServiceArea>): Promise<ServiceArea> {
+    const [area] = await db
+      .update(serviceAreas)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(deliveryZones.id, id))
+      .where(eq(serviceAreas.id, id))
       .returning();
-    return zone;
+    return area;
   }
 
-  async deleteDeliveryZone(id: string): Promise<void> {
-    await db.delete(deliveryZones).where(eq(deliveryZones.id, id));
+  async deleteServiceArea(id: string): Promise<void> {
+    await db.delete(serviceAreas).where(eq(serviceAreas.id, id));
+  }
+
+  // Função para buscar bairros de uma cidade (para listagem)
+  async getCityNeighborhoods(city: string, state: string): Promise<string[]> {
+    // Esta função pode ser expandida no futuro para usar uma API de bairros
+    // Por enquanto retorna bairros exemplo baseados na cidade
+    const neighborhoods = {
+      "São Paulo": [
+        "Centro", "Vila Olímpia", "Jardins", "Moema", "Itaim Bibi", "Pinheiros", 
+        "Vila Madalena", "Bela Vista", "Liberdade", "Brooklin", "Morumbi", 
+        "Santana", "Tatuapé", "Anália Franco", "Vila Mariana", "Ipiranga"
+      ],
+      "Rio de Janeiro": [
+        "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Botafogo", 
+        "Flamengo", "Tijuca", "Centro", "Lapa", "Santa Teresa"
+      ],
+      // Adicione mais cidades conforme necessário
+    };
+    
+    return neighborhoods[city] || [];
   }
 }
 

@@ -209,8 +209,8 @@ export default function Sales() {
                   onClick={() => {
                     // Save selected plan to localStorage
                     localStorage.setItem('selectedPlan', plan.name);
-                    // Redirect to restaurant register
-                    window.location.href = "/restaurant-register";
+                    // Redirect to restaurant setup
+                    window.location.href = "/setup-restaurant";
                   }}
                   className={`w-full py-3 font-semibold transition-colors ${
                     plan.popular
