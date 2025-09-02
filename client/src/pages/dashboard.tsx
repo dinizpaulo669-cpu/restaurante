@@ -1966,21 +1966,50 @@ export default function Dashboard() {
                       
                       <div className="flex gap-2 pt-4">
                         <Button
-                          onClick={() => {
+                          onClick={async () => {
                             if (newUserData.password !== newUserData.confirmPassword) {
-                              alert("As senhas não coincidem");
+                              toast({
+                                title: "Erro",
+                                description: "As senhas não coincidem",
+                                variant: "destructive"
+                              });
                               return;
                             }
-                            // Aqui você implementaria a lógica para salvar o usuário
-                            console.log("Criando usuário:", newUserData);
-                            setIsCreatingUser(false);
-                            setNewUserData({
-                              name: "",
-                              email: "",
-                              password: "",
-                              confirmPassword: "",
-                              permissions: []
-                            });
+                            
+                            try {
+                              const response = await fetch("/api/employees", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  ...newUserData,
+                                  restaurantId: (restaurant as any)?.id
+                                })
+                              });
+                              
+                              if (response.ok) {
+                                toast({
+                                  title: "Sucesso",
+                                  description: "Funcionário criado com sucesso!",
+                                });
+                                setIsCreatingUser(false);
+                                setNewUserData({
+                                  name: "",
+                                  email: "",
+                                  password: "",
+                                  confirmPassword: "",
+                                  permissions: []
+                                });
+                                // Refetch dos funcionários aqui se necessário
+                              } else {
+                                throw new Error("Falha ao criar funcionário");
+                              }
+                            } catch (error) {
+                              toast({
+                                title: "Erro",
+                                description: "Não foi possível criar o funcionário",
+                                variant: "destructive"
+                              });
+                            }
                           }}
                           disabled={!newUserData.name || !newUserData.email || !newUserData.password || newUserData.permissions.length === 0}
                           data-testid="button-save-user"
@@ -2115,9 +2144,36 @@ export default function Dashboard() {
                     </div>
                     
                     <Button
-                      onClick={() => {
-                        // Aqui você implementaria a lógica para salvar a faixa de CEP
-                        console.log("Salvando faixa de CEP:", cepRange);
+                      onClick={async () => {
+                        try {
+                          const response = await fetch("/api/delivery-zones", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              startZipCode: cepRange.start,
+                              endZipCode: cepRange.end,
+                              deliveryFee: cepRange.deliveryFee,
+                              minTime: cepRange.minTime,
+                              maxTime: cepRange.maxTime,
+                              restaurantId: (restaurant as any)?.id
+                            })
+                          });
+                          
+                          if (response.ok) {
+                            toast({
+                              title: "Sucesso",
+                              description: "Faixa de CEP configurada com sucesso!",
+                            });
+                          } else {
+                            throw new Error("Falha ao salvar faixa de CEP");
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Erro",
+                            description: "Não foi possível salvar a configuração de CEP",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                       disabled={!cepRange.start || !cepRange.end}
                       className="w-full"

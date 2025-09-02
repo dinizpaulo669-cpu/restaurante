@@ -9,6 +9,7 @@ import {
   productVariations,
   tables,
   openingHours,
+  deliveryZones,
   type User,
   type UpsertUser,
   type Restaurant,
@@ -27,6 +28,8 @@ import {
   type InsertTable,
   type OpeningHour,
   type InsertOpeningHour,
+  type DeliveryZone,
+  type InsertDeliveryZone,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, sql } from "drizzle-orm";
@@ -85,6 +88,18 @@ export interface IStorage {
   updateOpeningHour(id: string, updates: Partial<InsertOpeningHour>): Promise<OpeningHour>;
   deleteOpeningHour(id: string): Promise<void>;
   upsertOpeningHours(restaurantId: string, hours: InsertOpeningHour[]): Promise<OpeningHour[]>;
+  
+  // Employee operations
+  createEmployee(employee: UpsertUser): Promise<User>;
+  getEmployees(restaurantId: string): Promise<User[]>;
+  updateEmployee(id: string, updates: Partial<UpsertUser>): Promise<User>;
+  deleteEmployee(id: string): Promise<void>;
+  
+  // Delivery zone operations
+  getDeliveryZones(restaurantId: string): Promise<DeliveryZone[]>;
+  createDeliveryZone(zone: InsertDeliveryZone): Promise<DeliveryZone>;
+  updateDeliveryZone(id: string, updates: Partial<InsertDeliveryZone>): Promise<DeliveryZone>;
+  deleteDeliveryZone(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -420,6 +435,68 @@ export class DatabaseStorage implements IStorage {
       return await db.insert(openingHours).values(hours).returning();
     }
     return [];
+  }
+
+  // Employee operations
+  async createEmployee(employee: UpsertUser): Promise<User> {
+    const [newEmployee] = await db
+      .insert(users)
+      .values({
+        ...employee,
+        role: "employee"
+      })
+      .returning();
+    return newEmployee;
+  }
+
+  async getEmployees(restaurantId: string): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(eq(users.role, "employee"), eq(users.restaurantId, restaurantId)));
+  }
+
+  async updateEmployee(id: string, updates: Partial<UpsertUser>): Promise<User> {
+    const [employee] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return employee;
+  }
+
+  async deleteEmployee(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  // Delivery zone operations
+  async getDeliveryZones(restaurantId: string): Promise<DeliveryZone[]> {
+    return await db
+      .select()
+      .from(deliveryZones)
+      .where(eq(deliveryZones.restaurantId, restaurantId))
+      .orderBy(deliveryZones.startZipCode);
+  }
+
+  async createDeliveryZone(zone: InsertDeliveryZone): Promise<DeliveryZone> {
+    const [newZone] = await db
+      .insert(deliveryZones)
+      .values(zone)
+      .returning();
+    return newZone;
+  }
+
+  async updateDeliveryZone(id: string, updates: Partial<InsertDeliveryZone>): Promise<DeliveryZone> {
+    const [zone] = await db
+      .update(deliveryZones)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(deliveryZones.id, id))
+      .returning();
+    return zone;
+  }
+
+  async deleteDeliveryZone(id: string): Promise<void> {
+    await db.delete(deliveryZones).where(eq(deliveryZones.id, id));
   }
 }
 

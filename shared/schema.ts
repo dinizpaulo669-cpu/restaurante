@@ -31,12 +31,16 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default("customer"), // "customer" | "restaurant_owner"
+  role: varchar("role").notNull().default("customer"), // "customer" | "restaurant_owner" | "employee"
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionPlan: varchar("subscription_plan").default("trial"), // "trial" | "basic" | "pro" | "enterprise"
   trialEndsAt: timestamp("trial_ends_at"),
   isTrialActive: boolean("is_trial_active").default(true),
+  // Campos específicos para funcionários
+  restaurantId: varchar("restaurant_id").references(() => restaurants.id), // Apenas para funcionários
+  permissions: text("permissions").array(), // Permissões do funcionário
+  password: varchar("password"), // Senha local para funcionários
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -319,3 +323,33 @@ export const insertOpeningHoursSchema = createInsertSchema(openingHours).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+// Configurações de CEP para entrega
+export const deliveryZones = pgTable("delivery_zones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  startZipCode: varchar("start_zip_code").notNull(),
+  endZipCode: varchar("end_zip_code").notNull(),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull(),
+  minDeliveryTime: integer("min_delivery_time").notNull(), // em minutos
+  maxDeliveryTime: integer("max_delivery_time").notNull(), // em minutos
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations para delivery zones
+export const deliveryZonesRelations = relations(deliveryZones, ({ one }) => ({
+  restaurant: one(restaurants, { fields: [deliveryZones.restaurantId], references: [restaurants.id] }),
+}));
+
+// Insert schema para delivery zones
+export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Tipos para delivery zones
+export type DeliveryZone = typeof deliveryZones.$inferSelect;
+export type InsertDeliveryZone = z.infer<typeof insertDeliveryZoneSchema>;

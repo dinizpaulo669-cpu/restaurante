@@ -1010,6 +1010,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Rotas para funcionários
+  app.post("/api/employees", async (req: any, res) => {
+    try {
+      const { name, email, password, permissions, restaurantId } = req.body;
+      
+      const employeeData = {
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ').slice(1).join(' '),
+        email,
+        password, // Em produção seria necessário hash
+        restaurantId,
+        permissions,
+        role: "employee" as const
+      };
+      
+      const employee = await dbStorage.createEmployee(employeeData);
+      res.json(employee);
+    } catch (error) {
+      console.error("Error creating employee:", error);
+      res.status(500).json({ message: "Failed to create employee" });
+    }
+  });
+
+  app.get("/api/employees/:restaurantId", async (req: any, res) => {
+    try {
+      const { restaurantId } = req.params;
+      const employees = await dbStorage.getEmployees(restaurantId);
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
+  // Rotas para zonas de entrega
+  app.post("/api/delivery-zones", async (req: any, res) => {
+    try {
+      const { startZipCode, endZipCode, deliveryFee, minTime, maxTime, restaurantId } = req.body;
+      
+      const zoneData = {
+        restaurantId,
+        startZipCode,
+        endZipCode,
+        deliveryFee: parseFloat(deliveryFee),
+        minDeliveryTime: parseInt(minTime),
+        maxDeliveryTime: parseInt(maxTime),
+        isActive: true
+      };
+      
+      const zone = await dbStorage.createDeliveryZone(zoneData);
+      res.json(zone);
+    } catch (error) {
+      console.error("Error creating delivery zone:", error);
+      res.status(500).json({ message: "Failed to create delivery zone" });
+    }
+  });
+
+  app.get("/api/delivery-zones/:restaurantId", async (req: any, res) => {
+    try {
+      const { restaurantId } = req.params;
+      const zones = await dbStorage.getDeliveryZones(restaurantId);
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching delivery zones:", error);
+      res.status(500).json({ message: "Failed to fetch delivery zones" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
