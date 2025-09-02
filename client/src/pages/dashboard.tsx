@@ -311,6 +311,71 @@ export default function Dashboard() {
     },
   });
 
+  // Upload mutations moved here to avoid hooks order issues
+  const uploadLogoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      const response = await fetch('/api/dev/restaurants/logo', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload do logo');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Logo atualizado!",
+        description: "O logo foi enviado e atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível fazer upload do logo. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const uploadBannerMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('banner', file);
+      
+      const response = await fetch('/api/dev/restaurants/banner', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload do banner');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Banner atualizado!",
+        description: "O banner foi enviado e atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível fazer upload do banner. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers para mesas
   const handleCreateTable = (formData: any) => {
     createTableMutation.mutate(formData);
@@ -1291,37 +1356,6 @@ export default function Dashboard() {
     }
 
     if (activeSection === "logo") {
-      const uploadLogoMutation = useMutation({
-        mutationFn: async (file: File) => {
-          const formData = new FormData();
-          formData.append('logo', file);
-          
-          const response = await fetch('/api/dev/restaurants/logo', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            throw new Error('Falha ao fazer upload do logo');
-          }
-          
-          return response.json();
-        },
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
-          toast({
-            title: "Logo atualizado!",
-            description: "O logo foi enviado e atualizado com sucesso.",
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Erro no upload",
-            description: "Não foi possível fazer upload do logo. Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
 
       const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -1395,7 +1429,7 @@ export default function Dashboard() {
                   <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
                     {(restaurant as any)?.logoUrl ? (
                       <img 
-                        src={(restaurant as any).logoUrl} 
+                        src={`${(restaurant as any).logoUrl}?t=${Date.now()}`}
                         alt="Logo do restaurante" 
                         className="max-w-full max-h-48 object-contain"
                         onError={(e) => {
@@ -1419,37 +1453,6 @@ export default function Dashboard() {
     }
 
     if (activeSection === "banner") {
-      const uploadBannerMutation = useMutation({
-        mutationFn: async (file: File) => {
-          const formData = new FormData();
-          formData.append('banner', file);
-          
-          const response = await fetch('/api/dev/restaurants/banner', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            throw new Error('Falha ao fazer upload do banner');
-          }
-          
-          return response.json();
-        },
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
-          toast({
-            title: "Banner atualizado!",
-            description: "O banner foi enviado e atualizado com sucesso.",
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Erro no upload",
-            description: "Não foi possível fazer upload do banner. Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
 
       const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -1525,7 +1528,7 @@ export default function Dashboard() {
                     {(restaurant as any)?.bannerUrl ? (
                       <div className="relative h-48 w-full">
                         <img 
-                          src={(restaurant as any).bannerUrl} 
+                          src={`${(restaurant as any).bannerUrl}?t=${Date.now()}`}
                           alt="Banner do restaurante" 
                           className="w-full h-full object-cover"
                           onError={(e) => {
