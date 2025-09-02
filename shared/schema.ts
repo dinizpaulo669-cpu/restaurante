@@ -38,7 +38,7 @@ export const users = pgTable("users", {
   trialEndsAt: timestamp("trial_ends_at"),
   isTrialActive: boolean("is_trial_active").default(true),
   // Campos específicos para funcionários
-  restaurantId: varchar("restaurant_id").references(() => restaurants.id), // Apenas para funcionários
+  restaurantId: varchar("restaurant_id"), // Apenas para funcionários - reference will be added later
   permissions: text("permissions").array(), // Permissões do funcionário
   password: varchar("password"), // Senha local para funcionários
   createdAt: timestamp("created_at").defaultNow(),
