@@ -46,22 +46,22 @@ export default function Landing() {
                 Traga seu Restaurante
               </Link>
             </nav>
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button 
-                  variant="ghost" 
-                  className="text-muted-foreground hover:text-foreground"
-                  data-testid="button-login"
-                >
-                  Entrar
-                </Button>
-              </Link>
+            <div className="flex items-center space-x-4 ml-auto">
               <Link href="/register">
                 <Button 
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  variant="outline"
+                  className="text-muted-foreground hover:text-foreground border-muted-foreground"
                   data-testid="button-register"
                 >
                   Cadastrar
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button 
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  data-testid="button-login"
+                >
+                  Entrar
                 </Button>
               </Link>
             </div>

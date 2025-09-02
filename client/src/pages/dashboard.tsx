@@ -199,6 +199,43 @@ export default function Dashboard() {
     },
   });
 
+  // Mutations para configurações - movidas para o topo para evitar erro de hooks
+  const updateCompanyDataMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("PUT", "/api/dev/restaurant/company-data", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Dados atualizados!",
+        description: "Os dados da empresa foram atualizados com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar os dados. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateWhatsAppMutation = useMutation({
+    mutationFn: (whatsappNumber: string) => apiRequest("PUT", "/api/dev/restaurant/whatsapp", { whatsappNumber }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "WhatsApp configurado!",
+        description: "O número do WhatsApp foi configurado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao configurar",
+        description: "Não foi possível configurar o WhatsApp. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutations para atualizar informações do restaurante
   const updateAboutMutation = useMutation({
     mutationFn: (description: string) => apiRequest("PUT", "/api/dev/restaurant/about", { description }),
@@ -1501,41 +1538,6 @@ export default function Dashboard() {
     }
 
     if (activeSection === "configuracoes") {
-      const updateCompanyDataMutation = useMutation({
-        mutationFn: (data: any) => apiRequest("PUT", "/api/dev/restaurant/company-data", data),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
-          toast({
-            title: "Dados atualizados!",
-            description: "Os dados da empresa foram atualizados com sucesso.",
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Erro ao atualizar",
-            description: "Não foi possível atualizar os dados. Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
-
-      const updateWhatsAppMutation = useMutation({
-        mutationFn: (whatsappNumber: string) => apiRequest("PUT", "/api/dev/restaurant/whatsapp", { whatsappNumber }),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
-          toast({
-            title: "WhatsApp configurado!",
-            description: "O número do WhatsApp foi configurado com sucesso.",
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Erro ao configurar",
-            description: "Não foi possível configurar o WhatsApp. Tente novamente.",
-            variant: "destructive",
-          });
-        },
-      });
 
       const renderConfigurationContent = () => {
         if (configurationSubSection === "dados-empresa") {
