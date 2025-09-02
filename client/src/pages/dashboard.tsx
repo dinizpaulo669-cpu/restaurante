@@ -86,6 +86,25 @@ export default function Dashboard() {
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [selectedSeoCategories, setSelectedSeoCategories] = useState<string[]>([]);
+  
+  // Estados para gerenciamento de usuários
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    permissions: [] as string[]
+  });
+  
+  // Estados para configuração de CEP
+  const [cepRange, setCepRange] = useState({
+    start: "",
+    end: "",
+    deliveryFee: "",
+    minTime: "",
+    maxTime: ""
+  });
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -1837,6 +1856,299 @@ export default function Dashboard() {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+          );
+        }
+
+        if (configurationSubSection === "usuarios") {
+          return (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold">Gerenciar Usuários</h3>
+                <Button
+                  onClick={() => setIsCreatingUser(!isCreatingUser)}
+                  data-testid="button-new-user"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </div>
+              
+              {isCreatingUser && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Criar Novo Funcionário</h4>
+                    
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Nome Completo</label>
+                          <input
+                            type="text"
+                            value={newUserData.name}
+                            onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full p-3 border rounded-lg"
+                            placeholder="Nome do funcionário"
+                            data-testid="input-user-name"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Email</label>
+                          <input
+                            type="email"
+                            value={newUserData.email}
+                            onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                            className="w-full p-3 border rounded-lg"
+                            placeholder="email@exemplo.com"
+                            data-testid="input-user-email"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Senha</label>
+                          <input
+                            type="password"
+                            value={newUserData.password}
+                            onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+                            className="w-full p-3 border rounded-lg"
+                            placeholder="Senha do funcionário"
+                            data-testid="input-user-password"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Confirmar Senha</label>
+                          <input
+                            type="password"
+                            value={newUserData.confirmPassword}
+                            onChange={(e) => setNewUserData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                            className="w-full p-3 border rounded-lg"
+                            placeholder="Confirme a senha"
+                            data-testid="input-user-confirm-password"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Permissões de Acesso</label>
+                        <p className="text-muted-foreground mb-3 text-sm">
+                          Selecione quais seções o funcionário poderá acessar no sistema
+                        </p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {["home", "produtos", "vendas", "mesas", "horarios", "configuracoes"].map((permission) => (
+                            <label key={permission} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={newUserData.permissions.includes(permission)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewUserData(prev => ({
+                                      ...prev,
+                                      permissions: [...prev.permissions, permission]
+                                    }));
+                                  } else {
+                                    setNewUserData(prev => ({
+                                      ...prev,
+                                      permissions: prev.permissions.filter(p => p !== permission)
+                                    }));
+                                  }
+                                }}
+                                className="rounded"
+                                data-testid={`checkbox-permission-${permission}`}
+                              />
+                              <span className="capitalize">{permission === "home" ? "Dashboard" : permission}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          onClick={() => {
+                            if (newUserData.password !== newUserData.confirmPassword) {
+                              alert("As senhas não coincidem");
+                              return;
+                            }
+                            // Aqui você implementaria a lógica para salvar o usuário
+                            console.log("Criando usuário:", newUserData);
+                            setIsCreatingUser(false);
+                            setNewUserData({
+                              name: "",
+                              email: "",
+                              password: "",
+                              confirmPassword: "",
+                              permissions: []
+                            });
+                          }}
+                          disabled={!newUserData.name || !newUserData.email || !newUserData.password || newUserData.permissions.length === 0}
+                          data-testid="button-save-user"
+                        >
+                          Criar Funcionário
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsCreatingUser(false)}
+                          data-testid="button-cancel-user"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h4 className="text-lg font-semibold mb-4">Funcionários Cadastrados</h4>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h5 className="font-medium">Administrador</h5>
+                        <p className="text-sm text-muted-foreground">{(user as any)?.email}</p>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="secondary" className="text-xs">Acesso Total</Badge>
+                        </div>
+                      </div>
+                      <Badge variant="outline">Owner</Badge>
+                    </div>
+                    
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Nenhum funcionário cadastrado ainda</p>
+                      <p className="text-sm">Clique em "Novo Usuário" para criar o primeiro funcionário</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        }
+
+        if (configurationSubSection === "cep") {
+          return (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Faixa de CEP</h3>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h4 className="text-lg font-semibold mb-4">Configurar Área de Entrega</h4>
+                  <p className="text-muted-foreground mb-4">
+                    Defina a faixa de CEP que seu restaurante atende para entregas. Os clientes só poderão fazer pedidos dentro desta área.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">CEP Inicial</label>
+                        <input
+                          type="text"
+                          value={cepRange.start}
+                          onChange={(e) => setCepRange(prev => ({ ...prev, start: e.target.value }))}
+                          placeholder="00000-000"
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-cep-start"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          CEP menor da sua área de entrega
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">CEP Final</label>
+                        <input
+                          type="text"
+                          value={cepRange.end}
+                          onChange={(e) => setCepRange(prev => ({ ...prev, end: e.target.value }))}
+                          placeholder="99999-999"
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-cep-end"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          CEP maior da sua área de entrega
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Taxa de Entrega</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cepRange.deliveryFee}
+                        onChange={(e) => setCepRange(prev => ({ ...prev, deliveryFee: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full p-3 border rounded-lg"
+                        data-testid="input-delivery-fee"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Valor da taxa de entrega em R$ para esta área
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Tempo de Entrega (minutos)</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input
+                          type="number"
+                          value={cepRange.minTime}
+                          onChange={(e) => setCepRange(prev => ({ ...prev, minTime: e.target.value }))}
+                          placeholder="30"
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-min-time"
+                        />
+                        <input
+                          type="number"
+                          value={cepRange.maxTime}
+                          onChange={(e) => setCepRange(prev => ({ ...prev, maxTime: e.target.value }))}
+                          placeholder="60"
+                          className="w-full p-3 border rounded-lg"
+                          data-testid="input-max-time"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tempo mínimo e máximo de entrega para esta área
+                      </p>
+                    </div>
+                    
+                    <Button
+                      onClick={() => {
+                        // Aqui você implementaria a lógica para salvar a faixa de CEP
+                        console.log("Salvando faixa de CEP:", cepRange);
+                      }}
+                      disabled={!cepRange.start || !cepRange.end}
+                      className="w-full"
+                      data-testid="button-save-cep"
+                    >
+                      Salvar Configurações de CEP
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {cepRange.start && cepRange.end && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Área de Entrega Configurada</h4>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">📍</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">Área de Entrega: {cepRange.start} - {cepRange.end}</p>
+                          <p className="text-sm text-green-700 mt-1">
+                            Taxa: R$ {cepRange.deliveryFee} | Tempo: {cepRange.minTime}-{cepRange.maxTime} minutos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           );
         }
