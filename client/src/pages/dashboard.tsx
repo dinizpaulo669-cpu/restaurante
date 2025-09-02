@@ -85,6 +85,7 @@ export default function Dashboard() {
     email: "",
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [selectedSeoCategories, setSelectedSeoCategories] = useState<string[]>([]);
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
@@ -1768,6 +1769,74 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+          );
+        }
+
+        if (configurationSubSection === "seo") {
+          const seoCategories = [
+            "Lanches", "Hotdog", "Pastel", "Sorvetes", "Doces", 
+            "Almoço", "Açai", "Bebidas"
+          ];
+          
+          const toggleCategory = (category: string) => {
+            setSelectedSeoCategories(prev => 
+              prev.includes(category) 
+                ? prev.filter(c => c !== category)
+                : [...prev, category]
+            );
+          };
+
+          return (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Configurar SEO</h3>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h4 className="text-lg font-semibold mb-4">Categorias do Restaurante</h4>
+                  <p className="text-muted-foreground mb-4">
+                    Selecione as categorias que seu restaurante atende para melhorar a visibilidade nos resultados de busca.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {seoCategories.map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => toggleCategory(category)}
+                        className={`p-3 rounded-lg border text-center transition-colors ${
+                          selectedSeoCategories.includes(category)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border hover:bg-muted"
+                        }`}
+                        data-testid={`category-${category.toLowerCase()}`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {selectedSeoCategories.length > 0 && (
+                    <div className="mt-6">
+                      <h5 className="font-medium mb-2">Categorias Selecionadas:</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSeoCategories.map((category) => (
+                          <Badge key={category} variant="secondary">
+                            {category}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    className="w-full mt-6"
+                    disabled={selectedSeoCategories.length === 0}
+                    data-testid="button-save-seo"
+                  >
+                    Salvar Configurações de SEO
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           );
         }

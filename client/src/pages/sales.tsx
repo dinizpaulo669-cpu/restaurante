@@ -97,7 +97,14 @@ export default function Sales() {
               <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Botão removido conforme solicitado */}
+              <Button 
+                variant="outline"
+                onClick={() => window.location.href = "/login"}
+                data-testid="button-header-login"
+                className="bg-transparent border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                Entrar
+              </Button>
             </div>
           </div>
         </div>
@@ -167,17 +174,6 @@ export default function Sales() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-8" data-testid="pricing-title">Escolha seu plano</h2>
-          <div className="text-center mb-12">
-            <p className="text-muted-foreground mb-4">Já tem cadastro no RestaurantePro?</p>
-            <Button 
-              variant="outline"
-              onClick={() => window.location.href = "/login"}
-              data-testid="button-existing-login"
-              className="bg-transparent border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-            >
-              Entrar
-            </Button>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((plan) => (
               <div
