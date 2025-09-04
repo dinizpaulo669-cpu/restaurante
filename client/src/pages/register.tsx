@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Home } from "lucide-react";
+import { User, Mail, Phone, MapPin, Home, Lock } from "lucide-react";
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -14,6 +14,8 @@ export default function Register() {
     name: "",
     email: "",
     phone: "",
+    senha: "",
+    confirmarSenha: "",
     cep: "",
     rua: "",
     numero: "",
@@ -28,10 +30,28 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone || !formData.cep || !formData.rua || !formData.numero) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.senha || !formData.confirmarSenha || !formData.cep || !formData.rua || !formData.numero) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha nome, email, telefone, CEP, rua e número",
+        description: "Por favor, preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.senha.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.senha !== formData.confirmarSenha) {
+      toast({
+        title: "Senhas não coincidem",
+        description: "A confirmação de senha deve ser igual à senha",
         variant: "destructive",
       });
       return;
@@ -170,6 +190,46 @@ export default function Register() {
                     className="pl-10"
                     data-testid="input-phone"
                   />
+                </div>
+              </div>
+
+              {/* Campos de Senha */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <Lock className="mr-2 h-5 w-5 text-primary" />
+                  Criar Senha
+                </h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="senha" className="text-sm font-medium">Senha *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="senha"
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={formData.senha}
+                      onChange={(e) => handleInputChange("senha", e.target.value)}
+                      className="pl-10"
+                      data-testid="input-senha"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmarSenha" className="text-sm font-medium">Confirmar Senha *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="confirmarSenha"
+                      type="password"
+                      placeholder="Digite a senha novamente"
+                      value={formData.confirmarSenha}
+                      onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
+                      className="pl-10"
+                      data-testid="input-confirmar-senha"
+                    />
+                  </div>
                 </div>
               </div>
 
