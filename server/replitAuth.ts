@@ -145,8 +145,8 @@ export async function setupAuth(app: Express) {
     // Usar 127.0.0.1 para localhost e desenvolvimento local
     const hostname = req.hostname === 'localhost' ? '127.0.0.1' : req.hostname;
     passport.authenticate(`replitauth:${hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+      successReturnToOrRedirect: "/auth-callback",
+      failureRedirect: "/login",
     })(req, res, next);
   });
 

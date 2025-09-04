@@ -1,13 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { LogIn } from "lucide-react";
+import { LogIn, User, Store } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [selectedUserType, setSelectedUserType] = useState<"customer" | "restaurant_owner" | "">("");
 
   // Redirecionar usuários já autenticados
   useEffect(() => {
@@ -21,6 +22,13 @@ export default function Login() {
   }, [isAuthenticated, user, setLocation]);
 
   const handleLogin = () => {
+    if (!selectedUserType) {
+      return;
+    }
+    
+    // Salvar tipo selecionado no localStorage para usar após o login
+    localStorage.setItem('selectedUserType', selectedUserType);
+    
     // Redirecionar para a rota de autenticação Replit
     window.location.href = "/api/login";
   };
@@ -42,20 +50,62 @@ export default function Login() {
               Entrar
             </CardTitle>
             <p className="text-muted-foreground" data-testid="login-subtitle">
-              Acesse sua conta no RestaurantePro
+              Como você vai usar o RestaurantePro?
             </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="text-center space-y-2">
-                <p className="text-muted-foreground">
-                  Faça login com sua conta Replit para acessar o RestaurantePro
-                </p>
+              {/* Seleção de tipo de usuário */}
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-center">Selecione uma opção:</p>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  <Card 
+                    className={`cursor-pointer transition-all ${
+                      selectedUserType === "customer" 
+                        ? "ring-2 ring-primary bg-primary/5" 
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => setSelectedUserType("customer")}
+                    data-testid="card-customer-type"
+                  >
+                    <CardContent className="p-4 flex items-center space-x-3">
+                      <User className="h-6 w-6 text-primary" />
+                      <div className="flex-1">
+                        <h3 className="font-medium">Sou Cliente</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Quero pedir comida dos restaurantes
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className={`cursor-pointer transition-all ${
+                      selectedUserType === "restaurant_owner" 
+                        ? "ring-2 ring-primary bg-primary/5" 
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => setSelectedUserType("restaurant_owner")}
+                    data-testid="card-restaurant-type"
+                  >
+                    <CardContent className="p-4 flex items-center space-x-3">
+                      <Store className="h-6 w-6 text-primary" />
+                      <div className="flex-1">
+                        <h3 className="font-medium">Sou Dono de Restaurante</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Quero gerenciar meu restaurante
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
               <Button
                 onClick={handleLogin}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={!selectedUserType}
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
                 data-testid="button-login"
               >
                 <LogIn className="mr-2 h-4 w-4" />

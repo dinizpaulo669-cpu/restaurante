@@ -14,6 +14,7 @@ import RestaurantPanel from "@/pages/restaurant-panel";
 import Dashboard from "@/pages/dashboard";
 import Menu from "@/pages/menu";
 import SetupRestaurant from "@/pages/setup-restaurant";
+import AuthCallback from "@/pages/auth-callback";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/auth-callback" component={AuthCallback} />
       <Route path="/customer-panel" component={CustomerPanel} />
       <Route path="/sales" component={Sales} />
       <Route path="/restaurant-register" component={RestaurantRegister} />
