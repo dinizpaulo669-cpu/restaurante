@@ -10,9 +10,13 @@ export default function Login() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [selectedUserType, setSelectedUserType] = useState<"customer" | "restaurant_owner" | "">("");
 
-  // Redirecionar usuários já autenticados
+  // Redirecionar usuários já autenticados apenas se não estão testando
   useEffect(() => {
-    if (isAuthenticated && user) {
+    // Verificar se há um parâmetro na URL para mostrar a página mesmo logado
+    const urlParams = new URLSearchParams(window.location.search);
+    const showLoginPage = urlParams.get('show') === 'true';
+    
+    if (isAuthenticated && user && !showLoginPage) {
       if ((user as any)?.role === "restaurant_owner") {
         setLocation("/dashboard");
       } else {
@@ -55,6 +59,23 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Aviso se já está logado */}
+              {isAuthenticated && user && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-yellow-800 mb-2">
+                    Você já está logado como: <strong>{(user as any)?.role === "restaurant_owner" ? "Dono de Restaurante" : "Cliente"}</strong>
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = "/api/logout"}
+                    className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+                  >
+                    Fazer Logout
+                  </Button>
+                </div>
+              )}
+
               {/* Seleção de tipo de usuário */}
               <div className="space-y-3">
                 <p className="text-sm font-medium text-center">Selecione uma opção:</p>
