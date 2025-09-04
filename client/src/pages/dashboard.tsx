@@ -2061,153 +2061,203 @@ export default function Dashboard() {
         }
 
         if (configurationSubSection === "cep") {
+          const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
+          const [serviceAreas, setServiceAreas] = useState<any[]>([]);
+          const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+          const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
+
+          // Extrair cidade e estado do endereço do restaurante
+          const extractCityState = (address: string) => {
+            // Formato esperado: "Rua, Número - Bairro, Cidade - Estado, CEP: xxxxx"
+            try {
+              const parts = address.split('-');
+              if (parts.length >= 2) {
+                const cityStatePart = parts[1].trim(); // "Cidade - Estado, CEP: xxxxx"
+                const cityStateOnly = cityStatePart.split(',')[0]; // "Cidade - Estado"
+                const [city, state] = cityStateOnly.split('-').map(s => s.trim());
+                return { city, state };
+              }
+            } catch (error) {
+              console.error('Erro ao extrair cidade/estado:', error);
+            }
+            return { city: '', state: '' };
+          };
+
+          const { city, state } = restaurant ? extractCityState((restaurant as any).address) : { city: '', state: '' };
+
+          // Buscar bairros da cidade quando o componente carregar
+          useEffect(() => {
+            if (city && state) {
+              setLoadingNeighborhoods(true);
+              fetch(`/api/neighborhoods/${encodeURIComponent(city)}/${encodeURIComponent(state)}`)
+                .then(res => res.json())
+                .then(data => {
+                  setNeighborhoods(data);
+                  setLoadingNeighborhoods(false);
+                })
+                .catch(error => {
+                  console.error('Erro ao buscar bairros:', error);
+                  setLoadingNeighborhoods(false);
+                });
+            }
+          }, [city, state]);
+
+          // Buscar áreas de serviço existentes
+          useEffect(() => {
+            if ((restaurant as any)?.id) {
+              fetch(`/api/service-areas/${(restaurant as any).id}`)
+                .then(res => res.json())
+                .then(data => {
+                  setServiceAreas(data);
+                  // Preencher selectedNeighborhoods com dados existentes
+                  const existing: {[key: string]: {selected: boolean, fee: string}} = {};
+                  data.forEach((area: any) => {
+                    existing[area.neighborhood] = {
+                      selected: area.isActive,
+                      fee: area.deliveryFee
+                    };
+                  });
+                  setSelectedNeighborhoods(existing);
+                })
+                .catch(error => console.error('Erro ao buscar áreas de serviço:', error));
+            }
+          }, [(restaurant as any)?.id]);
+
+          const handleNeighborhoodChange = (neighborhood: string, field: 'selected' | 'fee', value: boolean | string) => {
+            setSelectedNeighborhoods(prev => ({
+              ...prev,
+              [neighborhood]: {
+                ...prev[neighborhood],
+                [field]: value
+              }
+            }));
+          };
+
+          const saveServiceAreas = async () => {
+            if (!(restaurant as any)?.id || !city || !state) return;
+
+            try {
+              // Primeiro, remover todas as áreas existentes
+              await Promise.all(serviceAreas.map((area: any) => 
+                fetch(`/api/service-areas/${area.id}`, { method: 'DELETE' })
+              ));
+
+              // Depois, criar as novas áreas selecionadas
+              const promises = Object.entries(selectedNeighborhoods)
+                .filter(([_, config]) => config.selected && parseFloat(config.fee) >= 0)
+                .map(([neighborhood, config]) => 
+                  fetch('/api/service-areas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      restaurantId: (restaurant as any).id,
+                      neighborhood,
+                      city,
+                      state,
+                      deliveryFee: config.fee,
+                      isActive: true
+                    })
+                  })
+                );
+
+              await Promise.all(promises);
+
+              toast({
+                title: "Sucesso",
+                description: "Área de atendimento configurada com sucesso!",
+              });
+            } catch (error) {
+              toast({
+                title: "Erro", 
+                description: "Não foi possível salvar a configuração",
+                variant: "destructive"
+              });
+            }
+          };
+
           return (
             <div className="space-y-6">
               <h3 className="text-xl font-semibold">Área de Atendimento</h3>
               
               <Card>
                 <CardContent className="p-6">
-                  <h4 className="text-lg font-semibold mb-4">Configurar Área de Entrega</h4>
+                  <h4 className="text-lg font-semibold mb-4">Configurar Bairros de Entrega</h4>
                   <p className="text-muted-foreground mb-4">
-                    Defina a área que seu restaurante atende para entregas. Os clientes só poderão fazer pedidos dentro desta área.
+                    Selecione os bairros que seu restaurante atende e defina a taxa de entrega para cada um.
                   </p>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">CEP Inicial</label>
-                        <input
-                          type="text"
-                          value={cepRange.start}
-                          onChange={(e) => setCepRange(prev => ({ ...prev, start: e.target.value }))}
-                          placeholder="00000-000"
-                          className="w-full p-3 border rounded-lg"
-                          data-testid="input-cep-start"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          CEP inicial da sua área de atendimento
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-2">CEP Final</label>
-                        <input
-                          type="text"
-                          value={cepRange.end}
-                          onChange={(e) => setCepRange(prev => ({ ...prev, end: e.target.value }))}
-                          placeholder="99999-999"
-                          className="w-full p-3 border rounded-lg"
-                          data-testid="input-cep-end"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          CEP final da sua área de atendimento
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Taxa de Entrega</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={cepRange.deliveryFee}
-                        onChange={(e) => setCepRange(prev => ({ ...prev, deliveryFee: e.target.value }))}
-                        placeholder="0.00"
-                        className="w-full p-3 border rounded-lg"
-                        data-testid="input-delivery-fee"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Valor da taxa de entrega em R$ para esta área
+
+                  {!city || !state ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Não foi possível extrair a cidade do endereço do restaurante.
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Endereço atual: {(restaurant as any)?.address}
                       </p>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Tempo de Entrega (minutos)</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <input
-                          type="number"
-                          value={cepRange.minTime}
-                          onChange={(e) => setCepRange(prev => ({ ...prev, minTime: e.target.value }))}
-                          placeholder="30"
-                          className="w-full p-3 border rounded-lg"
-                          data-testid="input-min-time"
-                        />
-                        <input
-                          type="number"
-                          value={cepRange.maxTime}
-                          onChange={(e) => setCepRange(prev => ({ ...prev, maxTime: e.target.value }))}
-                          placeholder="60"
-                          className="w-full p-3 border rounded-lg"
-                          data-testid="input-max-time"
-                        />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>📍</span>
+                        <span>Bairros de {city} - {state}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Tempo mínimo e máximo de entrega para esta área
-                      </p>
-                    </div>
-                    
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const response = await fetch("/api/delivery-zones", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              startZipCode: cepRange.start,
-                              endZipCode: cepRange.end,
-                              deliveryFee: cepRange.deliveryFee,
-                              minTime: cepRange.minTime,
-                              maxTime: cepRange.maxTime,
-                              restaurantId: (restaurant as any)?.id
-                            })
-                          });
-                          
-                          if (response.ok) {
-                            toast({
-                              title: "Sucesso",
-                              description: "Área de atendimento configurada com sucesso!",
-                            });
-                          } else {
-                            throw new Error("Falha ao salvar faixa de CEP");
-                          }
-                        } catch (error) {
-                          toast({
-                            title: "Erro",
-                            description: "Não foi possível salvar a configuração de CEP",
-                            variant: "destructive"
-                          });
-                        }
-                      }}
-                      disabled={!cepRange.start || !cepRange.end}
-                      className="w-full"
-                      data-testid="button-save-cep"
-                    >
-                      Salvar Configurações de CEP
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {cepRange.start && cepRange.end && (
-                <Card>
-                  <CardContent className="p-6">
-                    <h4 className="text-lg font-semibold mb-4">Área de Entrega Configurada</h4>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">📍</span>
+
+                      {loadingNeighborhoods ? (
+                        <div className="text-center py-8">
+                          <p>Carregando bairros...</p>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium">Área de Entrega: {cepRange.start} - {cepRange.end}</p>
-                          <p className="text-sm text-green-700 mt-1">
-                            Taxa: R$ {cepRange.deliveryFee} | Tempo: {cepRange.minTime}-{cepRange.maxTime} minutos
+                      ) : neighborhoods.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">
+                            Nenhum bairro encontrado para {city}.
                           </p>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {neighborhoods.map(neighborhood => (
+                            <div key={neighborhood} className="flex items-center gap-4 p-3 border rounded-lg">
+                              <input
+                                type="checkbox"
+                                checked={selectedNeighborhoods[neighborhood]?.selected || false}
+                                onChange={(e) => handleNeighborhoodChange(neighborhood, 'selected', e.target.checked)}
+                                className="rounded"
+                                data-testid={`checkbox-${neighborhood}`}
+                              />
+                              <div className="flex-1">
+                                <span className="font-medium">{neighborhood}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Taxa:</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={selectedNeighborhoods[neighborhood]?.fee || '0.00'}
+                                  onChange={(e) => handleNeighborhoodChange(neighborhood, 'fee', e.target.value)}
+                                  placeholder="0.00"
+                                  className="w-20 p-1 text-sm border rounded"
+                                  disabled={!selectedNeighborhoods[neighborhood]?.selected}
+                                  data-testid={`input-fee-${neighborhood}`}
+                                />
+                                <span className="text-sm text-muted-foreground">R$</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={saveServiceAreas}
+                        disabled={loadingNeighborhoods || Object.values(selectedNeighborhoods).every(config => !config.selected)}
+                        className="w-full"
+                        data-testid="button-save-areas"
+                      >
+                        Salvar Configurações de Área
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
             </div>
           );
         }

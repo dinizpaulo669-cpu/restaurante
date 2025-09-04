@@ -514,6 +514,11 @@ export class DatabaseStorage implements IStorage {
         "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Botafogo", 
         "Flamengo", "Tijuca", "Centro", "Lapa", "Santa Teresa"
       ],
+      "Petrópolis": [
+        "Centro", "Pedro do Rio", "Quitandinha", "Retiro", "Valparaíso", 
+        "Corrêas", "Nogueira", "Itaipava", "Quarteirão Brasileiro", "Cascatinha",
+        "Alto da Serra", "Saldanha Marinho", "Chácara Flora", "Mosela", "Bingen"
+      ],
       // Adicione mais cidades conforme necessário
     };
     
