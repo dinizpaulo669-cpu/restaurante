@@ -167,14 +167,27 @@ export default function Dashboard() {
 
   // Extrair cidade e estado do endereço do restaurante
   const extractCityState = (address: string) => {
-    // Formato esperado: "Rua, Número - Bairro, Cidade - Estado, CEP: xxxxx"
+    // Formato do endereço: "Rua..., 864 - Pedro do Rio, Petrópolis - RJ, CEP: 25750361"
     try {
-      const parts = address.split('-');
-      if (parts.length >= 2) {
-        const cityStatePart = parts[1].trim(); // "Cidade - Estado, CEP: xxxxx"
-        const cityStateOnly = cityStatePart.split(',')[0]; // "Cidade - Estado"
-        const [city, state] = cityStateOnly.split('-').map(s => s.trim());
-        return { city, state };
+      console.log('Extraindo cidade/estado de:', address);
+      
+      // Dividir por vírgulas primeiro
+      const parts = address.split(',');
+      console.log('Parts:', parts);
+      
+      if (parts.length >= 3) {
+        // A penúltima parte contém "Cidade - Estado"
+        const cityStatePart = parts[parts.length - 2].trim(); // " Petrópolis - RJ"
+        console.log('City-State part:', cityStatePart);
+        
+        // Dividir por hífen para separar cidade e estado
+        const cityStateArr = cityStatePart.split('-');
+        if (cityStateArr.length >= 2) {
+          const city = cityStateArr[0].trim(); // "Petrópolis"
+          const state = cityStateArr[1].trim(); // "RJ"
+          console.log('Extracted city:', city, 'state:', state);
+          return { city, state };
+        }
       }
     } catch (error) {
       console.error('Erro ao extrair cidade/estado:', error);
