@@ -96,10 +96,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de desenvolvimento para criar produtos sem autenticação
   app.post("/api/dev/products", upload.single('image'), async (req: any, res) => {
     try {
-      // Processar dados do formulário usando restaurante de desenvolvimento
+      // Buscar o restaurante do usuário de desenvolvimento
+      const restaurant = await dbStorage.getRestaurantByOwner("dev-user-123");
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+
+      // Processar dados do formulário usando restaurante real
       const formData = {
         ...req.body,
-        restaurantId: "dev-restaurant-123",
+        restaurantId: restaurant.id,
         price: parseFloat(req.body.price),
         costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
         stock: parseInt(req.body.stock) || 0,
@@ -124,9 +130,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de desenvolvimento para criar categorias sem autenticação
   app.post("/api/dev/categories", async (req: any, res) => {
     try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const restaurant = await dbStorage.getRestaurantByOwner("dev-user-123");
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+
       const categoryData = insertCategorySchema.parse({
         ...req.body,
-        restaurantId: "dev-restaurant-123",
+        restaurantId: restaurant.id,
       });
 
       const category = await dbStorage.createCategory(categoryData);

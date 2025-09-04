@@ -97,7 +97,7 @@ export default function Dashboard() {
     permissions: [] as string[]
   });
   
-  // Estados para configuração de CEP
+  // Estados para configuração de área de atendimento
   const [cepRange, setCepRange] = useState({
     start: "",
     end: "",
@@ -2063,13 +2063,13 @@ export default function Dashboard() {
         if (configurationSubSection === "cep") {
           return (
             <div className="space-y-6">
-              <h3 className="text-xl font-semibold">Faixa de CEP</h3>
+              <h3 className="text-xl font-semibold">Área de Atendimento</h3>
               
               <Card>
                 <CardContent className="p-6">
                   <h4 className="text-lg font-semibold mb-4">Configurar Área de Entrega</h4>
                   <p className="text-muted-foreground mb-4">
-                    Defina a faixa de CEP que seu restaurante atende para entregas. Os clientes só poderão fazer pedidos dentro desta área.
+                    Defina a área que seu restaurante atende para entregas. Os clientes só poderão fazer pedidos dentro desta área.
                   </p>
                   
                   <div className="space-y-4">
@@ -2085,7 +2085,7 @@ export default function Dashboard() {
                           data-testid="input-cep-start"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                          CEP menor da sua área de entrega
+                          CEP inicial da sua área de atendimento
                         </p>
                       </div>
                       
@@ -2100,7 +2100,7 @@ export default function Dashboard() {
                           data-testid="input-cep-end"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                          CEP maior da sua área de entrega
+                          CEP final da sua área de atendimento
                         </p>
                       </div>
                     </div>
@@ -2165,7 +2165,7 @@ export default function Dashboard() {
                           if (response.ok) {
                             toast({
                               title: "Sucesso",
-                              description: "Faixa de CEP configurada com sucesso!",
+                              description: "Área de atendimento configurada com sucesso!",
                             });
                           } else {
                             throw new Error("Falha ao salvar faixa de CEP");
@@ -2283,7 +2283,7 @@ export default function Dashboard() {
                 }`}
                 data-testid="tab-cep"
               >
-                Faixa de CEP
+                Área de Atendimento
               </button>
             </div>
 
