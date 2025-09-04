@@ -106,6 +106,12 @@ export default function Dashboard() {
     maxTime: ""
   });
 
+  // Estados para seleção de bairros
+  const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
+  const [serviceAreas, setServiceAreas] = useState<any[]>([]);
+  const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+  const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
+
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
     enabled: isAuthenticated && (user as any)?.role === "restaurant_owner",
@@ -158,6 +164,115 @@ export default function Dashboard() {
       setWhatsappNumber((restaurant as any)?.whatsappNumber || "");
     }
   }, [restaurant]);
+
+  // Extrair cidade e estado do endereço do restaurante
+  const extractCityState = (address: string) => {
+    // Formato esperado: "Rua, Número - Bairro, Cidade - Estado, CEP: xxxxx"
+    try {
+      const parts = address.split('-');
+      if (parts.length >= 2) {
+        const cityStatePart = parts[1].trim(); // "Cidade - Estado, CEP: xxxxx"
+        const cityStateOnly = cityStatePart.split(',')[0]; // "Cidade - Estado"
+        const [city, state] = cityStateOnly.split('-').map(s => s.trim());
+        return { city, state };
+      }
+    } catch (error) {
+      console.error('Erro ao extrair cidade/estado:', error);
+    }
+    return { city: '', state: '' };
+  };
+
+  const { city, state } = restaurant ? extractCityState((restaurant as any).address) : { city: '', state: '' };
+
+  // Buscar bairros da cidade quando o componente carregar
+  useEffect(() => {
+    if (city && state && configurationSubSection === "cep") {
+      setLoadingNeighborhoods(true);
+      fetch(`/api/neighborhoods/${encodeURIComponent(city)}/${encodeURIComponent(state)}`)
+        .then(res => res.json())
+        .then(data => {
+          setNeighborhoods(data);
+          setLoadingNeighborhoods(false);
+        })
+        .catch(error => {
+          console.error('Erro ao buscar bairros:', error);
+          setLoadingNeighborhoods(false);
+        });
+    }
+  }, [city, state, configurationSubSection]);
+
+  // Buscar áreas de serviço existentes
+  useEffect(() => {
+    if ((restaurant as any)?.id && configurationSubSection === "cep") {
+      fetch(`/api/service-areas/${(restaurant as any).id}`)
+        .then(res => res.json())
+        .then(data => {
+          setServiceAreas(data);
+          // Preencher selectedNeighborhoods com dados existentes
+          const existing: {[key: string]: {selected: boolean, fee: string}} = {};
+          data.forEach((area: any) => {
+            existing[area.neighborhood] = {
+              selected: area.isActive,
+              fee: area.deliveryFee
+            };
+          });
+          setSelectedNeighborhoods(existing);
+        })
+        .catch(error => console.error('Erro ao buscar áreas de serviço:', error));
+    }
+  }, [(restaurant as any)?.id, configurationSubSection]);
+
+  const handleNeighborhoodChange = (neighborhood: string, field: 'selected' | 'fee', value: boolean | string) => {
+    setSelectedNeighborhoods(prev => ({
+      ...prev,
+      [neighborhood]: {
+        ...prev[neighborhood],
+        [field]: value
+      }
+    }));
+  };
+
+  const saveServiceAreas = async () => {
+    if (!(restaurant as any)?.id || !city || !state) return;
+
+    try {
+      // Primeiro, remover todas as áreas existentes
+      await Promise.all(serviceAreas.map((area: any) => 
+        fetch(`/api/service-areas/${area.id}`, { method: 'DELETE' })
+      ));
+
+      // Depois, criar as novas áreas selecionadas
+      const promises = Object.entries(selectedNeighborhoods)
+        .filter(([_, config]) => config.selected && parseFloat(config.fee) >= 0)
+        .map(([neighborhood, config]) => 
+          fetch('/api/service-areas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              restaurantId: (restaurant as any).id,
+              neighborhood,
+              city,
+              state,
+              deliveryFee: config.fee,
+              isActive: true
+            })
+          })
+        );
+
+      await Promise.all(promises);
+
+      toast({
+        title: "Sucesso",
+        description: "Área de atendimento configurada com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro", 
+        description: "Não foi possível salvar a configuração",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Mutations para mesas
   const createTableMutation = useMutation({
@@ -2061,119 +2176,6 @@ export default function Dashboard() {
         }
 
         if (configurationSubSection === "cep") {
-          const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
-          const [serviceAreas, setServiceAreas] = useState<any[]>([]);
-          const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
-          const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
-
-          // Extrair cidade e estado do endereço do restaurante
-          const extractCityState = (address: string) => {
-            // Formato esperado: "Rua, Número - Bairro, Cidade - Estado, CEP: xxxxx"
-            try {
-              const parts = address.split('-');
-              if (parts.length >= 2) {
-                const cityStatePart = parts[1].trim(); // "Cidade - Estado, CEP: xxxxx"
-                const cityStateOnly = cityStatePart.split(',')[0]; // "Cidade - Estado"
-                const [city, state] = cityStateOnly.split('-').map(s => s.trim());
-                return { city, state };
-              }
-            } catch (error) {
-              console.error('Erro ao extrair cidade/estado:', error);
-            }
-            return { city: '', state: '' };
-          };
-
-          const { city, state } = restaurant ? extractCityState((restaurant as any).address) : { city: '', state: '' };
-
-          // Buscar bairros da cidade quando o componente carregar
-          useEffect(() => {
-            if (city && state) {
-              setLoadingNeighborhoods(true);
-              fetch(`/api/neighborhoods/${encodeURIComponent(city)}/${encodeURIComponent(state)}`)
-                .then(res => res.json())
-                .then(data => {
-                  setNeighborhoods(data);
-                  setLoadingNeighborhoods(false);
-                })
-                .catch(error => {
-                  console.error('Erro ao buscar bairros:', error);
-                  setLoadingNeighborhoods(false);
-                });
-            }
-          }, [city, state]);
-
-          // Buscar áreas de serviço existentes
-          useEffect(() => {
-            if ((restaurant as any)?.id) {
-              fetch(`/api/service-areas/${(restaurant as any).id}`)
-                .then(res => res.json())
-                .then(data => {
-                  setServiceAreas(data);
-                  // Preencher selectedNeighborhoods com dados existentes
-                  const existing: {[key: string]: {selected: boolean, fee: string}} = {};
-                  data.forEach((area: any) => {
-                    existing[area.neighborhood] = {
-                      selected: area.isActive,
-                      fee: area.deliveryFee
-                    };
-                  });
-                  setSelectedNeighborhoods(existing);
-                })
-                .catch(error => console.error('Erro ao buscar áreas de serviço:', error));
-            }
-          }, [(restaurant as any)?.id]);
-
-          const handleNeighborhoodChange = (neighborhood: string, field: 'selected' | 'fee', value: boolean | string) => {
-            setSelectedNeighborhoods(prev => ({
-              ...prev,
-              [neighborhood]: {
-                ...prev[neighborhood],
-                [field]: value
-              }
-            }));
-          };
-
-          const saveServiceAreas = async () => {
-            if (!(restaurant as any)?.id || !city || !state) return;
-
-            try {
-              // Primeiro, remover todas as áreas existentes
-              await Promise.all(serviceAreas.map((area: any) => 
-                fetch(`/api/service-areas/${area.id}`, { method: 'DELETE' })
-              ));
-
-              // Depois, criar as novas áreas selecionadas
-              const promises = Object.entries(selectedNeighborhoods)
-                .filter(([_, config]) => config.selected && parseFloat(config.fee) >= 0)
-                .map(([neighborhood, config]) => 
-                  fetch('/api/service-areas', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      restaurantId: (restaurant as any).id,
-                      neighborhood,
-                      city,
-                      state,
-                      deliveryFee: config.fee,
-                      isActive: true
-                    })
-                  })
-                );
-
-              await Promise.all(promises);
-
-              toast({
-                title: "Sucesso",
-                description: "Área de atendimento configurada com sucesso!",
-              });
-            } catch (error) {
-              toast({
-                title: "Erro", 
-                description: "Não foi possível salvar a configuração",
-                variant: "destructive"
-              });
-            }
-          };
 
           return (
             <div className="space-y-6">
