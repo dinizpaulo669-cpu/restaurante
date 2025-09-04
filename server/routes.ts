@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertCategorySchema, insertAdditionalSchema, insertTableSchema, insertOpeningHoursSchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await dbStorage.getUser(userId);
@@ -137,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/update-role', isAuthenticated, async (req: any, res) => {
+  app.post('/api/update-role', isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { role } = req.body;
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/restaurants", isAuthenticated, async (req: any, res) => {
+  app.post("/api/restaurants", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurantData = insertRestaurantSchema.parse({
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/my-restaurant", isAuthenticated, async (req: any, res) => {
+  app.get("/api/my-restaurant", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
@@ -331,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", isAuthenticated, upload.single('image'), async (req: any, res) => {
+  app.post("/api/products", isDevAuthenticated, upload.single('image'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -365,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/products/:id", isDevAuthenticated, async (req: any, res) => {
     try {
       const updates = req.body;
       const product = await dbStorage.updateProduct(req.params.id, updates);
@@ -376,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/products/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/products/:id", isDevAuthenticated, async (req, res) => {
     try {
       await dbStorage.deleteProduct(req.params.id);
       res.json({ success: true });
@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", isAuthenticated, async (req: any, res) => {
+  app.post("/api/categories", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/categories/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/categories/:id", isDevAuthenticated, async (req, res) => {
     try {
       const updates = req.body;
       const category = await dbStorage.updateCategory(req.params.id, updates);
@@ -430,7 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/categories/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/categories/:id", isDevAuthenticated, async (req, res) => {
     try {
       await dbStorage.deleteCategory(req.params.id);
       res.json({ success: true });
@@ -451,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/additionals", isAuthenticated, async (req: any, res) => {
+  app.post("/api/additionals", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -476,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/additionals/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/additionals/:id", isDevAuthenticated, async (req, res) => {
     try {
       const updates = {
         ...req.body,
@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/additionals/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/additionals/:id", isDevAuthenticated, async (req, res) => {
     try {
       await dbStorage.deleteAdditional(req.params.id);
       res.json({ success: true });
@@ -503,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Order routes
-  app.get("/api/my-orders", isAuthenticated, async (req: any, res) => {
+  app.get("/api/my-orders", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -531,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/orders/:id/status", isAuthenticated, async (req, res) => {
+  app.put("/api/orders/:id/status", isDevAuthenticated, async (req, res) => {
     try {
       const { status } = req.body;
       const order = await dbStorage.updateOrderStatus(req.params.id, status);
@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tables", isAuthenticated, async (req: any, res) => {
+  app.post("/api/tables", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -579,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tables/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/tables/:id", isDevAuthenticated, async (req, res) => {
     try {
       const updates = req.body;
       const table = await dbStorage.updateTable(req.params.id, updates);
@@ -590,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tables/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/tables/:id", isDevAuthenticated, async (req, res) => {
     try {
       await dbStorage.deleteTable(req.params.id);
       res.json({ success: true });
@@ -670,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload de logo e banner do restaurante
-  app.post("/api/restaurants/:id/logo", isAuthenticated, upload.single('logo'), async (req: any, res) => {
+  app.post("/api/restaurants/:id/logo", isDevAuthenticated, upload.single('logo'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -692,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/restaurants/:id/banner", isAuthenticated, upload.single('banner'), async (req: any, res) => {
+  app.post("/api/restaurants/:id/banner", isDevAuthenticated, upload.single('banner'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -750,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotas para atualizar informações do restaurante
-  app.put("/api/restaurants/:id/about", isAuthenticated, async (req: any, res) => {
+  app.put("/api/restaurants/:id/about", isDevAuthenticated, async (req: any, res) => {
     try {
       const { description } = req.body;
       const restaurantId = req.params.id;
@@ -766,7 +766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/restaurants/:id/logo", isAuthenticated, async (req: any, res) => {
+  app.put("/api/restaurants/:id/logo", isDevAuthenticated, async (req: any, res) => {
     try {
       const { logoUrl } = req.body;
       const restaurantId = req.params.id;
@@ -782,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/restaurants/:id/banner", isAuthenticated, async (req: any, res) => {
+  app.put("/api/restaurants/:id/banner", isDevAuthenticated, async (req: any, res) => {
     try {
       const { bannerUrl } = req.body;
       const restaurantId = req.params.id;
@@ -848,7 +848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para editar dados da empresa
-  app.put("/api/restaurants/:id/company-data", isAuthenticated, async (req: any, res) => {
+  app.put("/api/restaurants/:id/company-data", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -880,7 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para configurar WhatsApp
-  app.put("/api/restaurants/:id/whatsapp", isAuthenticated, async (req: any, res) => {
+  app.put("/api/restaurants/:id/whatsapp", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -922,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/opening-hours", isAuthenticated, async (req: any, res) => {
+  app.post("/api/opening-hours", isDevAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const restaurant = await dbStorage.getRestaurantByOwner(userId);
@@ -947,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Subscription routes (only if Stripe is configured)
   if (stripe) {
-    app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
+    app.post('/api/create-subscription', isDevAuthenticated, async (req: any, res) => {
       try {
         const userId = req.user.claims.sub;
         const { priceId } = req.body;
@@ -1003,7 +1003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   } else {
     // Fallback when Stripe is not configured
-    app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
+    app.post('/api/create-subscription', isDevAuthenticated, async (req: any, res) => {
       res.status(503).json({ 
         message: "Payment system not configured. Please contact support." 
       });
