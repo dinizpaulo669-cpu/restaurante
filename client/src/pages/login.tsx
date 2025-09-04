@@ -10,20 +10,7 @@ export default function Login() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [selectedUserType, setSelectedUserType] = useState<"customer" | "restaurant_owner" | "">("");
 
-  // Redirecionar usuários já autenticados apenas se não estão testando
-  useEffect(() => {
-    // Verificar se há um parâmetro na URL para mostrar a página mesmo logado
-    const urlParams = new URLSearchParams(window.location.search);
-    const showLoginPage = urlParams.get('show') === 'true';
-    
-    if (isAuthenticated && user && !showLoginPage) {
-      if ((user as any)?.role === "restaurant_owner") {
-        setLocation("/dashboard");
-      } else {
-        setLocation("/customer-panel");
-      }
-    }
-  }, [isAuthenticated, user, setLocation]);
+  // Removido redirecionamento automático - sempre mostra a página de login
 
   const handleLogin = () => {
     if (!selectedUserType) {
