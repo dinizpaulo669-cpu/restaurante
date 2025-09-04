@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin } from "lucide-react";
+import { User, Mail, Phone, MapPin, Home } from "lucide-react";
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -14,20 +14,31 @@ export default function Register() {
     name: "",
     email: "",
     phone: "",
-    address: ""
+    cep: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
+    pontoReferencia: ""
   });
+  
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone || !formData.address) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.cep || !formData.rua || !formData.numero) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos",
+        description: "Por favor, preencha nome, email, telefone, CEP, rua e número",
         variant: "destructive",
       });
       return;
     }
+
+    // Concatenar endereço completo
+    const endereco = `${formData.rua}, ${formData.numero}${formData.pontoReferencia ? ` - ${formData.pontoReferencia}` : ''} - ${formData.bairro}, ${formData.cidade} - ${formData.estado}, CEP: ${formData.cep}`;
 
     // Salvar dados do cliente no localStorage
     localStorage.setItem('currentUser', JSON.stringify({
@@ -35,7 +46,7 @@ export default function Register() {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
-      address: formData.address,
+      address: endereco,
       type: 'customer'
     }));
 
@@ -55,9 +66,48 @@ export default function Register() {
     }));
   };
 
+  const handleCepChange = async (cep: string) => {
+    setFormData(prev => ({ ...prev, cep }));
+    
+    // Remove caracteres não numéricos do CEP
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            rua: data.logradouro || '',
+            bairro: data.bairro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || ''
+          }));
+        } else {
+          toast({
+            title: "CEP não encontrado",
+            description: "Verifique se o CEP está correto",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro ao buscar CEP",
+          description: "Não foi possível consultar o endereço",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingCep(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         <Card className="w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold text-primary" data-testid="register-title">
@@ -123,21 +173,112 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm font-medium">
-                  Endereço
-                </Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              {/* Seção de Endereço */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <MapPin className="mr-2 h-5 w-5 text-primary" />
+                  Endereço de Entrega
+                </h3>
+                
+                {/* CEP */}
+                <div className="space-y-2">
+                  <Label htmlFor="cep" className="text-sm font-medium">CEP *</Label>
+                  <div className="relative">
+                    <Input
+                      id="cep"
+                      value={formData.cep}
+                      onChange={(e) => handleCepChange(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      data-testid="input-cep"
+                    />
+                    {isLoadingCep && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Rua */}
+                <div className="space-y-2">
+                  <Label htmlFor="rua" className="text-sm font-medium">Rua / Logradouro *</Label>
                   <Input
-                    id="address"
-                    type="text"
-                    placeholder="Rua, número, bairro, cidade"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
-                    className="pl-10"
-                    data-testid="input-address"
+                    id="rua"
+                    value={formData.rua}
+                    onChange={(e) => handleInputChange("rua", e.target.value)}
+                    placeholder="Nome da rua"
+                    required
+                    data-testid="input-rua"
                   />
+                </div>
+
+                {/* Número e Bairro */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="numero" className="text-sm font-medium">Número *</Label>
+                    <Input
+                      id="numero"
+                      value={formData.numero}
+                      onChange={(e) => handleInputChange("numero", e.target.value)}
+                      placeholder="123"
+                      required
+                      data-testid="input-numero"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bairro" className="text-sm font-medium">Bairro</Label>
+                    <Input
+                      id="bairro"
+                      value={formData.bairro}
+                      onChange={(e) => handleInputChange("bairro", e.target.value)}
+                      placeholder="Bairro"
+                      data-testid="input-bairro"
+                    />
+                  </div>
+                </div>
+
+                {/* Cidade e Estado */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cidade" className="text-sm font-medium">Cidade</Label>
+                    <Input
+                      id="cidade"
+                      value={formData.cidade}
+                      onChange={(e) => handleInputChange("cidade", e.target.value)}
+                      placeholder="Cidade"
+                      data-testid="input-cidade"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="estado" className="text-sm font-medium">Estado</Label>
+                    <Input
+                      id="estado"
+                      value={formData.estado}
+                      onChange={(e) => handleInputChange("estado", e.target.value)}
+                      placeholder="UF"
+                      maxLength={2}
+                      data-testid="input-estado"
+                    />
+                  </div>
+                </div>
+
+                {/* Ponto de Referência */}
+                <div className="space-y-2">
+                  <Label htmlFor="pontoReferencia" className="text-sm font-medium">Ponto de Referência</Label>
+                  <div className="relative">
+                    <Home className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="pontoReferencia"
+                      value={formData.pontoReferencia}
+                      onChange={(e) => handleInputChange("pontoReferencia", e.target.value)}
+                      placeholder="Ex: Próximo ao mercado, em frente à escola..."
+                      className="pl-10"
+                      data-testid="input-ponto-referencia"
+                    />
+                  </div>
                 </div>
               </div>
 
