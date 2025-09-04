@@ -17,11 +17,9 @@ export default function Login() {
       return;
     }
     
-    // Salvar tipo selecionado no localStorage para usar após o login
+    // Salvar tipo selecionado e redirecionar para página de login interno
     localStorage.setItem('selectedUserType', selectedUserType);
-    
-    // Redirecionar para a rota de autenticação Replit
-    window.location.href = "/api/login";
+    setLocation("/internal-login");
   };
 
   if (isLoading) {
@@ -50,7 +48,7 @@ export default function Login() {
               {isAuthenticated && user && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
                   <p className="text-sm text-yellow-800 mb-2">
-                    Você já está logado como: <strong>{(user as any)?.role === "restaurant_owner" ? "Dono de Restaurante" : "Cliente"}</strong>
+                    Você já está logado como: <strong>{String((user as any)?.role === "restaurant_owner" ? "Dono de Restaurante" : "Cliente")}</strong>
                   </p>
                   <Button 
                     variant="outline" 
@@ -117,7 +115,7 @@ export default function Login() {
                 data-testid="button-login"
               >
                 <LogIn className="mr-2 h-4 w-4" />
-                Entrar com Replit
+                Entrar
               </Button>
 
               <div className="text-center space-y-2">

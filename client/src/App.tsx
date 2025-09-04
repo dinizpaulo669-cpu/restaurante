@@ -15,12 +15,14 @@ import Dashboard from "@/pages/dashboard";
 import Menu from "@/pages/menu";
 import SetupRestaurant from "@/pages/setup-restaurant";
 import AuthCallback from "@/pages/auth-callback";
+import InternalLogin from "@/pages/internal-login";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
+      <Route path="/internal-login" component={InternalLogin} />
       <Route path="/register" component={Register} />
       <Route path="/auth-callback" component={AuthCallback} />
       <Route path="/customer-panel" component={CustomerPanel} />

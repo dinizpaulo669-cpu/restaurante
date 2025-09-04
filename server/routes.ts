@@ -73,7 +73,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de desenvolvimento para bypass de autenticação
   app.get('/api/dev/auth/user', async (req: any, res) => {
     try {
-      // Usuário de desenvolvimento para testes
+      // Verificar se há usuário na sessão (do login interno)
+      if (req.session.user) {
+        return res.json(req.session.user);
+      }
+      
+      // Usuário de desenvolvimento padrão para testes
       const devUser = {
         id: "dev-user-123",
         email: "test@restaurant.com",
@@ -146,6 +151,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating dev category:", error);
       res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  // Login interno simplificado para desenvolvimento
+  app.post('/api/internal-login', async (req: any, res) => {
+    try {
+      const { email, password, userType } = req.body;
+      
+      if (!email || !password || !userType) {
+        return res.status(400).json({ message: "Email, senha e tipo de usuário são obrigatórios" });
+      }
+
+      // Simulação de autenticação (em produção seria validação real)
+      if (process.env.NODE_ENV === "development") {
+        // Para desenvolvimento, aceitar qualquer email/senha
+        const devUser = {
+          id: "dev-user-internal",
+          email: email,
+          firstName: "Usuário",
+          lastName: "Logado",
+          role: userType,
+          subscriptionPlan: userType === "customer" ? null : "pro",
+          isTrialActive: userType === "restaurant_owner",
+          trialEndsAt: userType === "restaurant_owner" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        // Salvar/atualizar usuário no banco
+        await dbStorage.upsertUser({
+          id: devUser.id,
+          email: devUser.email,
+          firstName: devUser.firstName,
+          lastName: devUser.lastName,
+          role: devUser.role,
+          subscriptionPlan: devUser.subscriptionPlan,
+          isTrialActive: devUser.isTrialActive,
+          trialEndsAt: devUser.trialEndsAt,
+        });
+
+        // Simular sessão (em produção seria através do Passport)
+        req.session.user = devUser;
+        
+        res.json({ 
+          message: "Login realizado com sucesso",
+          user: devUser 
+        });
+      } else {
+        // Em produção, implementar validação real
+        res.status(401).json({ message: "Credenciais inválidas" });
+      }
+    } catch (error) {
+      console.error("Error in internal login:", error);
+      res.status(500).json({ message: "Erro interno no login" });
     }
   });
 
@@ -1066,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         neighborhood,
         city,
         state,
-        deliveryFee: parseFloat(deliveryFee),
+        deliveryFee: deliveryFee,
         isActive: true
       };
       
