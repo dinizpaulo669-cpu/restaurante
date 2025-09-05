@@ -201,9 +201,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (city && state && configurationSubSection === "cep") {
       setLoadingNeighborhoods(true);
+      console.log(`Buscando bairros para ${city} - ${state} via API do IBGE...`);
+      
       fetch(`/api/neighborhoods/${encodeURIComponent(city)}/${encodeURIComponent(state)}`)
         .then(res => res.json())
         .then(data => {
+          console.log(`Bairros encontrados:`, data);
           setNeighborhoods(data);
           setLoadingNeighborhoods(false);
         })
@@ -2200,6 +2203,12 @@ export default function Dashboard() {
                   <p className="text-muted-foreground mb-4">
                     Selecione os bairros que seu restaurante atende e defina a taxa de entrega para cada um.
                   </p>
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <span className="text-blue-600">ℹ️</span>
+                    <span className="text-sm text-blue-700">
+                      Dados oficiais obtidos da API do IBGE (Instituto Brasileiro de Geografia e Estatística)
+                    </span>
+                  </div>
 
                   {!city || !state ? (
                     <div className="text-center py-8">
