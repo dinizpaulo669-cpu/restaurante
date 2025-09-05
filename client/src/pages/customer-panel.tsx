@@ -488,40 +488,41 @@ export default function CustomerPanel() {
             </div>
           </Card>
 
-        {/* Quick Actions */}
-        <div className="space-y-2 sm:space-y-3">
-          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
-            <User className="h-4 w-4 mr-2 sm:mr-3" />
-            Editar Perfil
-          </Button>
-          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
-            <MapPin className="h-4 w-4 mr-2 sm:mr-3" />
-            Gerenciar Endereços
-          </Button>
-          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
-            <Bell className="h-4 w-4 mr-2 sm:mr-3" />
-            Notificações
-          </Button>
-          {!isMobile && (
+          {/* Quick Actions */}
+          <div className="space-y-2 sm:space-y-3">
             <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
-              <Heart className="h-4 w-4 mr-2 sm:mr-3" />
-              Configurações de Privacidade
+              <User className="h-4 w-4 mr-2 sm:mr-3" />
+              Editar Perfil
             </Button>
-          )}
-          <Button 
-            variant="outline" 
-            className="w-full justify-start text-red-600 hover:bg-red-50 text-sm sm:text-base" 
-            onClick={() => {
-              localStorage.removeItem('currentUser');
-              setLocation("/");
-            }}
-          >
-            Sair
-          </Button>
+            <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+              <MapPin className="h-4 w-4 mr-2 sm:mr-3" />
+              Gerenciar Endereços
+            </Button>
+            <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+              <Bell className="h-4 w-4 mr-2 sm:mr-3" />
+              Notificações
+            </Button>
+            {!isMobile && (
+              <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+                <Heart className="h-4 w-4 mr-2 sm:mr-3" />
+                Configurações de Privacidade
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              className="w-full justify-start text-red-600 hover:bg-red-50 text-sm sm:text-base" 
+              onClick={() => {
+                localStorage.removeItem('currentUser');
+                setLocation("/");
+              }}
+            >
+              Sair
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderContent = () => {
     switch (activeTab) {
