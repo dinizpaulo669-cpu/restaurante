@@ -10,6 +10,7 @@ import {
   tables,
   openingHours,
   serviceAreas,
+  userFavorites,
   type User,
   type UpsertUser,
   type Restaurant,
@@ -30,6 +31,8 @@ import {
   type InsertOpeningHour,
   type ServiceArea,
   type InsertServiceArea,
+  type UserFavorite,
+  type InsertUserFavorite,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, sql } from "drizzle-orm";
@@ -101,6 +104,21 @@ export interface IStorage {
   updateServiceArea(id: string, updates: Partial<InsertServiceArea>): Promise<ServiceArea>;
   deleteServiceArea(id: string): Promise<void>;
   getCityNeighborhoods(city: string, state: string): Promise<string[]>;
+  
+  // Favorites operations
+  getUserFavorites(userId: string): Promise<Restaurant[]>;
+  addToFavorites(userId: string, restaurantId: string): Promise<UserFavorite>;
+  removeFromFavorites(userId: string, restaurantId: string): Promise<void>;
+  isFavorite(userId: string, restaurantId: string): Promise<boolean>;
+  
+  // Customer operations
+  getCustomerOrders(customerId: string): Promise<Order[]>;
+  getCustomerStats(customerId: string): Promise<{
+    totalOrders: number;
+    favoritesCount: number;
+    totalSpent: number;
+    averageRating: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -685,6 +703,95 @@ export class DatabaseStorage implements IStorage {
     };
     
     return neighborhoods[city] || ["Centro"];
+  }
+
+  // Favorites operations
+  async getUserFavorites(userId: string): Promise<Restaurant[]> {
+    const favorites = await db
+      .select({ restaurant: restaurants })
+      .from(userFavorites)
+      .innerJoin(restaurants, eq(userFavorites.restaurantId, restaurants.id))
+      .where(eq(userFavorites.userId, userId))
+      .orderBy(desc(userFavorites.createdAt));
+    
+    return favorites.map(f => f.restaurant);
+  }
+
+  async addToFavorites(userId: string, restaurantId: string): Promise<UserFavorite> {
+    // Verificar se já existe
+    const existing = await db
+      .select()
+      .from(userFavorites)
+      .where(and(eq(userFavorites.userId, userId), eq(userFavorites.restaurantId, restaurantId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    const [favorite] = await db
+      .insert(userFavorites)
+      .values({ userId, restaurantId })
+      .returning();
+    
+    return favorite;
+  }
+
+  async removeFromFavorites(userId: string, restaurantId: string): Promise<void> {
+    await db
+      .delete(userFavorites)
+      .where(and(eq(userFavorites.userId, userId), eq(userFavorites.restaurantId, restaurantId)));
+  }
+
+  async isFavorite(userId: string, restaurantId: string): Promise<boolean> {
+    const [favorite] = await db
+      .select()
+      .from(userFavorites)
+      .where(and(eq(userFavorites.userId, userId), eq(userFavorites.restaurantId, restaurantId)))
+      .limit(1);
+    
+    return !!favorite;
+  }
+
+  // Customer operations
+  async getCustomerOrders(customerId: string): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.customerId, customerId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async getCustomerStats(customerId: string): Promise<{
+    totalOrders: number;
+    favoritesCount: number;
+    totalSpent: number;
+    averageRating: number;
+  }> {
+    // Contar pedidos
+    const [orderCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(orders)
+      .where(eq(orders.customerId, customerId));
+
+    // Contar favoritos
+    const [favoritesCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userFavorites)
+      .where(eq(userFavorites.userId, customerId));
+
+    // Calcular total gasto
+    const [totalSpent] = await db
+      .select({ total: sql<number>`coalesce(sum(${orders.total}), 0)` })
+      .from(orders)
+      .where(and(eq(orders.customerId, customerId), eq(orders.status, "delivered")));
+
+    return {
+      totalOrders: orderCount?.count || 0,
+      favoritesCount: favoritesCount?.count || 0,
+      totalSpent: Number(totalSpent?.total || 0),
+      averageRating: 4.8, // Placeholder - implementar depois se necessário
+    };
   }
 }
 

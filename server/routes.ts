@@ -1226,6 +1226,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer panel APIs
+  app.get("/api/customer/favorites", async (req, res) => {
+    try {
+      // Para desenvolvimento, usar sessão interna ou user padrão
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const favorites = await dbStorage.getUserFavorites(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.post("/api/customer/favorites/:restaurantId", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const favorite = await dbStorage.addToFavorites(userId, req.params.restaurantId);
+      res.json(favorite);
+    } catch (error) {
+      console.error("Error adding favorite:", error);
+      res.status(500).json({ message: "Failed to add favorite" });
+    }
+  });
+
+  app.delete("/api/customer/favorites/:restaurantId", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      await dbStorage.removeFromFavorites(userId, req.params.restaurantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      res.status(500).json({ message: "Failed to remove favorite" });
+    }
+  });
+
+  app.get("/api/customer/orders", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const orders = await dbStorage.getCustomerOrders(userId);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching customer orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/customer/stats", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const stats = await dbStorage.getCustomerStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching customer stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/customer/profile", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const user = await dbStorage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching customer profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  app.put("/api/customer/profile", async (req, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const updates = req.body;
+      const user = await dbStorage.upsertUser({
+        id: userId,
+        ...updates,
+      });
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating customer profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

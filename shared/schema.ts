@@ -358,3 +358,27 @@ export const insertServiceAreaSchema = createInsertSchema(serviceAreas).omit({
 // Tipos para service areas
 export type ServiceArea = typeof serviceAreas.$inferSelect;
 export type InsertServiceArea = z.infer<typeof insertServiceAreaSchema>;
+
+// Tabela de Favoritos dos Usuários
+export const userFavorites = pgTable("user_favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations para favoritos
+export const userFavoritesRelations = relations(userFavorites, ({ one }) => ({
+  user: one(users, { fields: [userFavorites.userId], references: [users.id] }),
+  restaurant: one(restaurants, { fields: [userFavorites.restaurantId], references: [restaurants.id] }),
+}));
+
+// Insert schema para favoritos
+export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Tipos para favoritos
+export type UserFavorite = typeof userFavorites.$inferSelect;
+export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
