@@ -339,6 +339,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orderItems.orderId, orderId));
   }
 
+  async createOrderItems(items: any[], orderId: string): Promise<void> {
+    if (items && items.length > 0) {
+      const orderItemsData = items.map(item => ({
+        orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: String(item.unitPrice),
+        totalPrice: String(item.totalPrice),
+      }));
+      
+      await db.insert(orderItems).values(orderItemsData);
+    }
+  }
+
   // Additional operations
   async getAdditionals(restaurantId: string): Promise<Additional[]> {
     return await db

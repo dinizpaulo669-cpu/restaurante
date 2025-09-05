@@ -484,8 +484,9 @@ export default function Menu() {
 
       {/* Modal de Checkout */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-md my-8">
+            <Card className="w-full max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle>Finalizar Pedido</CardTitle>
             </CardHeader>
@@ -592,7 +593,8 @@ export default function Menu() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
       )}
     </div>

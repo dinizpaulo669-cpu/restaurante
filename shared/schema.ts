@@ -192,6 +192,18 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  orderNumber: true, // Auto-generated
+}).extend({
+  subtotal: z.union([z.string(), z.number()]).transform(val => String(val)),
+  deliveryFee: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
+  total: z.union([z.string(), z.number()]).transform(val => String(val)),
+});
+
+export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
+  id: true,
+}).extend({
+  unitPrice: z.union([z.string(), z.number()]).transform(val => String(val)),
+  totalPrice: z.union([z.string(), z.number()]).transform(val => String(val)),
 });
 
 export const insertCategorySchema = createInsertSchema(categories).omit({
@@ -227,6 +239,7 @@ export type ProductVariation = typeof productVariations.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertAdditional = z.infer<typeof insertAdditionalSchema>;

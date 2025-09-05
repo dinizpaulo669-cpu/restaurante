@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertCategorySchema, insertAdditionalSchema, insertTableSchema, insertOpeningHoursSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertAdditionalSchema, insertTableSchema, insertOpeningHoursSchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -593,8 +593,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const orderData = insertOrderSchema.parse(req.body);
-      const order = await dbStorage.createOrder(orderData);
+      const { items, ...orderData } = req.body;
+      const validatedOrderData = insertOrderSchema.parse(orderData);
+      const order = await dbStorage.createOrder(validatedOrderData);
+      
+      // Save order items if provided
+      if (items && items.length > 0) {
+        await dbStorage.createOrderItems(items, order.id);
+      }
+      
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
