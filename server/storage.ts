@@ -500,11 +500,101 @@ export class DatabaseStorage implements IStorage {
     await db.delete(serviceAreas).where(eq(serviceAreas.id, id));
   }
 
-  // Função para buscar bairros de uma cidade (para listagem)
+  // Funções para integração com API do IBGE
+  async getStates(): Promise<Array<{id: number, sigla: string, nome: string}>> {
+    try {
+      const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const states = await response.json();
+      return states.sort((a: any, b: any) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.error('Erro ao buscar estados:', error);
+      return [];
+    }
+  }
+
+  async getMunicipalities(stateId: number): Promise<Array<{id: number, nome: string}>> {
+    try {
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateId}/municipios`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const municipalities = await response.json();
+      return municipalities.sort((a: any, b: any) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.error('Erro ao buscar municípios:', error);
+      return [];
+    }
+  }
+
+  async getDistricts(municipalityId: number): Promise<Array<{id: number, nome: string}>> {
+    try {
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${municipalityId}/distritos`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const districts = await response.json();
+      return districts.sort((a: any, b: any) => a.nome.localeCompare(b.nome));
+    } catch (error) {
+      console.error('Erro ao buscar distritos:', error);
+      return [];
+    }
+  }
+
+  async findMunicipalityByName(cityName: string, stateCode: string): Promise<number | null> {
+    try {
+      const states = await this.getStates();
+      const state = states.find(s => s.sigla.toUpperCase() === stateCode.toUpperCase());
+      
+      if (!state) {
+        console.log(`Estado não encontrado: ${stateCode}`);
+        return null;
+      }
+
+      const municipalities = await this.getMunicipalities(state.id);
+      const municipality = municipalities.find(m => 
+        m.nome.toLowerCase().includes(cityName.toLowerCase()) ||
+        cityName.toLowerCase().includes(m.nome.toLowerCase())
+      );
+
+      return municipality ? municipality.id : null;
+    } catch (error) {
+      console.error('Erro ao buscar município por nome:', error);
+      return null;
+    }
+  }
+
+  // Função para buscar bairros de uma cidade usando API do IBGE
   async getCityNeighborhoods(city: string, state: string): Promise<string[]> {
-    // Esta função pode ser expandida no futuro para usar uma API de bairros
-    // Por enquanto retorna bairros exemplo baseados na cidade
-    const neighborhoods = {
+    try {
+      // Buscar ID do município na API do IBGE
+      const municipalityId = await this.findMunicipalityByName(city, state);
+      
+      if (!municipalityId) {
+        console.log(`Município não encontrado: ${city}, ${state}. Retornando bairros padrão.`);
+        return this.getDefaultNeighborhoods(city);
+      }
+
+      // Buscar distritos/bairros do município
+      const districts = await this.getDistricts(municipalityId);
+      
+      if (districts.length === 0) {
+        console.log(`Nenhum distrito encontrado para ${city}. Retornando bairros padrão.`);
+        return this.getDefaultNeighborhoods(city);
+      }
+
+      return districts.map(district => district.nome);
+    } catch (error) {
+      console.error('Erro ao buscar bairros via IBGE:', error);
+      return this.getDefaultNeighborhoods(city);
+    }
+  }
+
+  // Função auxiliar para bairros padrão (fallback)
+  private getDefaultNeighborhoods(city: string): string[] {
+    const neighborhoods: Record<string, string[]> = {
       "São Paulo": [
         "Centro", "Vila Olímpia", "Jardins", "Moema", "Itaim Bibi", "Pinheiros", 
         "Vila Madalena", "Bela Vista", "Liberdade", "Brooklin", "Morumbi", 
@@ -519,10 +609,9 @@ export class DatabaseStorage implements IStorage {
         "Corrêas", "Nogueira", "Itaipava", "Quarteirão Brasileiro", "Cascatinha",
         "Alto da Serra", "Saldanha Marinho", "Chácara Flora", "Mosela", "Bingen"
       ],
-      // Adicione mais cidades conforme necessário
     };
     
-    return neighborhoods[city] || [];
+    return neighborhoods[city] || ["Centro"];
   }
 }
 
