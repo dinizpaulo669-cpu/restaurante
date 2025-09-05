@@ -31,7 +31,7 @@ function Router() {
       <Route path="/restaurant-panel" component={RestaurantPanel} />
       <Route path="/setup-restaurant" component={SetupRestaurant} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/menu/:restaurantId" component={Menu} />
+      <Route path="/restaurant/:restaurantId" component={Menu} />
       <Route component={NotFound} />
     </Switch>
   );

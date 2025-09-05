@@ -64,33 +64,54 @@ export default function CustomerPanel() {
     setUser(JSON.parse(currentUser));
   }, [setLocation]);
 
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Atualizar busca quando searchQuery ou selectedCategory mudarem
+    queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+  }, [searchQuery, selectedCategory, queryClient]);
+
   const { data: restaurants = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/restaurants", searchQuery, selectedCategory],
+    queryKey: ["/api/restaurants"],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (selectedCategory) params.append('category', selectedCategory);
+      
+      const url = `/api/restaurants${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error('Falha ao carregar restaurantes');
+      return response.json();
+    },
     enabled: true,
   });
 
   // Customer data hooks
-  const { data: customerStats } = useQuery({
+  const { data: customerStats } = useQuery<{
+    totalOrders: number;
+    favoritesCount: number;
+    totalSpent: number;
+    averageRating: number;
+  }>({
     queryKey: ["/api/customer/stats"],
     enabled: true,
   });
 
-  const { data: customerOrders = [] } = useQuery({
+  const { data: customerOrders = [] } = useQuery<any[]>({
     queryKey: ["/api/customer/orders"],
     enabled: true,
   });
 
-  const { data: customerFavorites = [] } = useQuery({
+  const { data: customerFavorites = [] } = useQuery<any[]>({
     queryKey: ["/api/customer/favorites"],
     enabled: true,
   });
 
-  const { data: customerProfile } = useQuery({
+  const { data: customerProfile } = useQuery<any>({
     queryKey: ["/api/customer/profile"],
     enabled: true,
   });
 
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const addToFavoritesMutation = useMutation({
@@ -119,6 +140,7 @@ export default function CustomerPanel() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
   };
 
   if (!user) {
@@ -231,28 +253,56 @@ export default function CustomerPanel() {
         ) : (
           <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
             {restaurants.slice(0, isMobile ? 3 : 6).map((restaurant: any) => (
-              <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow">
+              <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                 <div className="flex space-x-4">
                   <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Pizza className="h-8 w-8 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-base lg:text-lg">{restaurant.name}</h3>
-                    <p className="text-muted-foreground text-sm mb-1">{restaurant.category}</p>
+                  <div 
+                    className="flex-1 min-w-0"
+                    onClick={() => setLocation(`/restaurant/${restaurant.id}`)}
+                  >
+                    <h3 className="font-semibold text-base lg:text-lg group-hover:text-primary transition-colors">
+                      {restaurant.name}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mb-1">{restaurant.category || 'Restaurante'}</p>
                     <div className="flex items-center space-x-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">
                         <Star className="w-3 h-3 mr-1" />
-                        4.5
+                        {restaurant.rating || '4.5'}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         <Clock className="w-3 h-3 mr-1" />
-                        25-35 min
+                        {restaurant.deliveryTime || '25-35'} min
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         <Truck className="w-3 h-3 mr-1" />
-                        R$ 5,99
+                        R$ {restaurant.deliveryFee || '5,99'}
                       </Badge>
                     </div>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-shrink-0 p-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const isFav = customerFavorites.some((fav: any) => fav.id === restaurant.id);
+                        if (isFav) {
+                          removeFromFavoritesMutation.mutate(restaurant.id);
+                        } else {
+                          addToFavoritesMutation.mutate(restaurant.id);
+                        }
+                      }}
+                      disabled={addToFavoritesMutation.isPending || removeFromFavoritesMutation.isPending}
+                    >
+                      <Heart className={`h-4 w-4 ${
+                        customerFavorites.some((fav: any) => fav.id === restaurant.id) 
+                          ? 'text-red-500 fill-current' 
+                          : 'text-muted-foreground'
+                      }`} />
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -310,9 +360,59 @@ export default function CustomerPanel() {
       ) : (
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
           {restaurants.map((restaurant: any) => (
-            <div key={restaurant.id} className="lg:col-span-1">
-              <RestaurantCard restaurant={restaurant} />
-            </div>
+            <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
+              <div className="flex space-x-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Pizza className="h-8 w-8 text-primary" />
+                </div>
+                <div 
+                  className="flex-1 min-w-0"
+                  onClick={() => setLocation(`/restaurant/${restaurant.id}`)}
+                >
+                  <h3 className="font-semibold text-base lg:text-lg group-hover:text-primary transition-colors">
+                    {restaurant.name}
+                  </h3>
+                  <p className="text-muted-foreground text-sm mb-1">{restaurant.category || 'Restaurante'}</p>
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <Badge variant="secondary" className="text-xs">
+                      <Star className="w-3 h-3 mr-1" />
+                      {restaurant.rating || '4.5'}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {restaurant.deliveryTime || '25-35'} min
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <Truck className="w-3 h-3 mr-1" />
+                      R$ {restaurant.deliveryFee || '5,99'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex-shrink-0 p-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const isFav = customerFavorites.some((fav: any) => fav.id === restaurant.id);
+                      if (isFav) {
+                        removeFromFavoritesMutation.mutate(restaurant.id);
+                      } else {
+                        addToFavoritesMutation.mutate(restaurant.id);
+                      }
+                    }}
+                    disabled={addToFavoritesMutation.isPending || removeFromFavoritesMutation.isPending}
+                  >
+                    <Heart className={`h-4 w-4 ${
+                      customerFavorites.some((fav: any) => fav.id === restaurant.id) 
+                        ? 'text-red-500 fill-current' 
+                        : 'text-muted-foreground'
+                    }`} />
+                  </Button>
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
       )}
