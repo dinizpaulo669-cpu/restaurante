@@ -214,7 +214,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (city && state && configurationSubSection === "cep") {
       setLoadingNeighborhoods(true);
-      console.log(`Buscando bairros para ${city} - ${state} via API do IBGE...`);
+      console.log(`Buscando bairros para ${city} - ${state} via ViaCEP + dados locais...`);
       
       fetch(`/api/neighborhoods/${encodeURIComponent(city)}/${encodeURIComponent(state)}`)
         .then(res => res.json())
@@ -2219,7 +2219,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <span className="text-blue-600">ℹ️</span>
                     <span className="text-sm text-blue-700">
-                      Dados oficiais obtidos da API do IBGE (Instituto Brasileiro de Geografia e Estatística)
+                      Bairros obtidos via ViaCEP e base de dados locais detalhados para máxima precisão
                     </span>
                   </div>
 
