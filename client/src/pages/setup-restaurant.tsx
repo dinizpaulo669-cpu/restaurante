@@ -52,13 +52,20 @@ export default function SetupRestaurant() {
   // Check for selected plan from localStorage
   useEffect(() => {
     const savedPlan = localStorage.getItem('selectedPlan');
-    if (savedPlan) {
+    if (savedPlan && savedPlan !== 'undefined' && savedPlan !== 'null') {
       try {
-        setSelectedPlan(JSON.parse(savedPlan));
+        const parsedPlan = JSON.parse(savedPlan);
+        if (parsedPlan && typeof parsedPlan === 'object' && parsedPlan.name) {
+          setSelectedPlan(parsedPlan);
+        } else {
+          localStorage.removeItem('selectedPlan');
+        }
       } catch (error) {
         console.error('Error parsing selected plan:', error);
         localStorage.removeItem('selectedPlan');
       }
+    } else {
+      localStorage.removeItem('selectedPlan');
     }
   }, []);
 
@@ -196,7 +203,7 @@ export default function SetupRestaurant() {
             <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
-                {user?.firstName || user?.email}
+                {(user as any)?.firstName || (user as any)?.email}
               </span>
               <Button 
                 variant="outline"
@@ -227,9 +234,9 @@ export default function SetupRestaurant() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-green-800 text-sm">
                 <strong>✨ Período de Teste Gratuito Ativo!</strong>
-                {user?.trialEndsAt && (
+                {(user as any)?.trialEndsAt && (
                   <span className="block mt-1">
-                    Aproveite todas as funcionalidades até: <strong>{new Date(user.trialEndsAt).toLocaleDateString('pt-BR')}</strong>
+                    Aproveite todas as funcionalidades até: <strong>{new Date((user as any).trialEndsAt).toLocaleDateString('pt-BR')}</strong>
                   </span>
                 )}
               </p>
