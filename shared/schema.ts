@@ -30,6 +30,8 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  address: text("address"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").notNull().default("customer"), // "customer" | "restaurant_owner" | "employee"
   stripeCustomerId: varchar("stripe_customer_id"),
