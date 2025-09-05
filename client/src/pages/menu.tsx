@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ interface Customer {
 export default function Menu() {
   const { restaurantId } = useParams();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -62,6 +64,12 @@ export default function Menu() {
   const { data: categories = [] } = useQuery({
     queryKey: [`/api/restaurants/${restaurantId}/categories`],
     enabled: !!restaurantId,
+  });
+
+  // Buscar perfil do cliente se autenticado
+  const { data: customerProfile } = useQuery({
+    queryKey: ["/api/customer/profile"],
+    enabled: isAuthenticated,
   });
 
   const addToCart = (product: any) => {
@@ -113,10 +121,24 @@ export default function Menu() {
   };
 
   const handleOrder = async () => {
-    if (!customer.name || !customer.phone || !customer.address) {
+    // Validar se o cliente tem perfil completo
+    if (!customerProfile) {
+      toast({
+        title: "Perfil não encontrado",
+        description: "É necessário ter um perfil cadastrado para fazer pedidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const customerName = (customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+      ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+      : (customerProfile as any)?.email;
+
+    if (!customerName || !(customerProfile as any)?.email) {
       toast({
         title: "Dados incompletos",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        description: "Complete seu perfil para fazer pedidos. Acesse 'Meu Perfil' no menu.",
         variant: "destructive",
       });
       return;
@@ -134,9 +156,9 @@ export default function Menu() {
     try {
       const orderData = {
         restaurantId,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        customerAddress: customer.address,
+        customerName,
+        customerPhone: (customerProfile as any)?.phone || '',
+        customerAddress: (customerProfile as any)?.address || 'Endereço não informado',
         notes: customer.notes,
         items: cart.map(item => ({
           productId: item.id,
@@ -145,8 +167,8 @@ export default function Menu() {
           totalPrice: item.price * item.quantity
         })),
         subtotal: getTotalPrice(),
-        deliveryFee: parseFloat(restaurant?.deliveryFee || "0"),
-        total: getTotalPrice() + parseFloat(restaurant?.deliveryFee || "0")
+        deliveryFee: parseFloat((restaurant as any)?.deliveryFee || "0"),
+        total: getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")
       };
 
       const response = await fetch('/api/orders', {
@@ -166,7 +188,7 @@ export default function Menu() {
         description: "Seu pedido foi enviado com sucesso. Em breve entraremos em contato!",
       });
 
-      // Limpar carrinho e dados do cliente
+      // Limpar carrinho e observações
       setCart([]);
       setCustomer({ name: "", phone: "", address: "", notes: "" });
       setShowCheckout(false);
@@ -209,34 +231,34 @@ export default function Menu() {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-primary mb-2">{restaurant.name}</h1>
-              <p className="text-muted-foreground mb-4">{restaurant.description}</p>
+              <h1 className="text-3xl font-bold text-primary mb-2">{(restaurant as any)?.name}</h1>
+              <p className="text-muted-foreground mb-4">{(restaurant as any)?.description}</p>
               
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
-                  <span>{restaurant.address}</span>
+                  <span>{(restaurant as any)?.address}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Phone className="w-4 h-4" />
-                  <span>{restaurant.phone}</span>
+                  <span>{(restaurant as any)?.phone}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>{restaurant.openingTime} - {restaurant.closingTime}</span>
+                  <span>{(restaurant as any)?.openingTime} - {(restaurant as any)?.closingTime}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Truck className="w-4 h-4" />
-                  <span>Taxa de entrega: R$ {restaurant.deliveryFee}</span>
+                  <span>Taxa de entrega: R$ {(restaurant as any)?.deliveryFee}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 mt-2">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{restaurant.rating}</span>
+                  <span className="font-medium">{(restaurant as any)?.rating}</span>
                 </div>
-                <Badge variant="secondary">{restaurant.category}</Badge>
+                <Badge variant="secondary">{(restaurant as any)?.category}</Badge>
               </div>
             </div>
 
@@ -273,7 +295,7 @@ export default function Menu() {
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
               </div>
-            ) : products.length === 0 ? (
+            ) : (products as any[]).length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <h3 className="text-xl font-semibold mb-2">Nenhum produto disponível</h3>
@@ -284,8 +306,8 @@ export default function Menu() {
               </Card>
             ) : (
               <div className="grid gap-6">
-                {categories.map((category: any) => {
-                  const categoryProducts = products.filter((product: any) => product.categoryId === category.id);
+                {(categories as any[]).map((category: any) => {
+                  const categoryProducts = (products as any[]).filter((product: any) => product.categoryId === category.id);
                   if (categoryProducts.length === 0) return null;
 
                   return (
@@ -331,7 +353,7 @@ export default function Menu() {
 
                 {/* Produtos sem categoria */}
                 {(() => {
-                  const uncategorizedProducts = products.filter((product: any) => !product.categoryId);
+                  const uncategorizedProducts = (products as any[]).filter((product: any) => !product.categoryId);
                   if (uncategorizedProducts.length === 0) return null;
 
                   return (
@@ -436,11 +458,11 @@ export default function Menu() {
                         </div>
                         <div className="flex justify-between">
                           <span>Taxa de entrega:</span>
-                          <span>R$ {restaurant.deliveryFee}</span>
+                          <span>R$ {(restaurant as any)?.deliveryFee}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg">
                           <span>Total:</span>
-                          <span>R$ {(getTotalPrice() + parseFloat(restaurant.deliveryFee || "0")).toFixed(2)}</span>
+                          <span>R$ {(getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -468,50 +490,62 @@ export default function Menu() {
               <CardTitle>Finalizar Pedido</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Nome *</label>
-                <Input
-                  value={customer.name}
-                  onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                  placeholder="Seu nome completo"
-                  data-testid="input-customer-name"
-                />
+              {/* Dados do cliente - somente leitura */}
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                <h3 className="font-medium text-sm text-muted-foreground mb-2">Dados do Cliente</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nome</label>
+                  <div className="p-2 bg-background rounded border text-sm">
+                    {(customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+                      ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+                      : (customerProfile as any)?.email || 'Não informado'
+                    }
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <div className="p-2 bg-background rounded border text-sm">
+                    {(customerProfile as any)?.email || 'Não informado'}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Telefone</label>
+                  <div className="p-2 bg-background rounded border text-sm">
+                    {(customerProfile as any)?.phone || 'Não informado'}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Endereço de entrega</label>
+                  <div className="p-2 bg-background rounded border text-sm">
+                    {(customerProfile as any)?.address || 'Não informado'}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Para alterar seus dados, acesse a seção "Meu Perfil" no menu principal.
+                </p>
               </div>
 
+              {/* Campo de observações - editável */}
               <div>
-                <label className="block text-sm font-medium mb-1">Telefone *</label>
-                <Input
-                  value={customer.phone}
-                  onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                  placeholder="(11) 99999-9999"
-                  data-testid="input-customer-phone"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Endereço de entrega *</label>
-                <Textarea
-                  value={customer.address}
-                  onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  placeholder="Rua, número, bairro, cidade"
-                  data-testid="input-customer-address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Observações</label>
+                <label className="block text-sm font-medium mb-1">Observações sobre o pedido</label>
                 <Textarea
                   value={customer.notes}
                   onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                  placeholder="Observações sobre o pedido (opcional)"
+                  placeholder="Observações especiais sobre o pedido (opcional)"
                   data-testid="input-customer-notes"
+                  rows={3}
                 />
               </div>
 
               <div className="border-t pt-4">
                 <div className="flex justify-between font-bold">
                   <span>Total do pedido:</span>
-                  <span>R$ {(getTotalPrice() + parseFloat(restaurant.deliveryFee || "0")).toFixed(2)}</span>
+                  <span>R$ {(getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")).toFixed(2)}</span>
                 </div>
               </div>
 
