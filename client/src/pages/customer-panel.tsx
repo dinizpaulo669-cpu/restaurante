@@ -262,135 +262,184 @@ export default function CustomerPanel() {
   );
 
   const renderOrdersContent = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Meus Pedidos</h2>
-      <div className="space-y-4">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meus Pedidos</h2>
+      <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
         {/* Placeholder for orders */}
-        <Card className="p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">Pizzaria Bella</h3>
-            <Badge className="bg-green-100 text-green-800">Entregue</Badge>
+        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base truncate">Pizzaria Bella</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Pizza Margherita + Coca-Cola</p>
+            </div>
+            <Badge className="bg-green-100 text-green-800 text-xs ml-2 flex-shrink-0">Entregue</Badge>
           </div>
-          <p className="text-sm text-muted-foreground mb-2">Pizza Margherita + Coca-Cola</p>
-          <div className="flex justify-between text-sm">
-            <span>15 Jan, 2025</span>
-            <span className="font-semibold">R$ 45,90</span>
+          <div className="flex justify-between items-center text-xs sm:text-sm">
+            <span className="text-muted-foreground">15 Jan, 2025</span>
+            <span className="font-semibold text-primary">R$ 45,90</span>
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">Burger House</h3>
-            <Badge className="bg-blue-100 text-blue-800">A caminho</Badge>
+        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base truncate">Burger House</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Burger Clássico + Batata</p>
+            </div>
+            <Badge className="bg-blue-100 text-blue-800 text-xs ml-2 flex-shrink-0">A caminho</Badge>
           </div>
-          <p className="text-sm text-muted-foreground mb-2">Burger Clássico + Batata</p>
-          <div className="flex justify-between text-sm">
-            <span>Hoje, 14:30</span>
-            <span className="font-semibold">R$ 32,50</span>
+          <div className="flex justify-between items-center text-xs sm:text-sm">
+            <span className="text-muted-foreground">Hoje, 14:30</span>
+            <span className="font-semibold text-primary">R$ 32,50</span>
           </div>
         </Card>
+        
+        {!isMobile && (
+          <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm sm:text-base truncate">Sushi Master</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Combo Sashimi + Temaki</p>
+              </div>
+              <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 flex-shrink-0">Preparando</Badge>
+            </div>
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="text-muted-foreground">Ontem, 19:45</span>
+              <span className="font-semibold text-primary">R$ 67,50</span>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
 
   const renderFavoritesContent = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Meus Favoritos</h2>
-      <div className="space-y-4">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meus Favoritos</h2>
+      <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
         {/* Placeholder for favorites */}
-        <Card className="p-4">
-          <div className="flex space-x-4">
-            <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
-              <Pizza className="h-8 w-8 text-red-600" />
+        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+          <div className="flex space-x-3 sm:space-x-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Pizza className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Pizzaria Bella</h3>
-              <p className="text-sm text-muted-foreground">Pizza • Italiana</p>
-              <div className="flex items-center space-x-2 mt-1">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base truncate">Pizzaria Bella</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Pizza • Italiana</p>
+              <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
                 <Badge variant="secondary" className="text-xs">★ 4.7</Badge>
-                <Badge variant="outline" className="text-xs">30-40 min</Badge>
+                <Badge variant="outline" className="text-xs hidden sm:inline-flex">30-40 min</Badge>
               </div>
             </div>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="flex-shrink-0">
               <Heart className="h-4 w-4 text-red-500 fill-current" />
             </Button>
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex space-x-4">
-            <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Sandwich className="h-8 w-8 text-orange-600" />
+        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+          <div className="flex space-x-3 sm:space-x-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Sandwich className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Burger House</h3>
-              <p className="text-sm text-muted-foreground">Hambúrguer • Americana</p>
-              <div className="flex items-center space-x-2 mt-1">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base truncate">Burger House</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Hambúrguer • Americana</p>
+              <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
                 <Badge variant="secondary" className="text-xs">★ 4.5</Badge>
-                <Badge variant="outline" className="text-xs">20-30 min</Badge>
+                <Badge variant="outline" className="text-xs hidden sm:inline-flex">20-30 min</Badge>
               </div>
             </div>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="flex-shrink-0">
               <Heart className="h-4 w-4 text-red-500 fill-current" />
             </Button>
           </div>
         </Card>
+        
+        {!isMobile && (
+          <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+            <div className="flex space-x-3 sm:space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Leaf className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm sm:text-base truncate">Vida Verde</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Saudável • Vegana</p>
+                <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">★ 4.9</Badge>
+                  <Badge variant="outline" className="text-xs hidden sm:inline-flex">15-25 min</Badge>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="flex-shrink-0">
+                <Heart className="h-4 w-4 text-red-500 fill-current" />
+              </Button>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
 
   const renderProfileContent = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Meu Perfil</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meu Perfil</h2>
       
-      {/* User Info */}
-      <Card className="p-6">
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="w-16 h-16 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xl font-bold">
-            {user.name.charAt(0).toUpperCase()}
+      <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}`}>
+        {/* User Info */}
+        <Card className="p-4 sm:p-6">
+          <div className="flex items-center space-x-3 sm:space-x-4 mb-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-lg sm:text-xl font-bold">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg sm:text-xl font-semibold truncate" data-testid="profile-name">{user.name}</h3>
+              <p className="text-sm sm:text-base text-muted-foreground truncate" data-testid="profile-email">{user.email}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold" data-testid="profile-name">{user.name}</h3>
-            <p className="text-muted-foreground" data-testid="profile-email">{user.email}</p>
+          
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-start space-x-3">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground" data-testid="profile-address">{user.address}</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className="text-xs sm:text-sm font-medium">Telefone:</span>
+              <span className="text-xs sm:text-sm" data-testid="profile-phone">{user.phone}</span>
+            </div>
           </div>
-        </div>
-        
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm" data-testid="profile-address">{user.address}</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium">Telefone:</span>
-            <span className="text-sm" data-testid="profile-phone">{user.phone}</span>
-          </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Quick Actions */}
-      <div className="space-y-3">
-        <Button variant="outline" className="w-full justify-start">
-          <User className="h-4 w-4 mr-3" />
-          Editar Perfil
-        </Button>
-        <Button variant="outline" className="w-full justify-start">
-          <MapPin className="h-4 w-4 mr-3" />
-          Gerenciar Endereços
-        </Button>
-        <Button variant="outline" className="w-full justify-start">
-          <Bell className="h-4 w-4 mr-3" />
-          Notificações
-        </Button>
-        <Button 
-          variant="outline" 
-          className="w-full justify-start text-red-600 hover:bg-red-50" 
-          onClick={() => {
-            localStorage.removeItem('currentUser');
-            setLocation("/");
-          }}
-        >
-          Sair
-        </Button>
+        {/* Quick Actions */}
+        <div className="space-y-2 sm:space-y-3">
+          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+            <User className="h-4 w-4 mr-2 sm:mr-3" />
+            Editar Perfil
+          </Button>
+          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+            <MapPin className="h-4 w-4 mr-2 sm:mr-3" />
+            Gerenciar Endereços
+          </Button>
+          <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+            <Bell className="h-4 w-4 mr-2 sm:mr-3" />
+            Notificações
+          </Button>
+          {!isMobile && (
+            <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+              <Heart className="h-4 w-4 mr-2 sm:mr-3" />
+              Configurações de Privacidade
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            className="w-full justify-start text-red-600 hover:bg-red-50 text-sm sm:text-base" 
+            onClick={() => {
+              localStorage.removeItem('currentUser');
+              setLocation("/");
+            }}
+          >
+            Sair
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -449,7 +498,7 @@ export default function CustomerPanel() {
               )}
               {!isMobile && (
                 <h2 className="text-xl font-semibold">
-                  {bottomNavItems.find(item => item.id === activeTab)?.label || "Início"}
+                  {bottomNavItems.find(item => item.value === activeTab)?.label || "Início"}
                 </h2>
               )}
               <div className="flex items-center space-x-2">
