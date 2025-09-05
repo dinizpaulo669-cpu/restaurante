@@ -1182,6 +1182,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rotas para integração com IBGE
+  app.get("/api/ibge/states", async (req: any, res) => {
+    try {
+      const states = await dbStorage.getStates();
+      res.json(states);
+    } catch (error) {
+      console.error("Error fetching states from IBGE:", error);
+      res.status(500).json({ message: "Failed to fetch states" });
+    }
+  });
+
+  app.get("/api/ibge/municipalities/:stateId", async (req: any, res) => {
+    try {
+      const { stateId } = req.params;
+      const municipalities = await dbStorage.getMunicipalities(parseInt(stateId));
+      res.json(municipalities);
+    } catch (error) {
+      console.error("Error fetching municipalities from IBGE:", error);
+      res.status(500).json({ message: "Failed to fetch municipalities" });
+    }
+  });
+
+  app.get("/api/ibge/districts/:municipalityId", async (req: any, res) => {
+    try {
+      const { municipalityId } = req.params;
+      const districts = await dbStorage.getDistricts(parseInt(municipalityId));
+      res.json(districts);
+    } catch (error) {
+      console.error("Error fetching districts from IBGE:", error);
+      res.status(500).json({ message: "Failed to fetch districts" });
+    }
+  });
+
+  app.get("/api/ibge/municipality/:cityName/:stateCode", async (req: any, res) => {
+    try {
+      const { cityName, stateCode } = req.params;
+      const municipalityId = await dbStorage.findMunicipalityByName(cityName, stateCode);
+      res.json({ municipalityId });
+    } catch (error) {
+      console.error("Error finding municipality:", error);
+      res.status(500).json({ message: "Failed to find municipality" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
