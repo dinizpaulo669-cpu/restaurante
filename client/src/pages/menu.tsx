@@ -491,44 +491,70 @@ export default function Menu() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Dados do cliente - somente leitura */}
-              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                <h3 className="font-medium text-sm text-muted-foreground mb-2">Dados do Cliente</h3>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nome</label>
-                  <div className="p-2 bg-background rounded border text-sm">
-                    {(customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
-                      ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
-                      : (customerProfile as any)?.email || 'Não informado'
-                    }
+              {customerProfile ? (
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <h3 className="font-medium text-sm text-muted-foreground mb-2">Dados do Cliente</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nome</label>
+                    <div className="p-2 bg-background rounded border text-sm">
+                      {(customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+                        ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+                        : (customerProfile as any)?.email || 'Não informado'
+                      }
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <div className="p-2 bg-background rounded border text-sm">
-                    {(customerProfile as any)?.email || 'Não informado'}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email</label>
+                    <div className="p-2 bg-background rounded border text-sm">
+                      {(customerProfile as any)?.email || 'Não informado'}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Telefone</label>
-                  <div className="p-2 bg-background rounded border text-sm">
-                    {(customerProfile as any)?.phone || 'Não informado'}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Telefone</label>
+                    <div className={`p-2 rounded border text-sm ${!(customerProfile as any)?.phone ? 'bg-yellow-50 border-yellow-200' : 'bg-background'}`}>
+                      {(customerProfile as any)?.phone || (
+                        <span className="text-yellow-700 font-medium">⚠️ Telefone não cadastrado</span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Endereço de entrega</label>
-                  <div className="p-2 bg-background rounded border text-sm">
-                    {(customerProfile as any)?.address || 'Não informado'}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Endereço de entrega</label>
+                    <div className={`p-2 rounded border text-sm ${!(customerProfile as any)?.address ? 'bg-yellow-50 border-yellow-200' : 'bg-background'}`}>
+                      {(customerProfile as any)?.address || (
+                        <span className="text-yellow-700 font-medium">⚠️ Endereço não cadastrado</span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <p className="text-xs text-muted-foreground">
-                  Para alterar seus dados, acesse a seção "Meu Perfil" no menu principal.
-                </p>
-              </div>
+                  {(!(customerProfile as any)?.phone || !(customerProfile as any)?.address) && (
+                    <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                      <p className="text-sm text-yellow-800 font-medium">
+                        ⚠️ Informações incompletas
+                      </p>
+                      <p className="text-xs text-yellow-700 mt-1">
+                        Complete seu perfil antes de fazer pedidos. Acesse "Meu Perfil" no menu principal e clique em "Editar Perfil".
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Para alterar seus dados, acesse a seção "Meu Perfil" no menu principal.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                  <p className="text-sm text-red-800 font-medium">
+                    🚫 Perfil não encontrado
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    É necessário ter um perfil cadastrado para fazer pedidos. Faça login ou cadastre-se.
+                  </p>
+                </div>
+              )}
 
               {/* Campo de observações - editável */}
               <div>
