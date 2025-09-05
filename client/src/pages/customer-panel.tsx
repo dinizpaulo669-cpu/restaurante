@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RestaurantCard } from "@/components/restaurant-card";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Search, 
   Pizza, 
@@ -22,7 +23,8 @@ import {
   Bell,
   Star,
   Clock,
-  Truck
+  Truck,
+  Menu
 } from "lucide-react";
 
 const categories = [
@@ -48,6 +50,8 @@ export default function CustomerPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [activeTab, setActiveTab] = useState("home");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
@@ -78,11 +82,11 @@ export default function CustomerPanel() {
   const renderHomeContent = () => (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary to-accent text-white rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-2" data-testid="welcome-title">
+      <div className="bg-gradient-to-r from-primary to-accent text-white rounded-xl p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2" data-testid="welcome-title">
           Olá, {user.name.split(' ')[0]}! 👋
         </h1>
-        <p className="text-white/90 mb-4" data-testid="welcome-subtitle">
+        <p className="text-white/90 mb-4 text-sm sm:text-base" data-testid="welcome-subtitle">
           O que você gostaria de comer hoje?
         </p>
         <div className="flex bg-white rounded-lg p-1">
@@ -106,48 +110,54 @@ export default function CustomerPanel() {
 
       {/* Categories */}
       <div>
-        <h2 className="text-xl font-bold mb-4" data-testid="categories-title">Categorias</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4" data-testid="categories-title">Categorias</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
           {categories.map(({ icon: Icon, name, value, color }) => (
             <button
               key={value}
               onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
-              className={`p-4 rounded-xl text-center transition-all hover:scale-105 ${
+              className={`p-3 sm:p-4 rounded-xl text-center transition-all hover:scale-105 ${
                 selectedCategory === value ? "bg-primary/10 border-2 border-primary" : "bg-card border border-border"
               }`}
               data-testid={`category-${value}`}
             >
-              <div className={`w-12 h-12 rounded-full ${color} flex items-center justify-center mx-auto mb-2`}>
-                <Icon className="h-6 w-6" />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full ${color} flex items-center justify-center mx-auto mb-2`}>
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7" />
               </div>
-              <span className="text-sm font-medium">{name}</span>
+              <span className="text-xs sm:text-sm font-medium">{name}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="text-center p-4">
-          <div className="text-primary text-2xl font-bold">12</div>
-          <div className="text-sm text-muted-foreground">Pedidos</div>
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+        <Card className="text-center p-3 sm:p-4">
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">12</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">Pedidos</div>
         </Card>
-        <Card className="text-center p-4">
-          <div className="text-primary text-2xl font-bold">5</div>
-          <div className="text-sm text-muted-foreground">Favoritos</div>
+        <Card className="text-center p-3 sm:p-4">
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">5</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">Favoritos</div>
         </Card>
-        <Card className="text-center p-4">
-          <div className="text-primary text-2xl font-bold">★ 4.8</div>
-          <div className="text-sm text-muted-foreground">Avaliação</div>
+        <Card className="text-center p-3 sm:p-4">
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">★ 4.8</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">Avaliação</div>
         </Card>
+        {!isMobile && (
+          <Card className="text-center p-3 sm:p-4">
+            <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">R$ 245</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Economizado</div>
+          </Card>
+        )}
       </div>
 
       {/* Featured Restaurants */}
       <div>
         <h2 className="text-xl font-bold mb-4" data-testid="restaurants-title">Restaurantes em destaque</h2>
         {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+            {[...Array(isMobile ? 3 : 6)].map((_, i) => (
               <div key={i} className="bg-card rounded-xl p-4 animate-pulse">
                 <div className="flex space-x-4">
                   <div className="w-16 h-16 bg-muted rounded-lg"></div>
@@ -161,17 +171,17 @@ export default function CustomerPanel() {
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
-            {restaurants.slice(0, 3).map((restaurant: any) => (
-              <Card key={restaurant.id} className="p-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+            {restaurants.slice(0, isMobile ? 3 : 6).map((restaurant: any) => (
+              <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow">
                 <div className="flex space-x-4">
                   <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Pizza className="h-8 w-8 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{restaurant.name}</h3>
+                    <h3 className="font-semibold text-base lg:text-lg">{restaurant.name}</h3>
                     <p className="text-muted-foreground text-sm mb-1">{restaurant.category}</p>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">
                         <Star className="w-3 h-3 mr-1" />
                         4.5
@@ -216,8 +226,8 @@ export default function CustomerPanel() {
 
       {/* All Restaurants */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4">
-          {[...Array(6)].map((_, i) => (
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+          {[...Array(isMobile ? 6 : 12)].map((_, i) => (
             <div key={i} className="bg-card rounded-lg p-4 animate-pulse">
               <div className="flex space-x-4">
                 <div className="w-20 h-20 bg-muted rounded-lg"></div>
@@ -240,9 +250,11 @@ export default function CustomerPanel() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
           {restaurants.map((restaurant: any) => (
-            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+            <div key={restaurant.id} className="lg:col-span-1">
+              <RestaurantCard restaurant={restaurant} />
+            </div>
           ))}
         </div>
       )}
@@ -395,54 +407,106 @@ export default function CustomerPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="bg-card shadow-sm border-b border-border sticky top-0 z-40">
-        <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-primary" data-testid="logo-text">
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <aside className="w-64 bg-card border-r border-border flex-shrink-0">
+          <div className="p-6">
+            <h1 className="text-xl font-bold text-primary" data-testid="logo-text-desktop">
               RestaurantePro
             </h1>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="relative"
-              data-testid="button-notifications"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
-            </Button>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-md mx-auto px-4 py-6">
-        {renderContent()}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-        <div className="max-w-md mx-auto">
-          <div className="flex">
+          <nav className="mt-6">
             {bottomNavItems.map(({ icon: Icon, label, value }) => (
               <button
                 key={value}
                 onClick={() => setActiveTab(value)}
-                className={`flex-1 py-3 px-2 text-center transition-colors ${
+                className={`w-full flex items-center px-6 py-3 text-left transition-colors ${
                   activeTab === value 
-                    ? "text-primary bg-primary/5" 
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-primary bg-primary/10 border-r-2 border-primary" 
+                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                 }`}
-                data-testid={`nav-${value}`}
+                data-testid={`nav-desktop-${value}`}
               >
-                <Icon className="h-5 w-5 mx-auto mb-1" />
-                <span className="text-xs font-medium">{label}</span>
+                <Icon className="h-5 w-5 mr-3" />
+                <span className="font-medium">{label}</span>
               </button>
             ))}
+          </nav>
+        </aside>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-card shadow-sm border-b border-border sticky top-0 z-40">
+          <div className={`mx-auto px-4 lg:px-6 xl:px-8 ${isMobile ? 'max-w-md' : 'max-w-none'}`}>
+            <div className="flex justify-between items-center h-16">
+              {isMobile && (
+                <h1 className="text-xl font-bold text-primary" data-testid="logo-text">
+                  RestaurantePro
+                </h1>
+              )}
+              {!isMobile && (
+                <h2 className="text-xl font-semibold">
+                  {bottomNavItems.find(item => item.id === activeTab)?.label || "Início"}
+                </h2>
+              )}
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="relative"
+                  data-testid="button-notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
+                </Button>
+                {!isMobile && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <span className="text-primary-foreground text-sm font-semibold">
+                        {user?.name?.charAt(0)?.toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="font-medium">{user?.name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </nav>
+        </header>
+
+        {/* Main Content */}
+        <main className={`flex-1 px-4 lg:px-6 xl:px-8 py-6 ${isMobile ? 'max-w-md mx-auto pb-20' : 'max-w-7xl mx-auto'}`}>
+          {renderContent()}
+        </main>
+
+        {/* Mobile Bottom Navigation */}
+        {isMobile && (
+          <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+            <div className="max-w-md mx-auto">
+              <div className="flex">
+                {bottomNavItems.map(({ icon: Icon, label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => setActiveTab(value)}
+                    className={`flex-1 py-3 px-2 text-center transition-colors ${
+                      activeTab === value 
+                        ? "text-primary bg-primary/5" 
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`nav-${value}`}
+                  >
+                    <Icon className="h-5 w-5 mx-auto mb-1" />
+                    <span className="text-xs font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </nav>
+        )}
+      </div>
     </div>
   );
 }
