@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Home, Lock } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -26,6 +28,25 @@ export default function Register() {
   });
   
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+
+  const createProfileMutation = useMutation({
+    mutationFn: (profileData: any) => apiRequest("/api/customer/profile", "PUT", profileData),
+    onSuccess: () => {
+      toast({
+        title: "Cadastro realizado!",
+        description: "Bem-vindo ao RestaurantePro!",
+      });
+      setLocation("/customer-panel");
+    },
+    onError: (error) => {
+      console.error("Erro ao salvar perfil:", error);
+      toast({
+        title: "Erro no cadastro",
+        description: "Não foi possível salvar seus dados. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,23 +81,18 @@ export default function Register() {
     // Concatenar endereço completo
     const endereco = `${formData.rua}, ${formData.numero}${formData.pontoReferencia ? ` - ${formData.pontoReferencia}` : ''} - ${formData.bairro}, ${formData.cidade} - ${formData.estado}, CEP: ${formData.cep}`;
 
-    // Salvar dados do cliente no localStorage
-    localStorage.setItem('currentUser', JSON.stringify({
-      id: Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
+    // Separar nome em firstName e lastName
+    const nameParts = formData.name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Enviar dados para o servidor
+    createProfileMutation.mutate({
+      firstName,
+      lastName,
       phone: formData.phone,
       address: endereco,
-      type: 'customer'
-    }));
-
-    toast({
-      title: "Cadastro realizado!",
-      description: "Bem-vindo ao RestaurantePro!",
     });
-
-    // Redirecionar para o painel do cliente
-    setLocation("/customer-panel");
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -345,9 +361,10 @@ export default function Register() {
               <Button
                 type="submit"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={createProfileMutation.isPending}
                 data-testid="button-register"
               >
-                Criar Conta
+                {createProfileMutation.isPending ? "Criando conta..." : "Criar Conta"}
               </Button>
 
               <div className="text-center">
