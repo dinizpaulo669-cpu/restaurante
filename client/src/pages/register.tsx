@@ -30,7 +30,7 @@ export default function Register() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const createProfileMutation = useMutation({
-    mutationFn: (profileData: any) => apiRequest("/api/customer/profile", "PUT", profileData),
+    mutationFn: (profileData: any) => apiRequest("PUT", "/api/customer/profile", profileData),
     onSuccess: () => {
       toast({
         title: "Cadastro realizado!",
