@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +67,54 @@ export default function CustomerPanel() {
   const { data: restaurants = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/restaurants", searchQuery, selectedCategory],
     enabled: true,
+  });
+
+  // Customer data hooks
+  const { data: customerStats } = useQuery({
+    queryKey: ["/api/customer/stats"],
+    enabled: true,
+  });
+
+  const { data: customerOrders = [] } = useQuery({
+    queryKey: ["/api/customer/orders"],
+    enabled: true,
+  });
+
+  const { data: customerFavorites = [] } = useQuery({
+    queryKey: ["/api/customer/favorites"],
+    enabled: true,
+  });
+
+  const { data: customerProfile } = useQuery({
+    queryKey: ["/api/customer/profile"],
+    enabled: true,
+  });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const addToFavoritesMutation = useMutation({
+    mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "POST"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/stats"] });
+      toast({ title: "Restaurante adicionado aos favoritos!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao adicionar favorito", variant: "destructive" });
+    },
+  });
+
+  const removeFromFavoritesMutation = useMutation({
+    mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/stats"] });
+      toast({ title: "Restaurante removido dos favoritos" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao remover favorito", variant: "destructive" });
+    },
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -133,21 +183,29 @@ export default function CustomerPanel() {
       {/* Quick Stats */}
       <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
         <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">12</div>
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
+            {customerStats?.totalOrders || 0}
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground">Pedidos</div>
         </Card>
         <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">5</div>
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
+            {customerStats?.favoritesCount || 0}
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground">Favoritos</div>
         </Card>
         <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">★ 4.8</div>
+          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
+            ★ {customerStats?.averageRating?.toFixed(1) || '4.8'}
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground">Avaliação</div>
         </Card>
         {!isMobile && (
           <Card className="text-center p-3 sm:p-4">
-            <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">R$ 245</div>
-            <div className="text-xs sm:text-sm text-muted-foreground">Economizado</div>
+            <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
+              R$ {customerStats?.totalSpent?.toFixed(2) || '0,00'}
+            </div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Total Gasto</div>
           </Card>
         )}
       </div>
@@ -261,153 +319,174 @@ export default function CustomerPanel() {
     </div>
   );
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800 text-xs ml-2 flex-shrink-0">Entregue</Badge>;
+      case 'in_transit':
+        return <Badge className="bg-blue-100 text-blue-800 text-xs ml-2 flex-shrink-0">A caminho</Badge>;
+      case 'preparing':
+        return <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 flex-shrink-0">Preparando</Badge>;
+      case 'confirmed':
+        return <Badge className="bg-orange-100 text-orange-800 text-xs ml-2 flex-shrink-0">Confirmado</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-100 text-red-800 text-xs ml-2 flex-shrink-0">Cancelado</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 text-xs ml-2 flex-shrink-0">Pedido</Badge>;
+    }
+  };
+
+  const formatOrderDate = (date: string) => {
+    const orderDate = new Date(date);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (orderDate.toDateString() === today.toDateString()) {
+      return `Hoje, ${orderDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (orderDate.toDateString() === yesterday.toDateString()) {
+      return `Ontem, ${orderDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      return orderDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    }
+  };
+
   const renderOrdersContent = () => (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meus Pedidos</h2>
-      <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
-        {/* Placeholder for orders */}
-        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm sm:text-base truncate">Pizzaria Bella</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Pizza Margherita + Coca-Cola</p>
-            </div>
-            <Badge className="bg-green-100 text-green-800 text-xs ml-2 flex-shrink-0">Entregue</Badge>
-          </div>
-          <div className="flex justify-between items-center text-xs sm:text-sm">
-            <span className="text-muted-foreground">15 Jan, 2025</span>
-            <span className="font-semibold text-primary">R$ 45,90</span>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm sm:text-base truncate">Burger House</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Burger Clássico + Batata</p>
-            </div>
-            <Badge className="bg-blue-100 text-blue-800 text-xs ml-2 flex-shrink-0">A caminho</Badge>
-          </div>
-          <div className="flex justify-between items-center text-xs sm:text-sm">
-            <span className="text-muted-foreground">Hoje, 14:30</span>
-            <span className="font-semibold text-primary">R$ 32,50</span>
-          </div>
-        </Card>
-        
-        {!isMobile && (
-          <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base truncate">Sushi Master</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">Combo Sashimi + Temaki</p>
+      {customerOrders.length === 0 ? (
+        <div className="text-center py-12">
+          <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Você ainda não fez nenhum pedido.</p>
+          <Button className="mt-4" onClick={() => setActiveTab('home')}>
+            Explorar Restaurantes
+          </Button>
+        </div>
+      ) : (
+        <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+          {customerOrders.slice(0, isMobile ? 6 : 12).map((order: any) => (
+            <Card key={order.id} className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">Pedido #{order.id.slice(-6)}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">
+                    {order.items?.length ? `${order.items.length} item(s)` : 'Itens do pedido'}
+                  </p>
+                </div>
+                {getStatusBadge(order.status)}
               </div>
-              <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 flex-shrink-0">Preparando</Badge>
-            </div>
-            <div className="flex justify-between items-center text-xs sm:text-sm">
-              <span className="text-muted-foreground">Ontem, 19:45</span>
-              <span className="font-semibold text-primary">R$ 67,50</span>
-            </div>
-          </Card>
-        )}
-      </div>
+              <div className="flex justify-between items-center text-xs sm:text-sm">
+                <span className="text-muted-foreground">{formatOrderDate(order.createdAt)}</span>
+                <span className="font-semibold text-primary">R$ {order.total?.toFixed(2) || '0,00'}</span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 
   const renderFavoritesContent = () => (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meus Favoritos</h2>
-      <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-        {/* Placeholder for favorites */}
-        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-          <div className="flex space-x-3 sm:space-x-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Pizza className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm sm:text-base truncate">Pizzaria Bella</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">Pizza • Italiana</p>
-              <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
-                <Badge variant="secondary" className="text-xs">★ 4.7</Badge>
-                <Badge variant="outline" className="text-xs hidden sm:inline-flex">30-40 min</Badge>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" className="flex-shrink-0">
-              <Heart className="h-4 w-4 text-red-500 fill-current" />
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-          <div className="flex space-x-3 sm:space-x-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Sandwich className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm sm:text-base truncate">Burger House</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">Hambúrguer • Americana</p>
-              <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
-                <Badge variant="secondary" className="text-xs">★ 4.5</Badge>
-                <Badge variant="outline" className="text-xs hidden sm:inline-flex">20-30 min</Badge>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" className="flex-shrink-0">
-              <Heart className="h-4 w-4 text-red-500 fill-current" />
-            </Button>
-          </div>
-        </Card>
-        
-        {!isMobile && (
-          <Card className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
-            <div className="flex space-x-3 sm:space-x-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Leaf className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base truncate">Vida Verde</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Saudável • Vegana</p>
-                <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">★ 4.9</Badge>
-                  <Badge variant="outline" className="text-xs hidden sm:inline-flex">15-25 min</Badge>
+      {customerFavorites.length === 0 ? (
+        <div className="text-center py-12">
+          <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Você ainda não tem restaurantes favoritos.</p>
+          <Button className="mt-4" onClick={() => setActiveTab('search')}>
+            Explorar Restaurantes
+          </Button>
+        </div>
+      ) : (
+        <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+          {customerFavorites.map((restaurant: any) => (
+            <Card key={restaurant.id} className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
+              <div className="flex space-x-3 sm:space-x-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Pizza className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">{restaurant.name}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{restaurant.category || 'Categoria'}</p>
+                  <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      <Star className="w-3 h-3 mr-1" />
+                      {restaurant.rating || '4.5'}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {restaurant.deliveryTime || '30-45'} min
+                    </Badge>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-shrink-0"
+                  onClick={() => removeFromFavoritesMutation.mutate(restaurant.id)}
+                  disabled={removeFromFavoritesMutation.isPending}
+                >
+                  <Heart className="h-4 w-4 text-red-500 fill-current" />
+                </Button>
               </div>
-              <Button variant="ghost" size="sm" className="flex-shrink-0">
-                <Heart className="h-4 w-4 text-red-500 fill-current" />
-              </Button>
-            </div>
-          </Card>
-        )}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 
-  const renderProfileContent = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meu Perfil</h2>
-      
-      <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}`}>
-        {/* User Info */}
-        <Card className="p-4 sm:p-6">
-          <div className="flex items-center space-x-3 sm:space-x-4 mb-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-lg sm:text-xl font-bold">
-              {user.name.charAt(0).toUpperCase()}
+  const renderProfileContent = () => {
+    const currentUser = customerProfile || user;
+    
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meu Perfil</h2>
+        
+        <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}`}>
+          {/* User Info */}
+          <Card className="p-4 sm:p-6">
+            <div className="flex items-center space-x-3 sm:space-x-4 mb-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-lg sm:text-xl font-bold">
+                {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-semibold truncate" data-testid="profile-name">
+                  {currentUser?.name || 'Nome não disponível'}
+                </h3>
+                <p className="text-sm sm:text-base text-muted-foreground truncate" data-testid="profile-email">
+                  {currentUser?.email || 'Email não disponível'}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-semibold truncate" data-testid="profile-name">{user.name}</h3>
-              <p className="text-sm sm:text-base text-muted-foreground truncate" data-testid="profile-email">{user.email}</p>
+            
+            <div className="space-y-2 sm:space-y-3">
+              {currentUser?.address && (
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-muted-foreground" data-testid="profile-address">
+                    {currentUser.address}
+                  </span>
+                </div>
+              )}
+              {currentUser?.phone && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-xs sm:text-sm font-medium">Telefone:</span>
+                  <span className="text-xs sm:text-sm" data-testid="profile-phone">
+                    {currentUser.phone}
+                  </span>
+                </div>
+              )}
+              {currentUser?.role && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-xs sm:text-sm font-medium">Tipo de conta:</span>
+                  <Badge variant="outline" className="text-xs">
+                    {currentUser.role === 'customer' ? 'Cliente' : 'Proprietário'}
+                  </Badge>
+                </div>
+              )}
             </div>
-          </div>
-          
-          <div className="space-y-2 sm:space-y-3">
-            <div className="flex items-start space-x-3">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground" data-testid="profile-address">{user.address}</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-xs sm:text-sm font-medium">Telefone:</span>
-              <span className="text-xs sm:text-sm" data-testid="profile-phone">{user.phone}</span>
-            </div>
-          </div>
-        </Card>
+          </Card>
 
         {/* Quick Actions */}
         <div className="space-y-2 sm:space-y-3">
