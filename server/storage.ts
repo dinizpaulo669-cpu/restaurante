@@ -566,30 +566,91 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Função para buscar bairros de uma cidade usando API do IBGE
+  // Função para buscar bairros de uma cidade usando API do ViaCEP
   async getCityNeighborhoods(city: string, state: string): Promise<string[]> {
     try {
-      // Buscar ID do município na API do IBGE
-      const municipalityId = await this.findMunicipalityByName(city, state);
+      console.log(`Buscando bairros para ${city}-${state} via ViaCEP...`);
       
-      if (!municipalityId) {
-        console.log(`Município não encontrado: ${city}, ${state}. Retornando bairros padrão.`);
-        return this.getDefaultNeighborhoods(city);
+      // Primeira tentativa: usar ViaCEP para buscar bairros reais
+      const neighborhoodsFromViaCep = await this.getNeighborhoodsFromViaCep(city, state);
+      
+      if (neighborhoodsFromViaCep.length > 0) {
+        console.log(`Encontrados ${neighborhoodsFromViaCep.length} bairros via ViaCEP`);
+        return neighborhoodsFromViaCep;
       }
 
-      // Buscar distritos/bairros do município
-      const districts = await this.getDistricts(municipalityId);
+      // Fallback: usar dados locais mais detalhados
+      console.log(`ViaCEP não retornou bairros. Usando dados locais detalhados.`);
+      return this.getDetailedLocalNeighborhoods(city, state);
       
-      if (districts.length === 0) {
-        console.log(`Nenhum distrito encontrado para ${city}. Retornando bairros padrão.`);
-        return this.getDefaultNeighborhoods(city);
-      }
-
-      return districts.map(district => district.nome);
     } catch (error) {
-      console.error('Erro ao buscar bairros via IBGE:', error);
-      return this.getDefaultNeighborhoods(city);
+      console.error('Erro ao buscar bairros:', error);
+      return this.getDetailedLocalNeighborhoods(city, state);
     }
+  }
+
+  // Nova função para buscar bairros via ViaCEP
+  async getNeighborhoodsFromViaCep(city: string, state: string): Promise<string[]> {
+    try {
+      // ViaCEP permite busca por cidade/estado: viacep.com.br/ws/{UF}/{cidade}/{logradouro}/json/
+      const response = await fetch(`https://viacep.com.br/ws/${state}/${encodeURIComponent(city)}/centro/json/`);
+      
+      if (!response.ok) {
+        console.log(`ViaCEP não encontrou dados para ${city}/${state}`);
+        return [];
+      }
+
+      const data = await response.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        // Extrair bairros únicos dos resultados
+        const neighborhoods = [...new Set(data
+          .map((item: any) => item.bairro)
+          .filter((bairro: string) => bairro && bairro.trim() !== '')
+        )];
+        return neighborhoods.sort();
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Erro ao consultar ViaCEP:', error);
+      return [];
+    }
+  }
+
+  // Função com dados locais mais detalhados por cidade
+  private getDetailedLocalNeighborhoods(city: string, state: string): string[] {
+    const cityKey = `${city.toLowerCase()}-${state.toLowerCase()}`;
+    
+    const detailedNeighborhoods: Record<string, string[]> = {
+      "petrópolis-rj": [
+        "Centro", "Bingen", "Retiro", "Valparaíso", "Quitandinha", "Coronel Veiga",
+        "Castelânea", "São Sebastião", "Cremerie", "Mosela", "Nogueira", "Duchas",
+        "Alto da Serra", "Carangola", "Cascatinha", "Itaipava", "Pedro do Rio",
+        "Posse", "Correas", "Araras", "Taquara", "Vila Felipe", "Quarteirão Brasileiro",
+        "Chácara Flora", "Fazenda Inglesa", "Samambaia", "Independência"
+      ],
+      "são paulo-sp": [
+        "Aclimação", "Água Branca", "Alto de Pinheiros", "Anhangabaú", "Bela Vista",
+        "Brooklin", "Campo Belo", "Centro", "Consolação", "Ipiranga", "Itaim Bibi",
+        "Jardins", "Liberdade", "Moema", "Morumbi", "Pinheiros", "Santa Cecília",
+        "Santana", "Tatuapé", "Vila Madalena", "Vila Mariana", "Vila Olímpia"
+      ],
+      "rio de janeiro-rj": [
+        "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Botafogo", "Flamengo",
+        "Tijuca", "Centro", "Lapa", "Santa Teresa", "Catete", "Urca", "Lagoa",
+        "Gávea", "São Conrado", "Recreio", "Jacarepaguá", "Vila Isabel", "Grajaú"
+      ],
+      "belo horizonte-mg": [
+        "Centro", "Savassi", "Funcionários", "Lourdes", "Cruzeiro", "Serra",
+        "Floresta", "Lagoinha", "Carlos Prates", "Cidade Nova", "Coração Eucarístico",
+        "Prado", "Santa Efigênia", "São Pedro", "Santo Antônio", "Boa Viagem"
+      ]
+    };
+
+    const neighborhoods = detailedNeighborhoods[cityKey] || this.getDefaultNeighborhoods(city);
+    console.log(`Retornando ${neighborhoods.length} bairros para ${city}-${state}`);
+    return neighborhoods;
   }
 
   // Função auxiliar para bairros padrão (fallback)
