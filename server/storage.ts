@@ -628,7 +628,19 @@ export class DatabaseStorage implements IStorage {
         "Castelânea", "São Sebastião", "Cremerie", "Mosela", "Nogueira", "Duchas",
         "Alto da Serra", "Carangola", "Cascatinha", "Itaipava", "Pedro do Rio",
         "Posse", "Correas", "Araras", "Taquara", "Vila Felipe", "Quarteirão Brasileiro",
-        "Chácara Flora", "Fazenda Inglesa", "Samambaia", "Independência"
+        "Chácara Flora", "Fazenda Inglesa", "Samambaia", "Independência",
+        // Bairros adicionais de Petrópolis
+        "Alcântara", "Batalhão", "Castelanea", "Caxambu", "Corrêas", "Duarte da Silveira",
+        "Estrada da Saudade", "Glória", "Granja Brasil", "Herval", "Inconfidência",
+        "João XXIII", "Linha do Tiro", "Moinho Preto", "Monte Serrat", "Palatinado",
+        "Parque São Vicente", "Paulo Barbosa", "Picada Mariana", "Quarteirão Italiano",
+        "Rocio", "Saldanha Marinho", "São Pedro", "Simeria", "Siméria", "Vila Militar",
+        "Vila Rica", "Bonfim", "Cidade Nova", "Duques", "Estrada União e Indústria",
+        "Galeria Carioca", "Industrial", "Itamarati", "Jardim Salvador", "Loteamento Morada da Colina",
+        "Miguel Salazar Mendes de Morais", "Morada da Colina", "Nova Petrópolis", "Parque Imbuí",
+        "Petrópole", "Quarteirão Ingelheim", "Roseiral", "Vale do Cuiabá", "Valley Encantado",
+        "Vila Real", "Alto Petrópole", "Caetés", "Floresta", "Fragoso", "Morada do Vale",
+        "Secretário", "Terra Nova", "Vale da Revolta", "Vale do Ipê", "Vila Santa Helena"
       ],
       "são paulo-sp": [
         "Aclimação", "Água Branca", "Alto de Pinheiros", "Anhangabaú", "Bela Vista",
