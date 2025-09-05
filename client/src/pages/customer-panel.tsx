@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -53,6 +55,20 @@ export default function CustomerPanel() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [activeTab, setActiveTab] = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address: "",
+    cep: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
+  });
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -112,7 +128,115 @@ export default function CustomerPanel() {
     enabled: true,
   });
 
+  // Mutação para atualizar perfil
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PUT", "/api/customer/profile", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/profile"] });
+      toast({
+        title: "Perfil atualizado!",
+        description: "Suas informações foram salvas com sucesso.",
+      });
+      setShowEditModal(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o perfil.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const { toast } = useToast();
+
+  // Função para buscar CEP
+  const handleCepChange = async (cep: string) => {
+    setEditFormData(prev => ({ ...prev, cep }));
+    
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setEditFormData(prev => ({
+            ...prev,
+            rua: data.logradouro || '',
+            bairro: data.bairro || '',
+            cidade: data.localidade || '',
+            estado: data.uf || ''
+          }));
+        } else {
+          toast({
+            title: "CEP não encontrado",
+            description: "Verifique se o CEP está correto",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro ao buscar CEP",
+          description: "Não foi possível consultar o endereço",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingCep(false);
+      }
+    }
+  };
+
+  // Função para abrir modal e preencher dados atuais
+  const openEditModal = () => {
+    if (customerProfile) {
+      setEditFormData({
+        firstName: (customerProfile as any)?.firstName || '',
+        lastName: (customerProfile as any)?.lastName || '',
+        phone: (customerProfile as any)?.phone || '',
+        address: (customerProfile as any)?.address || '',
+        cep: '',
+        rua: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+      });
+    }
+    setShowEditModal(true);
+  };
+
+  // Função para submeter formulário
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editFormData.firstName || !editFormData.lastName) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Nome e sobrenome são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let finalAddress = editFormData.address;
+    
+    // Se preencheu endereço via CEP, montar endereço completo
+    if (editFormData.cep && editFormData.rua && editFormData.numero) {
+      finalAddress = `${editFormData.rua}, ${editFormData.numero} - ${editFormData.bairro}, ${editFormData.cidade} - ${editFormData.estado}, CEP: ${editFormData.cep}`;
+    }
+
+    updateProfileMutation.mutate({
+      firstName: editFormData.firstName,
+      lastName: editFormData.lastName,
+      phone: editFormData.phone,
+      address: finalAddress,
+    });
+  };
 
   const addToFavoritesMutation = useMutation({
     mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "POST"),
@@ -590,11 +714,21 @@ export default function CustomerPanel() {
 
           {/* Quick Actions */}
           <div className="space-y-2 sm:space-y-3">
-            <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start text-sm sm:text-base"
+              onClick={openEditModal}
+              data-testid="button-edit-profile"
+            >
               <User className="h-4 w-4 mr-2 sm:mr-3" />
               Editar Perfil
             </Button>
-            <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start text-sm sm:text-base"
+              onClick={openEditModal}
+              data-testid="button-manage-address"
+            >
               <MapPin className="h-4 w-4 mr-2 sm:mr-3" />
               Gerenciar Endereços
             </Button>
@@ -736,6 +870,178 @@ export default function CustomerPanel() {
           </nav>
         )}
       </div>
+
+      {/* Modal de Edição do Perfil */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Editar Perfil</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitEdit} className="space-y-4">
+                {/* Nome e Sobrenome */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">Nome *</Label>
+                    <Input
+                      id="firstName"
+                      value={editFormData.firstName}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      placeholder="Seu nome"
+                      required
+                      data-testid="input-first-name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Sobrenome *</Label>
+                    <Input
+                      id="lastName"
+                      value={editFormData.lastName}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      placeholder="Seu sobrenome"
+                      required
+                      data-testid="input-last-name"
+                    />
+                  </div>
+                </div>
+
+                {/* Telefone */}
+                <div>
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(11) 99999-9999"
+                    data-testid="input-phone"
+                  />
+                </div>
+
+                {/* Endereço Manual ou por CEP */}
+                <div className="space-y-4">
+                  <Label className="text-base font-medium">Endereço</Label>
+                  
+                  {/* Opção 1: Endereço completo */}
+                  <div>
+                    <Label htmlFor="address" className="text-sm">Endereço completo</Label>
+                    <Textarea
+                      id="address"
+                      value={editFormData.address}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Rua, número, bairro, cidade - estado"
+                      rows={2}
+                      data-testid="input-address"
+                    />
+                  </div>
+
+                  <div className="text-center text-sm text-muted-foreground">ou</div>
+
+                  {/* Opção 2: Buscar por CEP */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="cep" className="text-sm">CEP</Label>
+                      <div className="relative">
+                        <Input
+                          id="cep"
+                          value={editFormData.cep}
+                          onChange={(e) => handleCepChange(e.target.value)}
+                          placeholder="00000-000"
+                          maxLength={9}
+                          data-testid="input-cep"
+                        />
+                        {isLoadingCep && (
+                          <div className="absolute right-3 top-3">
+                            <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <Label htmlFor="rua" className="text-sm">Rua</Label>
+                        <Input
+                          id="rua"
+                          value={editFormData.rua}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, rua: e.target.value }))}
+                          placeholder="Nome da rua"
+                          data-testid="input-rua"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="numero" className="text-sm">Número</Label>
+                        <Input
+                          id="numero"
+                          value={editFormData.numero}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, numero: e.target.value }))}
+                          placeholder="123"
+                          data-testid="input-numero"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="bairro" className="text-sm">Bairro</Label>
+                        <Input
+                          id="bairro"
+                          value={editFormData.bairro}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, bairro: e.target.value }))}
+                          placeholder="Bairro"
+                          data-testid="input-bairro"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cidade" className="text-sm">Cidade</Label>
+                        <Input
+                          id="cidade"
+                          value={editFormData.cidade}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, cidade: e.target.value }))}
+                          placeholder="Cidade"
+                          data-testid="input-cidade"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="w-20">
+                      <Label htmlFor="estado" className="text-sm">Estado</Label>
+                      <Input
+                        id="estado"
+                        value={editFormData.estado}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, estado: e.target.value }))}
+                        placeholder="SP"
+                        maxLength={2}
+                        data-testid="input-estado"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1"
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateProfileMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-save-profile"
+                  >
+                    {updateProfileMutation.isPending ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
