@@ -297,7 +297,7 @@ export default function CustomerPanel() {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-primary to-accent text-white rounded-xl p-4 sm:p-6 lg:p-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2" data-testid="welcome-title">
-          Olá, {user.name.split(' ')[0]}! 👋
+          Olá, {user.firstName || user.name?.split(' ')[0] || 'Cliente'}! 👋
         </h1>
         <p className="text-white/90 mb-4 text-sm sm:text-base" data-testid="welcome-subtitle">
           O que você gostaria de comer hoje?
