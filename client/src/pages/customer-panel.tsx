@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ const bottomNavItems = [
 
 export default function CustomerPanel() {
   const [, setLocation] = useLocation();
+  const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -72,13 +74,27 @@ export default function CustomerPanel() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      setLocation("/");
+    // Se ainda está carregando autenticação, aguardar
+    if (authLoading) return;
+    
+    // Primeira prioridade: usar authUser do hook useAuth
+    if (isAuthenticated && authUser) {
+      setUser(authUser);
+      // Salvar também no localStorage para futuras sessões
+      localStorage.setItem('currentUser', JSON.stringify(authUser));
       return;
     }
-    setUser(JSON.parse(currentUser));
-  }, [setLocation]);
+    
+    // Segunda prioridade: tentar localStorage
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      setUser(JSON.parse(currentUser));
+      return;
+    }
+    
+    // Se não há autenticação, redirecionar para home
+    setLocation("/");
+  }, [authLoading, isAuthenticated, authUser, setLocation]);
 
   const queryClient = useQueryClient();
 
@@ -267,7 +283,8 @@ export default function CustomerPanel() {
     queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
   };
 
-  if (!user) {
+  // Mostrar loading enquanto está carregando autenticação ou se não tem usuário
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />

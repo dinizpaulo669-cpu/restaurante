@@ -31,12 +31,19 @@ export default function Register() {
 
   const createProfileMutation = useMutation({
     mutationFn: (profileData: any) => apiRequest("PUT", "/api/customer/profile", profileData),
-    onSuccess: () => {
+    onSuccess: async (userData) => {
+      // Salvar dados do usuário no localStorage
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      
       toast({
         title: "Cadastro realizado!",
         description: "Bem-vindo ao RestaurantePro!",
       });
-      setLocation("/customer-panel");
+      
+      // Pequeno delay para garantir que o localStorage foi atualizado
+      setTimeout(() => {
+        setLocation("/customer-panel");
+      }, 100);
     },
     onError: (error) => {
       console.error("Erro ao salvar perfil:", error);
