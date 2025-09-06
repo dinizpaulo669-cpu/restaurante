@@ -85,10 +85,12 @@ export default function CustomerPanel() {
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Conectar WebSocket para atualizações em tempo real - sempre chamar o hook
   const { isConnected: wsConnected } = useWebSocket({
-    userId: user?.id || null,
+    userId: authUser?.id || user?.id || null,
     userType: 'customer',
     onStatusUpdate: (status, order) => {
       // Query das orders já será invalidada automaticamente pelo hook
@@ -122,8 +124,6 @@ export default function CustomerPanel() {
     // Se não há autenticação, redirecionar para home
     setLocation("/");
   }, [authLoading, isAuthenticated, authUser, setLocation]);
-
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Atualizar busca quando searchQuery ou selectedCategory mudarem
@@ -192,8 +192,6 @@ export default function CustomerPanel() {
       });
     },
   });
-
-  const { toast } = useToast();
 
   // Função para buscar CEP
   const handleCepChange = async (cep: string) => {
