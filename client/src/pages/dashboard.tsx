@@ -130,8 +130,9 @@ export default function Dashboard() {
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
-    enabled: isAuthenticated && (user as any)?.role === "restaurant_owner",
-    retry: false,
+    enabled: isAuthenticated,
+    retry: 3,
+    refetchOnMount: true,
   });
 
   // Debug log

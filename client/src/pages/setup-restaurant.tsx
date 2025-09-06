@@ -75,13 +75,17 @@ export default function SetupRestaurant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-restaurant"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
       // Clear selected plan from localStorage
       localStorage.removeItem('selectedPlan');
       toast({
         title: "Restaurante Criado!",
         description: "Seu restaurante foi configurado com sucesso. Bem-vindo ao RestaurantePro!",
       });
-      setLocation("/dashboard");
+      // Aguardar um pouco antes de redirecionar para garantir que a query seja invalidada
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 500);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
