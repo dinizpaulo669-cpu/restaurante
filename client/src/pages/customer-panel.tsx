@@ -86,9 +86,9 @@ export default function CustomerPanel() {
   const [newMessage, setNewMessage] = useState("");
   const isMobile = useIsMobile();
   
-  // Conectar WebSocket para atualizações em tempo real
+  // Conectar WebSocket para atualizações em tempo real - sempre chamar o hook
   const { isConnected: wsConnected } = useWebSocket({
-    userId: user?.id,
+    userId: user?.id || null,
     userType: 'customer',
     onStatusUpdate: (status, order) => {
       // Query das orders já será invalidada automaticamente pelo hook
