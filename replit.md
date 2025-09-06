@@ -26,7 +26,7 @@ Preferred communication style: Simple, everyday language.
 - **API Structure**: Resource-based routing with middleware for authentication and error handling
 
 ### Database Design
-- **Primary Database**: PostgreSQL with Neon serverless hosting for scalability
+- **Primary Database**: PostgreSQL with Supabase hosting for scalability and real-time features
 - **Schema Management**: Drizzle Kit for migrations and schema versioning
 - **Key Tables**: 
   - Users (supports both customers and restaurant owners)
@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
 
 ## External Dependencies
 
-- **Database Hosting**: Neon PostgreSQL serverless platform for managed database infrastructure
+- **Database Hosting**: Supabase PostgreSQL platform for managed database infrastructure with real-time capabilities
 - **Authentication Service**: Replit Auth for user identity and session management
 - **Payment Processing**: Stripe for subscription billing, payment forms, and transaction handling
 - **UI Component Library**: Radix UI for accessible, unstyled component primitives
