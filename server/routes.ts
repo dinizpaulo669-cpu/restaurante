@@ -1,5 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
+import WebSocket from "ws";
 import { storage as dbStorage } from "./storage";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertAdditionalSchema, insertTableSchema, insertOpeningHoursSchema } from "@shared/schema";
@@ -1375,6 +1377,281 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // APIs de Mensagens de Pedidos
+  
+  // Buscar mensagens de um pedido
+  app.get("/api/orders/:orderId/messages", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      // Verificar se o pedido existe e se o usuário tem acesso
+      const order = await dbStorage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado" });
+      }
+      
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      // Verificar acesso: deve ser o cliente do pedido ou dono do restaurante
+      const restaurant = await dbStorage.getRestaurant(order.restaurantId);
+      const isCustomer = order.customerId === userId;
+      const isRestaurantOwner = restaurant?.ownerId === userId;
+      
+      if (!isCustomer && !isRestaurantOwner) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const messages = await dbStorage.getOrderMessages(orderId);
+      
+      // Marcar mensagens como lidas se for o destinatário
+      const userType = isCustomer ? "customer" : "restaurant";
+      await dbStorage.markMessagesAsRead(orderId, userType);
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching order messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Enviar nova mensagem
+  app.post("/api/orders/:orderId/messages", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { message } = req.body;
+      
+      if (!message || !message.trim()) {
+        return res.status(400).json({ message: "Mensagem é obrigatória" });
+      }
+      
+      // Verificar se o pedido existe
+      const order = await dbStorage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado" });
+      }
+      
+      let userId = "dev-user-internal";
+      let userType = "customer";
+      
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+        
+        // Verificar acesso e determinar tipo de usuário
+        const restaurant = await dbStorage.getRestaurant(order.restaurantId);
+        const isCustomer = order.customerId === userId;
+        const isRestaurantOwner = restaurant?.ownerId === userId;
+        
+        if (!isCustomer && !isRestaurantOwner) {
+          return res.status(403).json({ message: "Acesso negado" });
+        }
+        
+        userType = isCustomer ? "customer" : "restaurant";
+      }
+      
+      const newMessage = await dbStorage.createOrderMessage({
+        orderId,
+        senderId: userId,
+        senderType: userType,
+        message: message.trim(),
+      });
+      
+      // Broadcast da nova mensagem para todos conectados ao pedido
+      const broadcast = (global as any).websocketBroadcast;
+      if (broadcast) {
+        broadcast.broadcastToOrder(orderId, {
+          type: 'new_message',
+          message: newMessage
+        });
+      }
+      
+      res.json(newMessage);
+    } catch (error) {
+      console.error("Error creating order message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // APIs de Status de Pedidos
+  
+  // Atualizar status do pedido (apenas restaurante)
+  app.put("/api/orders/:orderId/status", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      
+      const validStatuses = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered", "cancelled"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Status inválido" });
+      }
+      
+      // Verificar se o pedido existe
+      const order = await dbStorage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado" });
+      }
+      
+      let userId = "dev-user-123"; // Usuário padrão de desenvolvimento para restaurante
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      // Verificar se é o dono do restaurante
+      const restaurant = await dbStorage.getRestaurant(order.restaurantId);
+      if (restaurant?.ownerId !== userId) {
+        return res.status(403).json({ message: "Apenas o restaurante pode alterar o status" });
+      }
+      
+      // Atualizar status
+      const updatedOrder = await dbStorage.updateOrderStatus(orderId, status);
+      
+      // Se foi entregue, salvar timestamp
+      if (status === "delivered") {
+        await dbStorage.updateOrder(orderId, { deliveredAt: new Date() });
+      }
+      
+      // Broadcast da atualização de status para todos conectados ao pedido
+      const broadcast = (global as any).websocketBroadcast;
+      if (broadcast) {
+        broadcast.broadcastToOrder(orderId, {
+          type: 'status_updated',
+          orderId,
+          status,
+          order: updatedOrder
+        });
+        
+        // Também notificar cliente especificamente
+        if (updatedOrder.customerId) {
+          broadcast.broadcastToCustomer(updatedOrder.customerId, {
+            type: 'order_status_updated',
+            orderId,
+            status,
+            order: updatedOrder
+          });
+        }
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Configurar WebSocket server na rota /ws
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Armazenar conexões por tipo de usuário e ID
+  const connections = new Map<string, { ws: WebSocket, userId?: string, userType?: string }>();
+  
+  wss.on('connection', (ws, req) => {
+    const connectionId = Math.random().toString(36).substr(2, 9);
+    connections.set(connectionId, { ws });
+    
+    console.log(`Nova conexão WebSocket: ${connectionId}`);
+    
+    // Enviar mensagem de confirmação de conexão
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'connection',
+        status: 'connected',
+        connectionId
+      }));
+    }
+    
+    ws.on('message', async (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Autenticação da conexão
+        if (message.type === 'authenticate') {
+          const connection = connections.get(connectionId);
+          if (connection) {
+            connection.userId = message.userId;
+            connection.userType = message.userType; // 'customer' ou 'restaurant'
+            connections.set(connectionId, connection);
+            
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'authenticated',
+                userId: message.userId,
+                userType: message.userType
+              }));
+            }
+          }
+        }
+        
+        // Juntar-se a sala de pedido específico
+        if (message.type === 'join_order') {
+          const connection = connections.get(connectionId);
+          if (connection) {
+            connection.orderId = message.orderId;
+            connections.set(connectionId, connection);
+            
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'joined_order',
+                orderId: message.orderId
+              }));
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      connections.delete(connectionId);
+      console.log(`Conexão WebSocket fechada: ${connectionId}`);
+    });
+    
+    ws.on('error', (error) => {
+      console.error('Erro WebSocket:', error);
+      connections.delete(connectionId);
+    });
+  });
+  
+  // Função para broadcast de atualizações
+  const broadcastToOrder = (orderId: string, data: any) => {
+    connections.forEach((connection, id) => {
+      if (connection.orderId === orderId && connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(data));
+      }
+    });
+  };
+  
+  const broadcastToRestaurant = (restaurantId: string, data: any) => {
+    connections.forEach((connection, id) => {
+      if (connection.userType === 'restaurant' && 
+          connection.restaurantId === restaurantId && 
+          connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(data));
+      }
+    });
+  };
+  
+  const broadcastToCustomer = (customerId: string, data: any) => {
+    connections.forEach((connection, id) => {
+      if (connection.userType === 'customer' && 
+          connection.userId === customerId && 
+          connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(data));
+      }
+    });
+  };
+  
+  // Tornar as funções de broadcast disponíveis globalmente para uso nas APIs
+  (global as any).websocketBroadcast = {
+    broadcastToOrder,
+    broadcastToRestaurant,
+    broadcastToCustomer
+  };
+  
   return httpServer;
 }

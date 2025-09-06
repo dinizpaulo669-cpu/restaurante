@@ -136,12 +136,13 @@ export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerId: varchar("customer_id").references(() => users.id),
   restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  tableId: varchar("table_id").references(() => tables.id), // Para pedidos no local
   orderNumber: integer("order_number").notNull(),
   customerName: varchar("customer_name").notNull(),
   customerPhone: varchar("customer_phone"),
   customerAddress: text("customer_address"),
-  status: varchar("status").notNull().default("pending"), // "pending" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled"
-  orderType: varchar("order_type").notNull().default("delivery"), // "delivery" | "pickup"
+  status: varchar("status").notNull().default("pending"), // "pending" | "confirmed" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "cancelled"
+  orderType: varchar("order_type").notNull().default("delivery"), // "delivery" | "pickup" | "table"
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
@@ -289,7 +290,9 @@ export const additionalsRelations = relations(additionals, ({ one }) => ({
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   customer: one(users, { fields: [orders.customerId], references: [users.id] }),
   restaurant: one(restaurants, { fields: [orders.restaurantId], references: [restaurants.id] }),
+  table: one(tables, { fields: [orders.tableId], references: [tables.id] }),
   items: many(orderItems),
+  messages: many(orderMessages),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -397,3 +400,30 @@ export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
 // Tipos para favoritos
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
+
+// Tabela de Mensagens do Pedido
+export const orderMessages = pgTable("order_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  senderType: varchar("sender_type").notNull(), // "customer" | "restaurant"
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations para mensagens
+export const orderMessagesRelations = relations(orderMessages, ({ one }) => ({
+  order: one(orders, { fields: [orderMessages.orderId], references: [orders.id] }),
+  sender: one(users, { fields: [orderMessages.senderId], references: [users.id] }),
+}));
+
+// Insert schema para mensagens
+export const insertOrderMessageSchema = createInsertSchema(orderMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Tipos para mensagens
+export type OrderMessage = typeof orderMessages.$inferSelect;
+export type InsertOrderMessage = z.infer<typeof insertOrderMessageSchema>;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { CategoryForm } from "@/components/category-form";
 import { CategoryList } from "@/components/category-list";
 import { AdditionalForm } from "@/components/additional-form";
 import { AdditionalList } from "@/components/additional-list";
+import { OrderCard } from "@/components/order-card";
 import { 
   Home, 
   Package, 
@@ -86,6 +88,20 @@ export default function Dashboard() {
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [selectedSeoCategories, setSelectedSeoCategories] = useState<string[]>([]);
+  
+  // Conectar WebSocket para atualizações em tempo real
+  const { isConnected: wsConnected } = useWebSocket({
+    userId: user?.id,
+    userType: 'restaurant',
+    onStatusUpdate: (status, order) => {
+      // Query das orders já será invalidada automaticamente pelo hook
+      console.log(`Status do pedido ${order.id} atualizado para: ${status}`);
+    },
+    onNewMessage: (message) => {
+      // Query das mensagens já será invalidada automaticamente pelo hook  
+      console.log(`Nova mensagem no pedido ${message.orderId}:`, message.message);
+    }
+  });
   
   // Estados para gerenciamento de usuários
   const [isCreatingUser, setIsCreatingUser] = useState(false);
@@ -2376,6 +2392,103 @@ export default function Dashboard() {
 
             {renderConfigurationContent()}
           </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "comandas") {
+      return (
+        <div className="space-y-6">
+          {/* Header com estatísticas */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-blue-600">{orderCounts.abertos}</p>
+                <p className="text-sm text-blue-600">Pendentes</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-yellow-600">{orderCounts.preparando}</p>
+                <p className="text-sm text-yellow-600">Preparando</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-purple-50 border-purple-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-purple-600">{orderCounts.entrega}</p>
+                <p className="text-sm text-purple-600">Entrega</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-green-600">{orderCounts.finalizados}</p>
+                <p className="text-sm text-green-600">Entregues</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-red-600">{orderCounts.cancelados}</p>
+                <p className="text-sm text-red-600">Cancelados</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de pedidos */}
+          {ordersLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : (orders as any[]).length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhum pedido</h3>
+                <p className="text-muted-foreground">
+                  Os pedidos aparecerão aqui quando os clientes fizerem seus pedidos
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {(orders as any[]).map((order: any) => (
+                <OrderCard 
+                  key={order.id} 
+                  order={order} 
+                  onStatusUpdate={(status: string) => {
+                    // Atualizar status do pedido
+                    fetch(`/api/orders/${order.id}/status`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status }),
+                      credentials: 'include'
+                    }).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
+                      toast({
+                        title: "Status atualizado",
+                        description: "O status do pedido foi atualizado com sucesso"
+                      });
+                    }).catch(error => {
+                      console.error('Erro ao atualizar status:', error);
+                      toast({
+                        title: "Erro",
+                        description: "Não foi possível atualizar o status",
+                        variant: "destructive"
+                      });
+                    });
+                  }}
+                  onPrint={() => {
+                    console.log('Imprimir pedido:', order.id);
+                    // TODO: Implementar função de impressão
+                  }}
+                  isUpdatingStatus={false}
+                />
+              ))}
+            </div>
+          )}
         </div>
       );
     }

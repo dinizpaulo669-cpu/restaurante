@@ -119,6 +119,15 @@ export interface IStorage {
     totalSpent: number;
     averageRating: number;
   }>;
+  
+  // Order message operations
+  getOrderMessages(orderId: string): Promise<OrderMessage[]>;
+  createOrderMessage(message: InsertOrderMessage): Promise<OrderMessage>;
+  markMessagesAsRead(orderId: string, userType: string): Promise<void>;
+  
+  // Additional order operations
+  getOrder(orderId: string): Promise<Order | undefined>;
+  updateOrder(orderId: string, updates: Partial<Order>): Promise<Order>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -806,6 +815,57 @@ export class DatabaseStorage implements IStorage {
       totalSpent: Number(totalSpent?.total || 0),
       averageRating: 4.8, // Placeholder - implementar depois se necessário
     };
+  }
+
+  // Order message operations
+  async getOrderMessages(orderId: string): Promise<OrderMessage[]> {
+    return await db
+      .select()
+      .from(orderMessages)
+      .where(eq(orderMessages.orderId, orderId))
+      .orderBy(orderMessages.createdAt);
+  }
+
+  async createOrderMessage(message: InsertOrderMessage): Promise<OrderMessage> {
+    const [newMessage] = await db
+      .insert(orderMessages)
+      .values(message)
+      .returning();
+    return newMessage;
+  }
+
+  async markMessagesAsRead(orderId: string, userType: string): Promise<void> {
+    // Marca como lidas as mensagens que não são do tipo de usuário atual
+    const senderTypeToMark = userType === "customer" ? "restaurant" : "customer";
+    
+    await db
+      .update(orderMessages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(orderMessages.orderId, orderId),
+          eq(orderMessages.senderType, senderTypeToMark),
+          eq(orderMessages.isRead, false)
+        )
+      );
+  }
+
+  // Additional order operations
+  async getOrder(orderId: string): Promise<Order | undefined> {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId));
+    return order;
+  }
+
+  async updateOrder(orderId: string, updates: Partial<Order>): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(orders.id, orderId))
+      .returning();
+    return updatedOrder;
   }
 }
 

@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -29,7 +33,14 @@ import {
   Star,
   Clock,
   Truck,
-  Menu
+  Menu,
+  MessageSquare,
+  Send,
+  Phone,
+  CheckCircle,
+  Package,
+  ChefHat,
+  Eye
 } from "lucide-react";
 
 const categories = [
@@ -71,7 +82,23 @@ export default function CustomerPanel() {
     estado: "",
   });
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [newMessage, setNewMessage] = useState("");
   const isMobile = useIsMobile();
+  
+  // Conectar WebSocket para atualizações em tempo real
+  const { isConnected: wsConnected } = useWebSocket({
+    userId: user?.id,
+    userType: 'customer',
+    onStatusUpdate: (status, order) => {
+      // Query das orders já será invalidada automaticamente pelo hook
+      console.log(`Status do pedido ${order.id} atualizado para: ${status}`);
+    },
+    onNewMessage: (message) => {
+      // Query das mensagens já será invalidada automaticamente pelo hook  
+      console.log(`Nova mensagem no pedido ${message.orderId}:`, message.message);
+    }
+  });
 
   useEffect(() => {
     // Se ainda está carregando autenticação, aguardar
@@ -561,20 +588,25 @@ export default function CustomerPanel() {
   );
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'delivered':
-        return <Badge className="bg-green-100 text-green-800 text-xs ml-2 flex-shrink-0">Entregue</Badge>;
-      case 'in_transit':
-        return <Badge className="bg-blue-100 text-blue-800 text-xs ml-2 flex-shrink-0">A caminho</Badge>;
-      case 'preparing':
-        return <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 flex-shrink-0">Preparando</Badge>;
-      case 'confirmed':
-        return <Badge className="bg-orange-100 text-orange-800 text-xs ml-2 flex-shrink-0">Confirmado</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 text-xs ml-2 flex-shrink-0">Cancelado</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 text-xs ml-2 flex-shrink-0">Pedido</Badge>;
-    }
+    const statusConfig = {
+      'pending': { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+      'confirmed': { label: 'Confirmado', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+      'preparing': { label: 'Preparando', color: 'bg-orange-100 text-orange-800', icon: ChefHat },
+      'ready': { label: 'Pronto', color: 'bg-purple-100 text-purple-800', icon: Package },
+      'out_for_delivery': { label: 'A caminho', color: 'bg-indigo-100 text-indigo-800', icon: Truck },
+      'delivered': { label: 'Entregue', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+      'cancelled': { label: 'Cancelado', color: 'bg-red-100 text-red-800', icon: 'X' },
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+    
+    return (
+      <Badge className={`${config.color} text-xs ml-2 flex-shrink-0 flex items-center space-x-1`}>
+        {typeof Icon !== 'string' && <Icon className="w-3 h-3" />}
+        <span>{config.label}</span>
+      </Badge>
+    );
   };
 
   const formatOrderDate = (date: string) => {
@@ -589,6 +621,38 @@ export default function CustomerPanel() {
       return `Ontem, ${orderDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     } else {
       return orderDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    }
+  };
+
+  // Queries para mensagens
+  const { data: selectedOrderMessages = [] } = useQuery({
+    queryKey: [`/api/orders/${selectedOrderId}/messages`],
+    enabled: !!selectedOrderId,
+  });
+
+  // Mutation para enviar mensagem
+  const sendMessageMutation = useMutation({
+    mutationFn: (message: string) => apiRequest("POST", `/api/orders/${selectedOrderId}/messages`, { message }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${selectedOrderId}/messages`] });
+      setNewMessage("");
+      toast({
+        title: "Mensagem enviada",
+        description: "Sua mensagem foi enviada ao restaurante"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() && selectedOrderId) {
+      sendMessageMutation.mutate(newMessage.trim());
     }
   };
 
@@ -609,16 +673,182 @@ export default function CustomerPanel() {
             <Card key={order.id} className="p-3 sm:p-4 hover:shadow-lg transition-shadow">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm sm:text-base truncate">Pedido #{order.id.slice(-6)}</h3>
+                  <h3 className="font-semibold text-sm sm:text-base truncate">
+                    Pedido #{order.orderNumber || order.id.slice(-6)}
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">
                     {order.items?.length ? `${order.items.length} item(s)` : 'Itens do pedido'}
                   </p>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex items-center space-x-1">
+                      {order.orderType === 'delivery' && <Truck className="w-3 h-3 text-muted-foreground" />}
+                      {order.orderType === 'pickup' && <Package className="w-3 h-3 text-muted-foreground" />}
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {order.orderType === 'delivery' ? 'Entrega' : order.orderType === 'pickup' ? 'Retirada' : 'Mesa'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 {getStatusBadge(order.status)}
               </div>
-              <div className="flex justify-between items-center text-xs sm:text-sm">
+              <div className="flex justify-between items-center text-xs sm:text-sm mb-3">
                 <span className="text-muted-foreground">{formatOrderDate(order.createdAt)}</span>
                 <span className="font-semibold text-primary">R$ {order.total?.toFixed(2) || '0,00'}</span>
+              </div>
+
+              {/* Botões de ação */}
+              <div className="flex space-x-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setSelectedOrderId(order.id)}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Detalhes
+                    </Button>
+                  </DialogTrigger>
+                  
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Pedido #{order.orderNumber || order.id.slice(-6)}
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                      {/* Informações do pedido */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Status:</span>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Total:</span>
+                          <span className="text-lg font-bold text-primary">
+                            R$ {order.total?.toFixed(2) || '0,00'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Tipo:</span>
+                          <div className="flex items-center space-x-1">
+                            {order.orderType === 'delivery' && <Truck className="w-4 h-4" />}
+                            {order.orderType === 'pickup' && <Package className="w-4 h-4" />}
+                            <span className="text-sm capitalize">
+                              {order.orderType === 'delivery' ? 'Entrega' : order.orderType === 'pickup' ? 'Retirada' : 'Mesa'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {order.customerAddress && (
+                          <div className="flex items-start space-x-2">
+                            <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium">Endereço:</span>
+                              <p className="text-sm text-muted-foreground break-words">
+                                {order.customerAddress}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {order.notes && (
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <span className="text-sm font-medium">Observações:</span>
+                            <p className="text-sm text-muted-foreground mt-1">{order.notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* Sistema de mensagens */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium flex items-center">
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Chat com o Restaurante
+                          </h4>
+                          {selectedOrderMessages.filter((msg: any) => msg.senderType === "restaurant" && !msg.isRead).length > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              {selectedOrderMessages.filter((msg: any) => msg.senderType === "restaurant" && !msg.isRead).length} novas
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <ScrollArea className="h-48 pr-4">
+                          <div className="space-y-3">
+                            {selectedOrderMessages.length === 0 ? (
+                              <p className="text-center text-muted-foreground text-sm py-8">
+                                Nenhuma mensagem ainda
+                              </p>
+                            ) : (
+                              selectedOrderMessages.map((message: any) => (
+                                <div
+                                  key={message.id}
+                                  className={`flex ${
+                                    message.senderType === "customer" ? "justify-end" : "justify-start"
+                                  }`}
+                                >
+                                  <div
+                                    className={`max-w-xs p-3 rounded-lg ${
+                                      message.senderType === "customer"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted"
+                                    }`}
+                                  >
+                                    <p className="text-sm">{message.message}</p>
+                                    <p className="text-xs opacity-70 mt-1">
+                                      {new Date(message.createdAt).toLocaleString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </ScrollArea>
+
+                        <div className="flex space-x-2">
+                          <Input
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Digite sua mensagem..."
+                            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={handleSendMessage}
+                            disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Botão de contato (se disponível) */}
+                {order.restaurantPhone && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => window.open(`tel:${order.restaurantPhone}`, '_self')}
+                  >
+                    <Phone className="w-3 h-3 mr-1" />
+                    Ligar
+                  </Button>
+                )}
               </div>
             </Card>
           ))}
