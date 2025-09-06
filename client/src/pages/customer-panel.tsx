@@ -625,7 +625,7 @@ export default function CustomerPanel() {
   };
 
   // Queries para mensagens
-  const { data: selectedOrderMessages = [] } = useQuery({
+  const { data: selectedOrderMessages = [] } = useQuery<any[]>({
     queryKey: [`/api/orders/${selectedOrderId}/messages`],
     enabled: !!selectedOrderId,
   });
