@@ -1332,15 +1332,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/customer/profile", async (req, res) => {
     try {
       let userId = "dev-user-internal";
-      if (req.session?.user?.id) {
+      let isNewRegistration = false;
+      
+      // Se não há sessão ativa, é um novo cadastro
+      if (!req.session?.user?.id) {
+        isNewRegistration = true;
+      } else {
         userId = req.session.user.id;
       }
       
       const updates = req.body;
-      const user = await dbStorage.upsertUser({
+      
+      // Para novos cadastros, definir role como customer
+      const userData = {
         id: userId,
         ...updates,
-      });
+        role: "customer",
+      };
+      
+      const user = await dbStorage.upsertUser(userData);
+      
+      // Se é um novo cadastro, criar sessão de autenticação
+      if (isNewRegistration) {
+        req.session.user = {
+          id: userId,
+          email: updates.firstName ? `${updates.firstName}@cliente.com` : "cliente@exemplo.com",
+          firstName: updates.firstName || "Cliente",
+          lastName: updates.lastName || "",
+          role: "customer",
+          subscriptionPlan: null,
+          isTrialActive: false,
+          trialEndsAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+      }
       
       res.json(user);
     } catch (error) {
