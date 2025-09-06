@@ -63,16 +63,6 @@ const bottomNavItems = [
 export default function CustomerPanel() {
   const [, setLocation] = useLocation();
   const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth();
-  
-  // Mostrar loading enquanto está carregando autenticação
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -318,8 +308,8 @@ export default function CustomerPanel() {
     queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
   };
 
-  // Se não tem usuário após autenticação, mostrar loading
-  if (!user) {
+  // Renderizar loading se necessário - APÓS todos os hooks
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
