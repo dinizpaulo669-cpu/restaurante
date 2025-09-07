@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: restaurante-pro
+    env: node
+    repo: https://github.com/seu-usuario/restaurante-pro # Substitua pela URL do seu repositório
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false # Será configurado manualmente no painel do Render
+      - key: SESSION_SECRET
+        generateValue: true # O Render gerará um valor aleatório
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
