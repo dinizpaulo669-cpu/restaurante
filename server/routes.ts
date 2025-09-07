@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(product);
     } catch (error) {
       console.error("Error creating dev product:", error);
-      res.status(500).json({ message: error.message || "Failed to create product" });
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to create product" });
     }
   });
 
