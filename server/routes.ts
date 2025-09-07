@@ -9,8 +9,12 @@ import { users, restaurants, products, categories, orders, orderItems, userFavor
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Skip auth setup in development for now
+  if (process.env.NODE_ENV === "development") {
+    console.log("Skipping auth setup in development mode");
+  } else {
+    await setupAuth(app);
+  }
 
   // === AUTH ROUTES ===
   app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {

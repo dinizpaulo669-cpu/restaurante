@@ -10,8 +10,9 @@ import { db } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+// Skip auth setup in development mode for now
+if (!process.env.REPLIT_DOMAINS && process.env.NODE_ENV === "development") {
+  console.log("Skipping Replit Auth setup in development mode");
 }
 
 const getOidcConfig = memoize(
@@ -26,21 +27,29 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  
+  // Use in-memory store in development if DATABASE_URL is not available
+  let sessionStore;
+  const connectionString = process.env.SUPABASE_URL || process.env.DATABASE_URL;
+  
+  if (connectionString) {
+    const pgStore = connectPg(session);
+    sessionStore = new pgStore({
+      conString: connectionString,
+      createTableIfMissing: false,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+  }
+  
   return session({
-    secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
+    secret: process.env.SESSION_SECRET || "dev-secret-key-not-secure",
+    store: sessionStore, // Will use memory store if sessionStore is undefined
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
     },
   });
@@ -88,6 +97,14 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Skip OIDC config in development if variables are missing
+  if (!process.env.REPLIT_DOMAINS && process.env.NODE_ENV === "development") {
+    console.log("Skipping OIDC configuration in development mode");
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    return;
+  }
 
   const config = await getOidcConfig();
 
