@@ -326,8 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { message } = req.body;
       
       let userId = "dev-user-internal";
-      if (req.session?.user?.id) {
-        userId = req.session.user.id;
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
       }
       
       const newMessage = await db

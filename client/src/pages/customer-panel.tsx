@@ -197,7 +197,7 @@ export default function CustomerPanel() {
   
   // WebSocket sempre ativo
   const { isConnected: wsConnected } = useWebSocket({
-    userId: authUser?.id || user?.id || null,
+    userId: (authUser as any)?.id || (user as any)?.id || null,
     userType: 'customer',
     onStatusUpdate: (status, order) => {
       console.log(`Status do pedido ${order?.id || 'N/A'} atualizado para: ${status}`);
