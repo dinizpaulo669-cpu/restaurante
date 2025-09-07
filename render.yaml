@@ -14,6 +14,4 @@ services:
         sync: false # Será configurado manualmente no painel do Render
       - key: SESSION_SECRET
         generateValue: true # O Render gerará um valor aleatório
-      - key: PORT
-        value: 10000
     healthCheckPath: /health
