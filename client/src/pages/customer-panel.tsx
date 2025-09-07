@@ -200,7 +200,7 @@ export default function CustomerPanel() {
     userId: authUser?.id || user?.id || null,
     userType: 'customer',
     onStatusUpdate: (status, order) => {
-      console.log(`Status do pedido ${order?.id} atualizado para: ${status}`);
+      console.log(`Status do pedido ${order?.id || 'N/A'} atualizado para: ${status}`);
       queryClient.invalidateQueries({ queryKey: ["/api/customer/orders"] });
       // Adicionar notificação
       const newNotification = {
