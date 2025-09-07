@@ -215,6 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId = req.session.user.id;
       }
       
+      // First get all orders for the customer
       const customerOrders = await db
         .select({
           id: orders.id,
@@ -248,8 +249,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(restaurants, eq(orders.restaurantId, restaurants.id))
         .where(eq(orders.customerId, userId))
         .orderBy(desc(orders.createdAt));
+      
+      // Then get order items for each order
+      const ordersWithItems = await Promise.all(
+        customerOrders.map(async (order) => {
+          const items = await db
+            .select({
+              id: orderItems.id,
+              quantity: orderItems.quantity,
+              unitPrice: orderItems.unitPrice,
+              totalPrice: orderItems.totalPrice,
+              specialInstructions: orderItems.specialInstructions,
+              product: {
+                id: products.id,
+                name: products.name,
+                description: products.description,
+                imageUrl: products.imageUrl
+              }
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .where(eq(orderItems.orderId, order.id));
+          
+          return {
+            ...order,
+            items
+          };
+        })
+      );
         
-      res.json(customerOrders);
+      res.json(ordersWithItems);
     } catch (error) {
       console.error("Error fetching customer orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
