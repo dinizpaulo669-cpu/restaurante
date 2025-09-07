@@ -6,7 +6,9 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -57,30 +59,27 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  const existingUser = await storage.getUser(claims["sub"]);
+  const [existingUser] = await db.select().from(users).where(eq(users.id, claims["sub"])).limit(1);
   
   // Se é um novo usuário, criar sem role definido
   if (!existingUser) {
-    await storage.upsertUser({
+    await db.insert(users).values({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
+      role: "customer"
     });
   } else {
     // Atualizar usuário existente preservando configurações
-    await storage.upsertUser({
-      id: claims["sub"],
+    await db.update(users).set({
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
-      role: existingUser.role,
-      subscriptionPlan: existingUser.subscriptionPlan,
-      trialEndsAt: existingUser.trialEndsAt,
-      isTrialActive: existingUser.isTrialActive,
-    });
+      updatedAt: new Date()
+    }).where(eq(users.id, claims["sub"]));
   }
 }
 

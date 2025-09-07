@@ -51,16 +51,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { search, category, limit } = req.query;
       const conditions = [eq(restaurants.isActive, true)];
       
-      if (search) {
+      if (search && typeof search === 'string') {
         const searchCondition = or(
           ilike(restaurants.name, `%${search}%`),
           ilike(restaurants.description, `%${search}%`),
           ilike(restaurants.category, `%${search}%`)
         );
-        conditions.push(searchCondition);
+        if (searchCondition) conditions.push(searchCondition);
       }
       
-      if (category) {
+      if (category && typeof category === 'string') {
         conditions.push(eq(restaurants.category, category));
       }
       
@@ -170,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customer/orders", async (req, res) => {
+  app.get("/api/customer/orders", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if (req.session?.user?.id) {
@@ -219,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === CUSTOMER ROUTES ===
-  app.get("/api/customer/favorites", async (req, res) => {
+  app.get("/api/customer/favorites", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if (req.session?.user?.id) {
@@ -241,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customer/profile", async (req, res) => {
+  app.get("/api/customer/profile", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if (req.session?.user?.id) {
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customer/stats", async (req, res) => {
+  app.get("/api/customer/stats", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if (req.session?.user?.id) {
@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === INTERNAL LOGIN ===
-  app.post("/api/internal-login", async (req, res) => {
+  app.post("/api/internal-login", async (req: any, res) => {
     try {
       const { role } = req.body;
       const user = {
