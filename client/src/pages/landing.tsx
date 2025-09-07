@@ -20,21 +20,7 @@ export default function Landing() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   const { data: restaurants = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/restaurants", searchQuery, selectedCategory],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
-      if (selectedCategory) params.append('category', selectedCategory);
-      
-      const url = `/api/restaurants${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
-      
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
+    queryKey: ["/api/restaurants", { search: searchQuery, category: selectedCategory }],
     enabled: true,
   });
 
