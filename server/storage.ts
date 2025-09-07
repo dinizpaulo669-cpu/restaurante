@@ -216,7 +216,13 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(restaurants.isActive, true)];
     
     if (search) {
-      conditions.push(ilike(restaurants.name, `%${search}%`));
+      // Buscar por nome, descrição ou categoria
+      const searchCondition = or(
+        ilike(restaurants.name, `%${search}%`),
+        ilike(restaurants.description, `%${search}%`),
+        ilike(restaurants.category, `%${search}%`)
+      );
+      conditions.push(searchCondition);
     }
     
     if (category) {
@@ -779,8 +785,36 @@ export class DatabaseStorage implements IStorage {
   // Customer operations
   async getCustomerOrders(customerId: string): Promise<Order[]> {
     return await db
-      .select()
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        customerId: orders.customerId,
+        restaurantId: orders.restaurantId,
+        customerName: orders.customerName,
+        customerPhone: orders.customerPhone,
+        customerAddress: orders.customerAddress,
+        status: orders.status,
+        orderType: orders.orderType,
+        subtotal: orders.subtotal,
+        deliveryFee: orders.deliveryFee,
+        total: orders.total,
+        paymentMethod: orders.paymentMethod,
+        notes: orders.notes,
+        estimatedDeliveryTime: orders.estimatedDeliveryTime,
+        deliveredAt: orders.deliveredAt,
+        createdAt: orders.createdAt,
+        updatedAt: orders.updatedAt,
+        // Incluir dados do restaurante
+        restaurant: {
+          id: restaurants.id,
+          name: restaurants.name,
+          category: restaurants.category,
+          phone: restaurants.phone,
+          address: restaurants.address
+        }
+      })
       .from(orders)
+      .leftJoin(restaurants, eq(orders.restaurantId, restaurants.id))
       .where(eq(orders.customerId, customerId))
       .orderBy(desc(orders.createdAt));
   }

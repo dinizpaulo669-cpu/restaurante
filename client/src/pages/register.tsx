@@ -13,7 +13,8 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     senha: "",
@@ -58,7 +59,7 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone || !formData.senha || !formData.confirmarSenha || !formData.cep || !formData.rua || !formData.numero) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.senha || !formData.confirmarSenha || !formData.cep || !formData.rua || !formData.numero) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios",
@@ -88,15 +89,10 @@ export default function Register() {
     // Concatenar endereço completo
     const endereco = `${formData.rua}, ${formData.numero}${formData.pontoReferencia ? ` - ${formData.pontoReferencia}` : ''} - ${formData.bairro}, ${formData.cidade} - ${formData.estado}, CEP: ${formData.cep}`;
 
-    // Separar nome em firstName e lastName
-    const nameParts = formData.name.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-
-    // Enviar dados para o servidor
+    // Enviar dados para o servidor com firstName e lastName separados
     createProfileMutation.mutate({
-      firstName,
-      lastName,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       phone: formData.phone,
       address: endereco,
     });

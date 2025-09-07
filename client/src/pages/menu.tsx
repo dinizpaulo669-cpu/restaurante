@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,9 @@ import {
   Clock, 
   Phone,
   Star,
-  Truck
+  Truck,
+  Home,
+  ArrowLeft
 } from "lucide-react";
 
 interface CartItem {
@@ -36,6 +38,7 @@ interface Customer {
 
 export default function Menu() {
   const { restaurantId } = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -229,6 +232,19 @@ export default function Menu() {
       {/* Header do Restaurante */}
       <div className="bg-card shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-6">
+          {/* Botão de Voltar ao Início */}
+          <div className="mb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation('/')}
+              className="flex items-center gap-2"
+              data-testid="button-back-home"
+            >
+              <Home className="w-4 h-4" />
+              Voltar ao Início
+            </Button>
+          </div>
+          
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-primary mb-2">{(restaurant as any)?.name}</h1>
