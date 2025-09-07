@@ -260,23 +260,9 @@ export default function CustomerPanel() {
     setLocation("/");
   }, [authLoading, isAuthenticated, authUser, setLocation]);
 
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
-  }, [searchQuery, selectedCategory, queryClient]);
-
   // Todas as queries
   const { data: restaurants = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/restaurants"],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
-      if (selectedCategory) params.append('category', selectedCategory);
-      
-      const url = `/api/restaurants${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error('Falha ao carregar restaurantes');
-      return response.json();
-    },
+    queryKey: ["/api/restaurants", { search: searchQuery, category: selectedCategory }],
     enabled: true,
   });
 
