@@ -2,11 +2,49 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema } from "@shared/schema";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
+
+// Configure multer for file uploads
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let uploadDir;
+    if (req.path.includes('/logo') || req.path.includes('/banner')) {
+      uploadDir = path.join(process.cwd(), 'public', 'uploads', 'restaurant');
+    } else {
+      uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    }
+    
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: multerStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Always setup auth (simplified version for non-Replit deployments)
@@ -340,6 +378,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching restaurant:", error);
       res.status(500).json({ message: "Failed to fetch restaurant" });
+    }
+  });
+
+  // === DEV PRODUCTS ===
+  app.post("/api/dev/products", upload.single('image'), async (req: any, res) => {
+    try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+
+      // Processar dados do formulário
+      const formData = {
+        ...req.body,
+        restaurantId: restaurant.id,
+        price: parseFloat(req.body.price),
+        costPrice: req.body.costPrice ? parseFloat(req.body.costPrice) : undefined,
+        stock: parseInt(req.body.stock) || 0,
+        preparationTime: parseInt(req.body.preparationTime) || 15,
+        isActive: req.body.isActive === 'true',
+      };
+
+      // Adicionar URL da imagem se foi feito upload
+      if (req.file) {
+        formData.imageUrl = `/uploads/products/${req.file.filename}`;
+      }
+
+      const productData = insertProductSchema.parse(formData);
+      const [product] = await db.insert(products).values(productData).returning();
+      res.json(product);
+    } catch (error) {
+      console.error("Error creating dev product:", error);
+      res.status(500).json({ message: error.message || "Failed to create product" });
+    }
+  });
+
+  app.post("/api/dev/categories", async (req: any, res) => {
+    try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+
+      const categoryData = insertCategorySchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+      });
+
+      const [category] = await db.insert(categories).values(categoryData).returning();
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating dev category:", error);
+      res.status(500).json({ message: "Failed to create category" });
     }
   });
 
