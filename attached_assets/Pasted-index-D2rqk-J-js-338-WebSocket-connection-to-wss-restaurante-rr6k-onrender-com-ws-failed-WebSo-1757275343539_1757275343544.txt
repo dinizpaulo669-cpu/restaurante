@@ -1,0 +1,50 @@
+index-D2rqk_J-.js:338 WebSocket connection to 'wss://restaurante-rr6k.onrender.com/ws' failed: WebSocket is closed before the connection is established.
+d @ index-D2rqk_J-.js:338
+(anonymous) @ index-D2rqk_J-.js:338
+Vf @ index-D2rqk_J-.js:40
+mo @ index-D2rqk_J-.js:40
+Ha @ index-D2rqk_J-.js:40
+wC @ index-D2rqk_J-.js:40
+zs @ index-D2rqk_J-.js:40
+Ax @ index-D2rqk_J-.js:40
+Is @ index-D2rqk_J-.js:38
+(anonymous) @ index-D2rqk_J-.js:40
+setTimeout
+s @ index-D2rqk_J-.js:48
+o @ index-D2rqk_J-.js:48
+batch @ index-D2rqk_J-.js:48
+Cn @ index-D2rqk_J-.js:48
+setData @ index-D2rqk_J-.js:48
+onSuccess @ index-D2rqk_J-.js:48
+m @ index-D2rqk_J-.js:48
+Promise.then
+w @ index-D2rqk_J-.js:48
+start @ index-D2rqk_J-.js:48
+fetch @ index-D2rqk_J-.js:48
+Ji @ index-D2rqk_J-.js:48
+onSubscribe @ index-D2rqk_J-.js:48
+subscribe @ index-D2rqk_J-.js:48
+(anonymous) @ index-D2rqk_J-.js:48
+Ey @ index-D2rqk_J-.js:38
+bd @ index-D2rqk_J-.js:40
+Ha @ index-D2rqk_J-.js:40
+Ax @ index-D2rqk_J-.js:40
+Is @ index-D2rqk_J-.js:38
+wC @ index-D2rqk_J-.js:40
+zs @ index-D2rqk_J-.js:40
+a0 @ index-D2rqk_J-.js:40
+N @ index-D2rqk_J-.js:25
+F @ index-D2rqk_J-.js:25
+index-D2rqk_J-.js:338 Erro WebSocket: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+w.onerror @ index-D2rqk_J-.js:338
+index-D2rqk_J-.js:338 WebSocket desconectado: 1006 
+index-D2rqk_J-.js:338 WebSocket conectado
+index-D2rqk_J-.js:338 WebSocket mensagem recebida: {type: 'connection', status: 'connected', connectionId: 'b1cxa907vr'}
+index-D2rqk_J-.js:338 Conexão confirmada: b1cxa907vr
+index-D2rqk_J-.js:338 WebSocket mensagem recebida: {type: 'authenticated', userId: 'dev-user-internal', userType: 'customer'}
+index-D2rqk_J-.js:338 Autenticado como: customer dev-user-internal
+index-D2rqk_J-.js:338 WebSocket conectado
+index-D2rqk_J-.js:338 WebSocket mensagem recebida: {type: 'connection', status: 'connected', connectionId: 'elkvw4gjtg7'}
+index-D2rqk_J-.js:338 Conexão confirmada: elkvw4gjtg7
+index-D2rqk_J-.js:338 WebSocket mensagem recebida: {type: 'authenticated', userId: 'dev-user-internal', userType: 'customer'}
+index-D2rqk_J-.js:338 Autenticado como: customer dev-user-internal
