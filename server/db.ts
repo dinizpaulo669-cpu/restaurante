@@ -4,17 +4,17 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Use Supabase PostgreSQL database
-if (!process.env.SUPABASE_URL) {
-  throw new Error("SUPABASE_URL must be set. Please configure your Supabase connection string.");
-}
+// Use PostgreSQL database (Replit's built-in database or Supabase)
+const connectionString = process.env.SUPABASE_URL || process.env.DATABASE_URL;
 
-const connectionString = process.env.SUPABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL or SUPABASE_URL must be set. Please configure your database connection string.");
+}
 
 // Set DATABASE_URL for drizzle.config.ts compatibility
 process.env.DATABASE_URL = connectionString;
 
-console.log('Connecting to Supabase PostgreSQL database...');
+console.log('Connecting to PostgreSQL database...');
 
 export const pool = new Pool({ 
   connectionString: connectionString,
