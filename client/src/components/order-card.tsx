@@ -37,7 +37,7 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
   const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending;
   
   // Buscar mensagens do pedido
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [] } = useQuery<any[]>({
     queryKey: [`/api/orders/${order.id}/messages`],
     enabled: !!order.id,
   });
@@ -166,7 +166,7 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
                 <Button size="sm" variant="outline">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Chat
-                  {messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length > 0 && (
+                  {Array.isArray(messages) && messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length > 0 && (
                     <Badge variant="destructive" className="ml-2 px-1.5 py-0.5 text-xs">
                       {messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length}
                     </Badge>
@@ -185,7 +185,7 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
                   {/* Lista de mensagens */}
                   <ScrollArea className="h-64 pr-4">
                     <div className="space-y-3">
-                      {messages.length === 0 ? (
+                      {!Array.isArray(messages) || messages.length === 0 ? (
                         <p className="text-center text-muted-foreground text-sm">
                           Nenhuma mensagem ainda
                         </p>

@@ -16,6 +16,106 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Componente de Chat para Pedidos
+const OrderChatComponent = ({ orderId }: { orderId: string }) => {
+  const [newMessage, setNewMessage] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: messages = [] } = useQuery<any[]>({
+    queryKey: [`/api/orders/${orderId}/messages`],
+    enabled: !!orderId,
+  });
+  
+  const sendMessageMutation = useMutation({
+    mutationFn: (message: string) => apiRequest("POST", `/api/orders/${orderId}/messages`, { message }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}/messages`] });
+      setNewMessage("");
+      toast({
+        title: "Mensagem enviada",
+        description: "Sua mensagem foi enviada ao restaurante"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      sendMessageMutation.mutate(newMessage.trim());
+    }
+  };
+  
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  return (
+    <div className="space-y-4">
+      <ScrollArea className="h-64 pr-4">
+        <div className="space-y-3">
+          {!Array.isArray(messages) || messages.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm">
+              Nenhuma mensagem ainda
+            </p>
+          ) : (
+            messages.map((message: any) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.senderType === "customer" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-xs p-3 rounded-lg ${
+                    message.senderType === "customer"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}
+                >
+                  <p className="text-sm">{message.message}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {formatDate(message.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+      
+      <Separator />
+      
+      <div className="flex space-x-2">
+        <Input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Digite sua mensagem..."
+          onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+        />
+        <Button
+          size="sm"
+          onClick={handleSendMessage}
+          disabled={!newMessage.trim() || sendMessageMutation.isPending}
+        >
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
 import { 
   Search, 
   Pizza, 
@@ -40,7 +140,10 @@ import {
   CheckCircle,
   Package,
   ChefHat,
-  Eye
+  Eye,
+  Filter,
+  Table,
+  X
 } from "lucide-react";
 
 const categories = [
@@ -85,6 +188,9 @@ export default function CustomerPanel() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,10 +200,44 @@ export default function CustomerPanel() {
     userId: authUser?.id || user?.id || null,
     userType: 'customer',
     onStatusUpdate: (status, order) => {
-      console.log(`Status do pedido ${order.id} atualizado para: ${status}`);
+      console.log(`Status do pedido ${order?.id} atualizado para: ${status}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/orders"] });
+      // Adicionar notificação
+      const newNotification = {
+        id: Date.now(),
+        type: 'status_update',
+        title: 'Status do pedido atualizado',
+        message: `Seu pedido agora está ${status === 'delivered' ? 'entregue' : status === 'preparing' ? 'sendo preparado' : status}`,
+        timestamp: new Date(),
+        read: false,
+        orderId: order?.id
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      toast({
+        title: "Status do pedido atualizado",
+        description: newNotification.message,
+      });
     },
     onNewMessage: (message) => {
-      console.log(`Nova mensagem no pedido ${message.orderId}:`, message.message);
+      console.log(`Nova mensagem no pedido ${message?.orderId}:`, message?.message);
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${message?.orderId}/messages`] });
+      // Adicionar notificação de mensagem
+      const newNotification = {
+        id: Date.now(),
+        type: 'new_message',
+        title: 'Nova mensagem',
+        message: 'Você recebeu uma nova mensagem do restaurante',
+        timestamp: new Date(),
+        read: false,
+        orderId: message?.orderId
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      toast({
+        title: "Nova mensagem",
+        description: "Você recebeu uma nova mensagem do restaurante",
+      });
     }
   });
 
@@ -165,6 +305,48 @@ export default function CustomerPanel() {
     enabled: true,
   });
 
+  // Funções para notificações
+  const markNotificationAsRead = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+  
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  // Funções auxiliares para pedidos
+  const getStatusLabel = (status: string) => {
+    const labels: { [key: string]: string } = {
+      pending: "Pendente",
+      confirmed: "Confirmado", 
+      preparing: "Preparando",
+      ready: "Pronto",
+      out_for_delivery: "A caminho",
+      delivered: "Entregue",
+      cancelled: "Cancelado"
+    };
+    return labels[status] || status;
+  };
+  
+  const getStatusBadgeColor = (status: string) => {
+    const colors: { [key: string]: string } = {
+      pending: "bg-yellow-100 text-yellow-800",
+      confirmed: "bg-blue-100 text-blue-800",
+      preparing: "bg-orange-100 text-orange-800",
+      ready: "bg-purple-100 text-purple-800",
+      out_for_delivery: "bg-indigo-100 text-indigo-800",
+      delivered: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800"
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
+  
   // Todas as mutations
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -348,22 +530,99 @@ export default function CustomerPanel() {
         <p className="text-white/90 mb-4 text-sm sm:text-base" data-testid="welcome-subtitle">
           O que você gostaria de comer hoje?
         </p>
-        <div className="flex bg-white rounded-lg p-1">
-          <Input
-            type="text"
-            placeholder="Buscar restaurantes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 border-0 text-gray-800 focus:ring-0"
-            data-testid="input-search"
-          />
-          <Button 
-            onClick={() => setActiveTab("search")}
-            className="bg-primary text-white hover:bg-primary/90"
-            data-testid="button-search"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <div className="flex bg-white rounded-lg p-1">
+              <Input
+                type="text"
+                placeholder="Buscar restaurantes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 border-0 text-gray-800 focus:ring-0"
+                data-testid="input-search"
+              />
+              <Button 
+                onClick={() => setActiveTab("search")}
+                className="bg-primary text-white hover:bg-primary/90"
+                data-testid="button-search"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Sistema de Notificações */}
+          <div className="relative ml-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative bg-white text-gray-800 border-gray-300"
+              data-testid="button-notifications"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+            
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-80 bg-background border rounded-lg shadow-lg z-50" data-testid="notifications-panel">
+                <div className="p-4 border-b flex justify-between items-center">
+                  <h3 className="font-medium">Notificações</h3>
+                  <div className="flex space-x-2">
+                    {notifications.length > 0 && (
+                      <Button size="sm" variant="ghost" onClick={clearAllNotifications}>
+                        Limpar
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => setShowNotifications(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <ScrollArea className="max-h-96">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground">
+                      <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Nenhuma notificação</p>
+                    </div>
+                  ) : (
+                    <div className="p-2">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                            notification.read ? 'bg-muted/50' : 'bg-primary/5 border border-primary/20'
+                          }`}
+                          onClick={() => markNotificationAsRead(notification.id)}
+                          data-testid={`notification-${notification.id}`}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-medium text-sm">{notification.title}</h4>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-primary rounded-full" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {notification.timestamp.toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -539,7 +798,103 @@ export default function CustomerPanel() {
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-muted-foreground">Seus pedidos aparecerão aqui.</p>
+          {customerOrders.map((order: any) => (
+            <Card key={order.id} className="p-4" data-testid={`customer-order-${order.id}`}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <h4 className="font-semibold text-lg flex items-center space-x-2">
+                      {order.orderType === 'table' && <Table className="w-4 h-4" />}
+                      {order.orderType === 'delivery' && <Truck className="w-4 h-4" />}
+                      <span>Pedido #{order.orderNumber}</span>
+                    </h4>
+                    <Badge className={getStatusBadgeColor(order.status)}>
+                      {getStatusLabel(order.status)}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    {new Date(order.createdAt).toLocaleDateString('pt-BR')} às {' '}
+                    {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="font-medium text-sm mt-1">
+                    Restaurante: {order.restaurant?.name || 'N/A'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-primary">R$ {order.total}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}
+                  </p>
+                </div>
+              </div>
+              
+              {order.notes && (
+                <div className="mb-3 p-3 bg-muted rounded-lg">
+                  <p className="text-sm">
+                    <strong>Observações:</strong> {order.notes}
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center pt-3 border-t">
+                <div className="flex space-x-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedOrderId(order.id)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Detalhes
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Detalhes do Pedido #{order.orderNumber}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium mb-2">Itens do Pedido</h4>
+                          <div className="space-y-2">
+                            {order.items?.map((item: any, index: number) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span>{item.quantity}x {item.product?.name || 'Item'}</span>
+                                <span>R$ {item.totalPrice}</span>
+                              </div>
+                            )) || <p className="text-muted-foreground">Itens não disponíveis</p>}
+                          </div>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-medium">
+                          <span>Total:</span>
+                          <span>R$ {order.total}</span>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedOrderId(order.id)}>
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Chat
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Chat - Pedido #{order.orderNumber}</DialogTitle>
+                      </DialogHeader>
+                      <OrderChatComponent orderId={order.id} />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                
+                {order.estimatedDeliveryTime && (
+                  <div className="text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Previsão: {new Date(order.estimatedDeliveryTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>
