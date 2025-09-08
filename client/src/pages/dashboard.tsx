@@ -38,6 +38,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export default function Dashboard() {
@@ -61,12 +62,6 @@ export default function Dashboard() {
   // Estados para edição de pedidos
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [showOrderEditForm, setShowOrderEditForm] = useState(false);
-  
-  // Buscar produtos disponíveis para edição de pedidos
-  const { data: availableProducts } = useQuery({
-    queryKey: ["/api/restaurants", restaurant?.id, "products"],
-    enabled: !!restaurant?.id && showOrderEditForm
-  });
   
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
@@ -147,6 +142,12 @@ export default function Dashboard() {
     enabled: isAuthenticated,
     retry: 3,
     refetchOnMount: true,
+  });
+
+  // Buscar produtos disponíveis para edição de pedidos
+  const { data: availableProducts } = useQuery({
+    queryKey: ["/api/restaurants", restaurant?.id, "products"],
+    enabled: !!restaurant?.id && showOrderEditForm
   });
 
   // Debug log
