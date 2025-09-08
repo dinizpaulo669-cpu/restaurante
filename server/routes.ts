@@ -8,7 +8,7 @@ import fs from "fs";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -884,7 +884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Centro', 'Lapa', 'Glória', 'Catete', 'Cosme Velho',
           'Humaitá', 'Gávea', 'São Conrado', 'Barra da Tijuca',
           'Recreio dos Bandeirantes', 'Jacarepaguá', 'Taquara',
-          'Freguesia', 'Pechincha', 'Curicica', 'Camorim'
+          'Freguesia', 'Pechincha', 'Curicica', 'Camorim', 'Benfica',
+          'Mangueira', 'Bonsucesso', 'Ramos', 'Olaria', 'Penha',
+          'Brás de Pina', 'Cordovil', 'Parada de Lucas', 'Vigário Geral',
+          'Jardim América', 'Irajá', 'Vicente de Carvalho', 'Vila da Penha',
+          'Vista Alegre', 'Colégio', 'Turiaçu', 'Rocha Miranda',
+          'Honório Gurgel', 'Oswaldo Cruz', 'Madureira', 'Vaz Lobo',
+          'Pavuna', 'Costa Barros', 'Anchieta', 'Parque Anchieta'
         ],
         'São Paulo': [
           'Jardins', 'Pinheiros', 'Vila Madalena', 'Itaim Bibi',
@@ -893,7 +899,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Pompeia', 'Vila Leopoldina', 'Bela Vista', 'Liberdade',
           'Aclimação', 'Paraíso', 'Vila Mariana', 'Saúde',
           'Ipiranga', 'Cambuci', 'Bom Retiro', 'Santa Ifigênia',
-          'República', 'Sé', 'Brás', 'Mooca', 'Tatuapé'
+          'República', 'Sé', 'Brás', 'Mooca', 'Tatuapé', 'Consolação',
+          'Cerqueira César', 'Jardim Paulista', 'Vila Buarque', 'Copacabana',
+          'Vila Andrade', 'Campo Limpo', 'Capela do Socorro', 'Jabaquara',
+          'Sacomã', 'Cursino', 'Vila Prudente', 'São Lucas', 'Sapopemba',
+          'São Mateus', 'Itaquera', 'Guaianases', 'Lajeado', 'Ermelino Matarazzo',
+          'São Miguel Paulista', 'Vila Jacuí', 'Tucuruvi', 'Santana',
+          'Mandaqui', 'Casa Verde', 'Limão', 'Freguesia do Ó',
+          'Brasilândia', 'Cachoeirinha', 'Pirituba', 'São Domingos'
+        ],
+        'Belo Horizonte': [
+          'Centro', 'Savassi', 'Funcionários', 'Lourdes', 'Santo Agostinho',
+          'Cidade Nova', 'Boa Viagem', 'Carlos Prates', 'Floresta', 'Lagoinha',
+          'Bonfim', 'Concórdia', 'Santa Tereza', 'Santa Efigênia', 'Barro Preto',
+          'Santo Antônio', 'São Pedro', 'União', 'Sagrada Família', 'Coração de Jesus',
+          'São Lucas', 'Castelo', 'Anchieta', 'Sion', 'Cruzeiro', 'Carmo',
+          'Gutierrez', 'Belvedere', 'Mangabeiras', 'Buritis', 'Estoril',
+          'Jardim Atlântico', 'Nova Suíça', 'Planalto', 'São Bento',
+          'Pampulha', 'Ouro Preto', 'Trevo', 'Liberdade', 'Jaraguá'
+        ],
+        'Brasília': [
+          'Asa Sul', 'Asa Norte', 'Lago Sul', 'Lago Norte', 'Sudoeste/Octogonal',
+          'Noroeste', 'Park Way', 'Cruzeiro', 'Águas Claras', 'Vicente Pires',
+          'Taguatinga', 'Ceilândia', 'Guará', 'Sobradinho', 'Planaltina',
+          'Paranoá', 'Núcleo Bandeirante', 'Riacho Fundo', 'Samambaia', 'Santa Maria',
+          'São Sebastião', 'Recanto das Emas', 'Gama', 'Brazlândia', 'Candangolândia',
+          'Jardim Botânico', 'Itapoã', 'SIA', 'SCIA', 'Estrutural'
+        ],
+        'Salvador': [
+          'Pelourinho', 'Barra', 'Ondina', 'Rio Vermelho', 'Pituba', 'Itaigara',
+          'Caminho das Árvores', 'Graça', 'Vitória', 'Corredor da Vitória',
+          'Campo Grande', 'Nazaré', 'Piedade', 'Barris', 'Canela', 'Garcia',
+          'Federação', 'Costa Azul', 'Armação', 'Piatã', 'Itapuã', 'Stella Maris',
+          'Flamengo', 'Amaralina', 'Brotas', 'Engenho Velho de Brotas', 'Barbalho',
+          'Caixa D\'Água', 'Acupe de Brotas', 'Matatu', 'Alto das Pombas'
+        ],
+        'Fortaleza': [
+          'Centro', 'Aldeota', 'Meireles', 'Mucuripe', 'Varjota', 'Joaquim Távora',
+          'Dionísio Torres', 'Cocó', 'Dunas', 'Guararapes', 'Papicu', 'Praia do Futuro',
+          'Edson Queiroz', 'Água Fria', 'José de Alencar', 'Fátima', 'Jacarecanga',
+          'Monte Castelo', 'Antônio Bezerra', 'Quintino Cunha', 'Benfica', 'Rodolfo Teófilo',
+          'Montese', 'Damas', 'Bom Futuro', 'Parangaba', 'Vila União', 'Serrinha'
+        ],
+        'Recife': [
+          'Boa Viagem', 'Pina', 'Brasília Teimosa', 'Imbiribeira', 'Setúbal',
+          'Cordeiro', 'Torrões', 'Curado', 'Barro', 'Cohab', 'Ibura',
+          'Ipsep', 'Estância', 'Jordão', 'Areias', 'Mustardinha', 'San Martin',
+          'Centro', 'São José', 'Santo Antônio', 'Boa Vista', 'Derby',
+          'Graças', 'Espinheiro', 'Aflitos', 'Tamarineira', 'Casa Forte',
+          'Parnamirim', 'Santana', 'Fundão', 'Poço da Panela', 'Monteiro'
+        ],
+        'Porto Alegre': [
+          'Centro Histórico', 'Cidade Baixa', 'Bom Fim', 'Rio Branco', 'Floresta',
+          'São Geraldo', 'Navegantes', 'Farroupilha', 'Independência', 'Azenha',
+          'Praia de Belas', 'Menino Deus', 'Cristal', 'Ipanema', 'Cavalhada',
+          'Tristeza', 'Vila Assunção', 'Pedra Redonda', 'Belém Novo', 'Lami',
+          'Moinhos de Vento', 'Mont\'Serrat', 'Auxiliadora', 'Petrópolis', 'Higienópolis',
+          'Passo da Areia', 'São João', 'Partenon', 'Lomba do Pinheiro'
+        ],
+        'Curitiba': [
+          'Centro', 'Batel', 'Água Verde', 'Rebouças', 'Bigorrilho', 'Mercês',
+          'São Francisco', 'Alto da Glória', 'Cristo Rei', 'Jardim Botânico',
+          'Cabral', 'Hugo Lange', 'Juvevê', 'Bacacheri', 'Boa Vista',
+          'Ahú', 'São Lourenço', 'Portão', 'Novo Mundo', 'Pilarzinho',
+          'Bom Retiro', 'Taboão', 'Vila Izabel', 'Parolin', 'Guaíra'
         ],
         'Petrópolis': [
           'Centro', 'Corrêas', 'Itaipava', 'Nogueira', 'Quitandinha',
@@ -929,9 +998,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { restaurantId } = req.params;
       
-      // Por enquanto retornar um array vazio já que não temos a tabela no banco
-      // TODO: Implementar tabela service_areas no banco de dados
-      res.json([]);
+      const areas = await db
+        .select()
+        .from(serviceAreas)
+        .where(eq(serviceAreas.restaurantId, restaurantId))
+        .orderBy(serviceAreas.neighborhood);
+      
+      res.json(areas);
     } catch (error) {
       console.error("Error fetching service areas:", error);
       res.status(500).json({ message: "Failed to fetch service areas" });
