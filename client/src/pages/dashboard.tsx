@@ -62,6 +62,12 @@ export default function Dashboard() {
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [showOrderEditForm, setShowOrderEditForm] = useState(false);
   
+  // Buscar produtos disponíveis para edição de pedidos
+  const { data: availableProducts } = useQuery({
+    queryKey: ["/api/restaurants", restaurant?.id, "products"],
+    enabled: !!restaurant?.id && showOrderEditForm
+  });
+  
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
   const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
@@ -2656,6 +2662,90 @@ export default function Dashboard() {
                 value={editingOrder.customerAddress || ''}
                 onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, customerAddress: e.target.value }))}
               />
+            </div>
+
+            {/* Seção de Produtos */}
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold mb-4">Produtos do Pedido</h3>
+              
+              {/* Lista de produtos atuais */}
+              <div className="space-y-2 mb-4">
+                {editingOrder.items?.map((item: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <div className="flex-1">
+                      <span className="font-medium">{item.productName}</span>
+                      <span className="text-sm text-gray-600 ml-2">R$ {parseFloat(item.price || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const newItems = [...(editingOrder.items || [])];
+                          if (newItems[index].quantity > 1) {
+                            newItems[index].quantity -= 1;
+                          } else {
+                            newItems.splice(index, 1);
+                          }
+                          setEditingOrder((prev: any) => ({ ...prev, items: newItems }));
+                        }}
+                      >
+                        -
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const newItems = [...(editingOrder.items || [])];
+                          newItems[index].quantity += 1;
+                          setEditingOrder((prev: any) => ({ ...prev, items: newItems }));
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Adicionar novos produtos */}
+              <div>
+                <Label>Adicionar Produto</Label>
+                <Select onValueChange={(productId) => {
+                  const product = availableProducts?.find((p: any) => p.id === productId);
+                  if (product) {
+                    const existingItemIndex = editingOrder.items?.findIndex((item: any) => item.productId === productId);
+                    if (existingItemIndex >= 0) {
+                      const newItems = [...(editingOrder.items || [])];
+                      newItems[existingItemIndex].quantity += 1;
+                      setEditingOrder((prev: any) => ({ ...prev, items: newItems }));
+                    } else {
+                      const newItem = {
+                        productId: product.id,
+                        productName: product.name,
+                        price: product.price,
+                        quantity: 1
+                      };
+                      setEditingOrder((prev: any) => ({ 
+                        ...prev, 
+                        items: [...(prev.items || []), newItem] 
+                      }));
+                    }
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um produto para adicionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProducts?.map((product: any) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - R$ {parseFloat(product.price || 0).toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div>
