@@ -2330,12 +2330,8 @@ export default function Dashboard() {
           );
         }
 
-        return (
-          <div className="p-6">
-            <h4 className="text-lg font-semibold mb-4">Seção em Desenvolvimento</h4>
-            <p className="text-muted-foreground">Esta funcionalidade será implementada em breve.</p>
-          </div>
-        );
+        // Não mostrar nada se a seção não for reconhecida
+        return null;
       };
 
       return (
