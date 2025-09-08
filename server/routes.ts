@@ -869,6 +869,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para buscar bairros de uma cidade
+  app.get("/api/neighborhoods/:city/:state", async (req, res) => {
+    try {
+      const { city, state } = req.params;
+      
+      // Lista de bairros para grandes cidades brasileiras
+      const neighborhoodsData: { [key: string]: string[] } = {
+        'Rio de Janeiro': [
+          'Copacabana', 'Ipanema', 'Leblon', 'Botafogo', 'Flamengo', 
+          'Laranjeiras', 'Urca', 'Leme', 'Tijuca', 'Vila Isabel',
+          'Grajaú', 'Maracanã', 'Praça da Bandeira', 'São Cristóvão',
+          'Catumbi', 'Estácio', 'Rio Comprido', 'Santa Teresa',
+          'Centro', 'Lapa', 'Glória', 'Catete', 'Cosme Velho',
+          'Humaitá', 'Gávea', 'São Conrado', 'Barra da Tijuca',
+          'Recreio dos Bandeirantes', 'Jacarepaguá', 'Taquara',
+          'Freguesia', 'Pechincha', 'Curicica', 'Camorim'
+        ],
+        'São Paulo': [
+          'Jardins', 'Pinheiros', 'Vila Madalena', 'Itaim Bibi',
+          'Moema', 'Vila Olímpia', 'Brooklin', 'Campo Belo',
+          'Santo Amaro', 'Morumbi', 'Butantã', 'Lapa', 'Perdizes',
+          'Pompeia', 'Vila Leopoldina', 'Bela Vista', 'Liberdade',
+          'Aclimação', 'Paraíso', 'Vila Mariana', 'Saúde',
+          'Ipiranga', 'Cambuci', 'Bom Retiro', 'Santa Ifigênia',
+          'República', 'Sé', 'Brás', 'Mooca', 'Tatuapé'
+        ],
+        'Petrópolis': [
+          'Centro', 'Corrêas', 'Itaipava', 'Nogueira', 'Quitandinha',
+          'Cascatinha', 'Duchas', 'Retiro', 'Valparaíso', 'Cremerie',
+          'Bingen', 'Mosela', 'Carangola', 'Vila Felipe', 'Alto da Serra',
+          'Pedro do Rio', 'Posse', 'Araras', 'Secretário', 'Meio da Serra'
+        ]
+      };
+      
+      // Buscar bairros para a cidade específica
+      const cityKey = Object.keys(neighborhoodsData).find(
+        key => key.toLowerCase() === city.toLowerCase()
+      );
+      
+      if (cityKey) {
+        res.json(neighborhoodsData[cityKey]);
+      } else {
+        // Se não tiver dados locais, retornar uma lista genérica baseada no nome da cidade
+        const genericNeighborhoods = [
+          'Centro', 'Vila Nova', 'Jardim', 'São José', 'Santa Maria',
+          'Boa Vista', 'Alto', 'Bairro Novo', 'Industrial', 'Residencial'
+        ];
+        res.json(genericNeighborhoods);
+      }
+    } catch (error) {
+      console.error("Error fetching neighborhoods:", error);
+      res.status(500).json({ message: "Failed to fetch neighborhoods" });
+    }
+  });
+
+  // Endpoint para buscar áreas de serviço de um restaurante
+  app.get("/api/service-areas/:restaurantId", async (req, res) => {
+    try {
+      const { restaurantId } = req.params;
+      
+      // Por enquanto retornar um array vazio já que não temos a tabela no banco
+      // TODO: Implementar tabela service_areas no banco de dados
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching service areas:", error);
+      res.status(500).json({ message: "Failed to fetch service areas" });
+    }
+  });
+
   // WebSocket Setup
   const httpServer = createServer(app);
 
