@@ -2620,9 +2620,8 @@ export default function Dashboard() {
           {renderContent()}
         </main>
       </div>
-    </div>
-    
-    {/* Modal de edição de pedidos */}
+      
+      {/* Modal de edição de pedidos */}
     <Dialog open={showOrderEditForm} onOpenChange={setShowOrderEditForm}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -2746,6 +2745,6 @@ export default function Dashboard() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    
+    </div>
   );
 }
