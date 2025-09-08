@@ -627,6 +627,7 @@ export default function Dashboard() {
     { id: "logo", label: "Logo", icon: Edit, hasSubmenu: false },
     { id: "banner", label: "Banner", icon: Package, hasSubmenu: false },
     { id: "comandas", label: "Comandas", icon: FileText, hasSubmenu: false },
+    { id: "cupons", label: "Criar Cupom", icon: CreditCard, hasSubmenu: false },
     { 
       id: "configuracoes", 
       label: "Configurações", 
@@ -640,7 +641,7 @@ export default function Dashboard() {
         "Faixa de Cep"
       ]
     },
-    { id: "plano", label: "Plano", icon: CreditCard, hasSubmenu: false },
+    { id: "controle", label: "Controle", icon: AlertTriangle, hasSubmenu: false },
   ];
 
   // Contadores de pedidos por status
@@ -653,6 +654,12 @@ export default function Dashboard() {
   };
 
   const handleMenuClick = (itemId: string) => {
+    if (itemId === "controle") {
+      // Redirecionar para página de controle
+      window.location.href = "/controle";
+      return;
+    }
+    
     if (menuItems.find(item => item.id === itemId)?.hasSubmenu) {
       setExpandedMenu(expandedMenu === itemId ? null : itemId);
     } else {
@@ -2404,6 +2411,194 @@ export default function Dashboard() {
 
             {renderConfigurationContent()}
           </div>
+        </div>
+      );
+    }
+
+    if (activeSection === "cupons") {
+      const { data: coupons = [] } = useQuery({
+        queryKey: ["/api/dev/coupons"],
+        enabled: isAuthenticated
+      });
+
+      const [couponForm, setCouponForm] = useState({
+        code: "",
+        description: "",
+        discountType: "percentage",
+        discountValue: "",
+        minOrderValue: "",
+        maxUses: "",
+        validFrom: "",
+        validUntil: ""
+      });
+
+      const createCouponMutation = useMutation({
+        mutationFn: (data: any) => apiRequest("POST", "/api/dev/coupons", data),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
+          setCouponForm({
+            code: "",
+            description: "",
+            discountType: "percentage", 
+            discountValue: "",
+            minOrderValue: "",
+            maxUses: "",
+            validFrom: "",
+            validUntil: ""
+          });
+          toast({
+            title: "Cupom criado",
+            description: "Cupom criado com sucesso!"
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro",
+            description: "Erro ao criar cupom",
+            variant: "destructive"
+          });
+        }
+      });
+
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Criar Cupom Promocional</h2>
+          
+          {/* Formulário para criar cupom */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Código do Cupom</Label>
+                  <Input
+                    value={couponForm.code}
+                    onChange={(e) => setCouponForm(prev => ({...prev, code: e.target.value.toUpperCase()}))}
+                    placeholder="DESCONTO10"
+                    data-testid="input-coupon-code"
+                  />
+                </div>
+                <div>
+                  <Label>Descrição</Label>
+                  <Input
+                    value={couponForm.description}
+                    onChange={(e) => setCouponForm(prev => ({...prev, description: e.target.value}))}
+                    placeholder="Desconto de 10% no pedido"
+                    data-testid="input-coupon-description"
+                  />
+                </div>
+                <div>
+                  <Label>Tipo de Desconto</Label>
+                  <Select value={couponForm.discountType} onValueChange={(value) => setCouponForm(prev => ({...prev, discountType: value}))}>
+                    <SelectTrigger data-testid="select-discount-type">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Porcentagem (%)</SelectItem>
+                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Valor do Desconto</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={couponForm.discountValue}
+                    onChange={(e) => setCouponForm(prev => ({...prev, discountValue: e.target.value}))}
+                    placeholder={couponForm.discountType === "percentage" ? "10" : "5.00"}
+                    data-testid="input-discount-value"
+                  />
+                </div>
+                <div>
+                  <Label>Valor Mínimo do Pedido (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={couponForm.minOrderValue}
+                    onChange={(e) => setCouponForm(prev => ({...prev, minOrderValue: e.target.value}))}
+                    placeholder="50.00"
+                    data-testid="input-min-order-value"
+                  />
+                </div>
+                <div>
+                  <Label>Quantidade Máxima de Usos</Label>
+                  <Input
+                    type="number"
+                    value={couponForm.maxUses}
+                    onChange={(e) => setCouponForm(prev => ({...prev, maxUses: e.target.value}))}
+                    placeholder="100"
+                    data-testid="input-max-uses"
+                  />
+                </div>
+                <div>
+                  <Label>Data de Início</Label>
+                  <Input
+                    type="datetime-local"
+                    value={couponForm.validFrom}
+                    onChange={(e) => setCouponForm(prev => ({...prev, validFrom: e.target.value}))}
+                    data-testid="input-valid-from"
+                  />
+                </div>
+                <div>
+                  <Label>Data de Expiração</Label>
+                  <Input
+                    type="datetime-local"
+                    value={couponForm.validUntil}
+                    onChange={(e) => setCouponForm(prev => ({...prev, validUntil: e.target.value}))}
+                    data-testid="input-valid-until"
+                  />
+                </div>
+              </div>
+              
+              <Button 
+                onClick={() => createCouponMutation.mutate(couponForm)}
+                disabled={!couponForm.code || !couponForm.discountValue || !couponForm.validFrom || !couponForm.validUntil || createCouponMutation.isPending}
+                className="w-full mt-6"
+                data-testid="button-create-coupon"
+              >
+                {createCouponMutation.isPending ? "Criando..." : "Criar Cupom"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Lista de cupons existentes */}
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Cupons Criados</h3>
+              
+              {coupons.length === 0 ? (
+                <div className="text-center py-8">
+                  <CreditCard className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhum cupom criado ainda</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {coupons.map((coupon: any) => (
+                    <div key={coupon.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-lg">{coupon.code}</h4>
+                          <p className="text-muted-foreground">{coupon.description}</p>
+                          <div className="flex gap-4 mt-2 text-sm">
+                            <span>
+                              Desconto: {coupon.discountType === "percentage" ? `${coupon.discountValue}%` : `R$ ${coupon.discountValue}`}
+                            </span>
+                            <span>Usado: {coupon.usedCount}/{coupon.maxUses || "∞"}</span>
+                          </div>
+                          <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
+                            <span>Válido: {new Date(coupon.validFrom).toLocaleDateString()} - {new Date(coupon.validUntil).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <Badge variant={coupon.isActive ? "default" : "secondary"}>
+                          {coupon.isActive ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       );
     }

@@ -427,3 +427,65 @@ export const insertOrderMessageSchema = createInsertSchema(orderMessages).omit({
 // Tipos para mensagens
 export type OrderMessage = typeof orderMessages.$inferSelect;
 export type InsertOrderMessage = z.infer<typeof insertOrderMessageSchema>;
+
+// Tabela de Cupons
+export const coupons = pgTable("coupons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  code: varchar("code", { length: 50 }).notNull(),
+  description: varchar("description", { length: 255 }),
+  discountType: varchar("discount_type", { length: 20 }).notNull(), // "percentage" ou "fixed"
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  minOrderValue: decimal("min_order_value", { precision: 10, scale: 2 }),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").default(0).notNull(),
+  validFrom: timestamp("valid_from").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tabela de Uso de Cupons
+export const couponUsages = pgTable("coupon_usages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  couponId: varchar("coupon_id").notNull().references(() => coupons.id),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  discountApplied: decimal("discount_applied", { precision: 10, scale: 2 }).notNull(),
+  usedAt: timestamp("used_at").defaultNow().notNull(),
+});
+
+// Relations para cupons
+export const couponsRelations = relations(coupons, ({ one, many }) => ({
+  restaurant: one(restaurants, { fields: [coupons.restaurantId], references: [restaurants.id] }),
+  usages: many(couponUsages),
+}));
+
+export const couponUsagesRelations = relations(couponUsages, ({ one }) => ({
+  coupon: one(coupons, { fields: [couponUsages.couponId], references: [coupons.id] }),
+  order: one(orders, { fields: [couponUsages.orderId], references: [orders.id] }),
+}));
+
+// Insert schemas para cupons
+export const insertCouponSchema = createInsertSchema(coupons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usedCount: true,
+}).extend({
+  discountValue: z.union([z.string(), z.number()]).transform(val => String(val)),
+  minOrderValue: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
+});
+
+export const insertCouponUsageSchema = createInsertSchema(couponUsages).omit({
+  id: true,
+  usedAt: true,
+}).extend({
+  discountApplied: z.union([z.string(), z.number()]).transform(val => String(val)),
+});
+
+// Tipos para cupons
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type CouponUsage = typeof couponUsages.$inferSelect;
+export type InsertCouponUsage = z.infer<typeof insertCouponUsageSchema>;

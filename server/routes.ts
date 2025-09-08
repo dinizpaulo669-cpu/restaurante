@@ -7,8 +7,8 @@ import path from "path";
 import fs from "fs";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema } from "@shared/schema";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -935,6 +935,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching service areas:", error);
       res.status(500).json({ message: "Failed to fetch service areas" });
+    }
+  });
+
+  // Endpoints para cupons
+  app.get("/api/dev/coupons", async (req, res) => {
+    try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const restaurantCoupons = await db
+        .select()
+        .from(coupons)
+        .where(eq(coupons.restaurantId, restaurant.id))
+        .orderBy(desc(coupons.createdAt));
+
+      res.json(restaurantCoupons);
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+      res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
+  app.post("/api/dev/coupons", async (req, res) => {
+    try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const couponData = insertCouponSchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+      });
+
+      const [coupon] = await db.insert(coupons).values(couponData).returning();
+      res.json(coupon);
+    } catch (error) {
+      console.error("Error creating coupon:", error);
+      res.status(500).json({ message: "Failed to create coupon" });
+    }
+  });
+
+  // Validar cupom
+  app.post("/api/validate-coupon", async (req, res) => {
+    try {
+      const { code, restaurantId, orderTotal } = req.body;
+      
+      if (!code || !restaurantId) {
+        return res.status(400).json({ message: "Code and restaurant ID are required" });
+      }
+
+      const [coupon] = await db
+        .select()
+        .from(coupons)
+        .where(and(
+          eq(coupons.code, code.toUpperCase()),
+          eq(coupons.restaurantId, restaurantId),
+          eq(coupons.isActive, true)
+        ))
+        .limit(1);
+
+      if (!coupon) {
+        return res.status(404).json({ message: "Cupom não encontrado ou inválido" });
+      }
+
+      const now = new Date();
+      if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
+        return res.status(400).json({ message: "Cupom fora do período de validade" });
+      }
+
+      if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        return res.status(400).json({ message: "Cupom esgotado" });
+      }
+
+      if (coupon.minOrderValue && orderTotal < parseFloat(coupon.minOrderValue)) {
+        return res.status(400).json({ 
+          message: `Valor mínimo do pedido deve ser R$ ${parseFloat(coupon.minOrderValue).toFixed(2)}` 
+        });
+      }
+
+      // Calcular desconto
+      let discount = 0;
+      if (coupon.discountType === "percentage") {
+        discount = orderTotal * (parseFloat(coupon.discountValue) / 100);
+      } else {
+        discount = parseFloat(coupon.discountValue);
+      }
+
+      res.json({
+        valid: true,
+        coupon: {
+          id: coupon.id,
+          code: coupon.code,
+          description: coupon.description,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue
+        },
+        discount: Math.min(discount, orderTotal) // Desconto não pode ser maior que o total
+      });
+    } catch (error) {
+      console.error("Error validating coupon:", error);
+      res.status(500).json({ message: "Failed to validate coupon" });
     }
   });
 
