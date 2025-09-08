@@ -10,13 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Printer, MessageSquare, Send, User, Phone, MapPin, Table, Truck } from "lucide-react";
+import { Printer, MessageSquare, Send, User, Phone, MapPin, Table, Truck, Edit3 } from "lucide-react";
 import type { Order } from "@shared/schema";
 
 interface OrderCardProps {
   order: Order;
   onStatusUpdate: (status: string) => void;
   onPrint: () => void;
+  onEdit?: (order: Order) => void;
   isUpdatingStatus: boolean;
 }
 
@@ -29,7 +30,7 @@ const statusConfig = {
   cancelled: { label: "Cancelado", color: "bg-red-100 text-red-800" },
 };
 
-export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: OrderCardProps) {
+export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingStatus }: OrderCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
@@ -41,6 +42,9 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
     queryKey: [`/api/orders/${order.id}/messages`],
     enabled: !!order.id,
   });
+  
+  // Contar mensagens não lidas do cliente
+  const unreadCount = Array.isArray(messages) ? messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length : 0;
   
   // Enviar mensagem
   const sendMessageMutation = useMutation({
@@ -65,6 +69,69 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
   const handleSendMessage = () => {
     if (newMessage.trim()) {
       sendMessageMutation.mutate(newMessage.trim());
+    }
+  };
+  
+  const handlePrint = () => {
+    console.log('Imprimir pedido:', order.id);
+    
+    // Criar conteúdo para impressão
+    const printContent = `
+      <div style="font-family: monospace; width: 300px; margin: 0 auto;">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+          <h2>PEDIDO #${order.orderNumber}</h2>
+          <p>${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <strong>Cliente:</strong> ${order.customerName}<br>
+          ${order.customerPhone ? `<strong>Telefone:</strong> ${order.customerPhone}<br>` : ''}
+          ${order.customerAddress ? `<strong>Endereço:</strong> ${order.customerAddress}<br>` : ''}
+          <strong>Tipo:</strong> ${order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}<br>
+          <strong>Status:</strong> ${statusInfo.label}
+        </div>
+        
+        ${order.notes ? `<div style="margin-bottom: 15px;"><strong>Observações:</strong> ${order.notes}</div>` : ''}
+        
+        <div style="border-top: 1px solid #000; padding-top: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+            <span>TOTAL:</span>
+            <span>R$ ${order.total}</span>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; font-size: 12px;">
+          <p>Obrigado pela preferência!</p>
+        </div>
+      </div>
+    `;
+    
+    // Abrir janela de impressão
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Pedido #${order.orderNumber}</title>
+            <style>
+              @media print {
+                @page { margin: 0; }
+                body { margin: 1cm; }
+              }
+            </style>
+          </head>
+          <body>${printContent}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+    
+    // Chamar callback original se existir
+    if (onPrint) {
+      onPrint();
     }
   };
 
@@ -166,9 +233,9 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
                 <Button size="sm" variant="outline">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Chat
-                  {Array.isArray(messages) && messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length > 0 && (
+                  {unreadCount > 0 && (
                     <Badge variant="destructive" className="ml-2 px-1.5 py-0.5 text-xs">
-                      {messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length}
+                      {unreadCount}
                     </Badge>
                   )}
                 </Button>
@@ -236,10 +303,23 @@ export function OrderCard({ order, onStatusUpdate, onPrint, isUpdatingStatus }: 
                 </div>
               </DialogContent>
             </Dialog>
+            
+            {/* Botão de corrigir */}
+            {onEdit && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onEdit(order)}
+                data-testid={`button-edit-${order.id}`}
+              >
+                <Edit3 className="w-4 h-4 mr-2" />
+                Corrigir
+              </Button>
+            )}
           </div>
           
           <Button 
-            onClick={onPrint}
+            onClick={handlePrint}
             variant="outline" 
             size="sm"
             data-testid={`button-print-${order.id}`}
