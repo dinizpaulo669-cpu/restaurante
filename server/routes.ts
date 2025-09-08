@@ -347,6 +347,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === RESTAURANT ORDERS ROUTE ===
+  app.get("/api/my-orders", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Get restaurant owned by this user
+      const userRestaurant = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .limit(1);
+      
+      if (userRestaurant.length === 0) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      
+      // Get all orders for this restaurant
+      const restaurantOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerId: orders.customerId,
+          restaurantId: orders.restaurantId,
+          customerName: orders.customerName,
+          customerPhone: orders.customerPhone,
+          customerAddress: orders.customerAddress,
+          status: orders.status,
+          orderType: orders.orderType,
+          subtotal: orders.subtotal,
+          deliveryFee: orders.deliveryFee,
+          total: orders.total,
+          paymentMethod: orders.paymentMethod,
+          notes: orders.notes,
+          estimatedDeliveryTime: orders.estimatedDeliveryTime,
+          deliveredAt: orders.deliveredAt,
+          createdAt: orders.createdAt,
+          updatedAt: orders.updatedAt
+        })
+        .from(orders)
+        .where(eq(orders.restaurantId, userRestaurant[0].id))
+        .orderBy(desc(orders.createdAt));
+      
+      // Get order items for each order
+      const ordersWithItems = await Promise.all(
+        restaurantOrders.map(async (order) => {
+          const items = await db
+            .select({
+              id: orderItems.id,
+              quantity: orderItems.quantity,
+              unitPrice: orderItems.unitPrice,
+              totalPrice: orderItems.totalPrice,
+              specialInstructions: orderItems.specialInstructions,
+              product: {
+                id: products.id,
+                name: products.name,
+                description: products.description,
+                imageUrl: products.imageUrl
+              }
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .where(eq(orderItems.orderId, order.id));
+          
+          return {
+            ...order,
+            items
+          };
+        })
+      );
+        
+      res.json(ordersWithItems);
+    } catch (error) {
+      console.error("Error fetching restaurant orders:", error);
+      res.status(500).json({ message: "Failed to fetch restaurant orders" });
+    }
+  });
+
   // === CUSTOMER ROUTES ===
   app.get("/api/customer/favorites", async (req: any, res) => {
     try {
