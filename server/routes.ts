@@ -529,6 +529,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/customer/profile", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+
+      const { firstName, lastName, phone, address } = req.body;
+
+      // Atualizar ou criar o usuário
+      const [updatedUser] = await db
+        .insert(users)
+        .values({
+          id: userId,
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone,
+          address: address,
+          email: "dev@example.com",
+          role: "customer"
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            firstName: firstName,
+            lastName: lastName,
+            phone: phone,
+            address: address,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating customer profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.get("/api/customer/stats", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
