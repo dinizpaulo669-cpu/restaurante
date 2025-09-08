@@ -16,6 +16,7 @@ import Menu from "@/pages/menu";
 import SetupRestaurant from "@/pages/setup-restaurant";
 import AuthCallback from "@/pages/auth-callback";
 import InternalLogin from "@/pages/internal-login";
+import ControlePage from "@/pages/controle";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/restaurant-panel" component={RestaurantPanel} />
       <Route path="/setup-restaurant" component={SetupRestaurant} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/controle" component={ControlePage} />
       <Route path="/restaurant/:restaurantId" component={Menu} />
       <Route component={NotFound} />
     </Switch>

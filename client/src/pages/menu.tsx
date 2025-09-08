@@ -18,7 +18,9 @@ import {
   Star,
   Truck,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  Tag,
+  X
 } from "lucide-react";
 
 interface CartItem {
@@ -50,6 +52,9 @@ export default function Menu() {
     address: "",
     notes: ""
   });
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
 
   // Buscar dados do restaurante
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
