@@ -54,8 +54,14 @@ export default function ControlePage() {
     enabled: isAuthenticated
   });
 
-  // Dados mockados para o dashboard
-  const salesData = [
+  // Buscar estatísticas reais do restaurante
+  const { data: restaurantStats } = useQuery<any>({
+    queryKey: ["/api/restaurant/stats"],
+    enabled: isAuthenticated
+  });
+
+  // Usar dados reais das estatísticas ou fallback para dados mockados
+  const salesData = restaurantStats?.salesByDay || [
     { date: '01/01', vendas: 1200, pedidos: 24 },
     { date: '02/01', vendas: 1500, pedidos: 28 },
     { date: '03/01', vendas: 1100, pedidos: 22 },
@@ -65,7 +71,11 @@ export default function ControlePage() {
     { date: '07/01', vendas: 2300, pedidos: 41 },
   ];
 
-  const topProducts = [
+  const topProducts = restaurantStats?.topProducts?.map((product: any) => ({
+    name: product.productName || 'Produto',
+    vendas: Number(product.totalSold || 0),
+    receita: Number(product.totalRevenue || 0)
+  })) || [
     { name: 'X-Burger', vendas: 120, receita: 1800 },
     { name: 'Pizza Margherita', vendas: 95, receita: 1520 },
     { name: 'Refrigerante', vendas: 200, receita: 800 },
@@ -73,15 +83,22 @@ export default function ControlePage() {
     { name: 'Hambúrguer Bacon', vendas: 65, receita: 1300 },
   ];
 
-  const categoryData = [
+  const categoryData = restaurantStats?.categoryStats?.map((category: any, index: number) => {
+    const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
+    return {
+      name: category.category || 'Categoria',
+      value: Number(category.count || 0),
+      color: colors[index % colors.length]
+    };
+  }) || [
     { name: 'Lanches', value: 45, color: '#ff6384' },
     { name: 'Pizzas', value: 30, color: '#36a2eb' },
     { name: 'Bebidas', value: 15, color: '#ffce56' },
     { name: 'Acompanhamentos', value: 10, color: '#4bc0c0' },
   ];
 
-  const totalRevenue = orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || 0), 0);
-  const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
+  const totalRevenue = restaurantStats?.totalRevenue || 0;
+  const averageTicket = restaurantStats?.averageTicket || 0;
 
   if (!isAuthenticated) {
     return (
@@ -216,7 +233,7 @@ export default function ControlePage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
                   <p className="text-3xl font-bold text-blue-600">
-                    {orders.length}
+                    {restaurantStats?.totalOrders || orders.length}
                   </p>
                   <p className="text-sm text-blue-600 flex items-center mt-1">
                     <ArrowUp className="w-4 h-4 mr-1" />
@@ -326,7 +343,7 @@ export default function ControlePage() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {categoryData.map((entry, index) => (
+                    {categoryData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -347,7 +364,7 @@ export default function ControlePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topProducts.map((product, index) => (
+              {topProducts.map((product: any, index: number) => (
                 <div key={product.name} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div className="flex items-center space-x-4">
                     <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">

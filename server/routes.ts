@@ -1125,6 +1125,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para estatísticas do restaurante
+  app.get("/api/restaurant/stats", async (req, res) => {
+    try {
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Calcular estatísticas de pedidos
+      const [totalOrdersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(eq(orders.restaurantId, restaurant.id));
+
+      const [totalRevenueResult] = await db
+        .select({ total: sql<number>`coalesce(sum(${orders.total}), 0)` })
+        .from(orders)
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`${orders.status} IN ('delivered', 'preparing', 'out_for_delivery')`
+        ));
+
+      const [todayOrdersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`DATE(${orders.createdAt}) = CURRENT_DATE`
+        ));
+
+      const [pendingOrdersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          eq(orders.status, 'pending')
+        ));
+
+      // Estatísticas de produtos
+      const [totalProductsResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(eq(products.restaurantId, restaurant.id));
+
+      // Produto mais vendido - usando order_items
+      const topProductsData = await db
+        .select({
+          productId: orderItems.productId,
+          productName: products.name,
+          totalSold: sql<number>`sum(${orderItems.quantity})`,
+          totalRevenue: sql<number>`sum(${orderItems.totalPrice})`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(eq(orders.restaurantId, restaurant.id))
+        .groupBy(orderItems.productId, products.name)
+        .orderBy(sql`sum(${orderItems.quantity}) DESC`)
+        .limit(5);
+
+      // Vendas por categoria
+      const categoryStats = await db
+        .select({
+          category: products.category,
+          count: sql<number>`sum(${orderItems.quantity})`,
+          revenue: sql<number>`sum(${orderItems.totalPrice})`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`${products.category} IS NOT NULL`
+        ))
+        .groupBy(products.category)
+        .orderBy(sql`sum(${orderItems.totalPrice}) DESC`);
+
+      // Vendas dos últimos 7 dias
+      const salesByDay = await db
+        .select({
+          date: sql<string>`DATE(${orders.createdAt})`,
+          sales: sql<number>`sum(${orders.total})`,
+          orderCount: sql<number>`count(*)`
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`
+        ))
+        .groupBy(sql`DATE(${orders.createdAt})`)
+        .orderBy(sql`DATE(${orders.createdAt}) ASC`);
+
+      const totalOrders = Number(totalOrdersResult?.count || 0);
+      const totalRevenue = Number(totalRevenueResult?.total || 0);
+      const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      res.json({
+        totalOrders,
+        totalRevenue,
+        averageTicket,
+        todayOrders: Number(todayOrdersResult?.count || 0),
+        pendingOrders: Number(pendingOrdersResult?.count || 0),
+        totalProducts: Number(totalProductsResult?.count || 0),
+        topProducts: topProductsData,
+        categoryStats: categoryStats,
+        salesByDay: salesByDay.map(item => ({
+          date: item.date,
+          vendas: Number(item.sales || 0),
+          pedidos: Number(item.orderCount || 0)
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching restaurant stats:", error);
+      res.status(500).json({ message: "Failed to fetch restaurant stats" });
+    }
+  });
+
   // Validar cupom
   app.post("/api/validate-coupon", async (req, res) => {
     try {
