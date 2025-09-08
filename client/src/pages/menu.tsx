@@ -236,12 +236,19 @@ export default function Menu() {
           <div className="mb-4">
             <Button 
               variant="outline" 
-              onClick={() => setLocation('/')}
+              onClick={() => {
+                // Se usuário está autenticado como cliente, voltar para painel do cliente
+                if (isAuthenticated) {
+                  setLocation('/customer-panel');
+                } else {
+                  setLocation('/');
+                }
+              }}
               className="flex items-center gap-2"
               data-testid="button-back-home"
             >
               <Home className="w-4 h-4" />
-              Voltar ao Início
+              {isAuthenticated ? 'Voltar ao Painel' : 'Voltar ao Início'}
             </Button>
           </div>
           
