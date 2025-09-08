@@ -1011,6 +1011,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para criar nova área de serviço
+  app.post("/api/service-areas", async (req, res) => {
+    try {
+      const serviceAreaData = insertServiceAreaSchema.parse(req.body);
+      
+      const [serviceArea] = await db
+        .insert(serviceAreas)
+        .values(serviceAreaData)
+        .returning();
+      
+      res.json(serviceArea);
+    } catch (error) {
+      console.error("Error creating service area:", error);
+      res.status(500).json({ message: "Failed to create service area" });
+    }
+  });
+
+  // Endpoint para atualizar área de serviço
+  app.put("/api/service-areas/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const serviceAreaData = insertServiceAreaSchema.partial().parse(req.body);
+      
+      const [updatedArea] = await db
+        .update(serviceAreas)
+        .set(serviceAreaData)
+        .where(eq(serviceAreas.id, id))
+        .returning();
+      
+      if (!updatedArea) {
+        return res.status(404).json({ message: "Service area not found" });
+      }
+      
+      res.json(updatedArea);
+    } catch (error) {
+      console.error("Error updating service area:", error);
+      res.status(500).json({ message: "Failed to update service area" });
+    }
+  });
+
+  // Endpoint para remover área de serviço
+  app.delete("/api/service-areas/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [deletedArea] = await db
+        .delete(serviceAreas)
+        .where(eq(serviceAreas.id, id))
+        .returning();
+      
+      if (!deletedArea) {
+        return res.status(404).json({ message: "Service area not found" });
+      }
+      
+      res.json({ message: "Service area deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting service area:", error);
+      res.status(500).json({ message: "Failed to delete service area" });
+    }
+  });
+
   // Endpoints para cupons
   app.get("/api/dev/coupons", async (req, res) => {
     try {
