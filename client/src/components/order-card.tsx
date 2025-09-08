@@ -267,8 +267,8 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
                             <div
                               className={`max-w-xs p-3 rounded-lg ${
                                 message.senderType === "restaurant"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted"
+                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                  : "bg-blue-100 text-blue-800 border border-blue-200"
                               }`}
                             >
                               <p className="text-sm">{message.message}</p>
