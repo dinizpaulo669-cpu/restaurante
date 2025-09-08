@@ -768,6 +768,98 @@ export default function CustomerPanel() {
           </Button>
         </form>
       </div>
+
+      {/* Categories */}
+      <div>
+        <h3 className="text-lg font-semibold mb-3">Categorias</h3>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {categories.map(({ icon: Icon, name, value, color }) => (
+            <button
+              key={value}
+              onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
+              className={`p-3 rounded-xl text-center transition-all hover:scale-105 ${
+                selectedCategory === value ? "bg-primary/10 border-2 border-primary" : "bg-card border border-border"
+              }`}
+              data-testid={`search-category-${value}`}
+            >
+              <div className={`w-12 h-12 rounded-full ${color} flex items-center justify-center mx-auto mb-2`}>
+                <Icon className="h-6 w-6" />
+              </div>
+              <span className="text-sm font-medium">{name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search Results */}
+      <div>
+        <h3 className="text-lg font-semibold mb-3">
+          {searchQuery || selectedCategory 
+            ? `Resultados da busca${searchQuery ? ` por "${searchQuery}"` : ''}${selectedCategory ? ` na categoria "${categories.find(c => c.value === selectedCategory)?.name}"` : ''}`
+            : "Todos os restaurantes"}
+        </h3>
+        
+        {isLoading ? (
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-card rounded-xl p-4 animate-pulse">
+                <div className="flex space-x-4">
+                  <div className="w-16 h-16 bg-muted rounded-lg"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                    <div className="h-3 bg-muted rounded w-1/4"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : restaurants.length === 0 ? (
+          <div className="text-center py-12">
+            <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {searchQuery || selectedCategory 
+                ? "Nenhum restaurante encontrado para sua busca."
+                : "Nenhum restaurante disponível no momento."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+            {restaurants.map((restaurant: any) => (
+              <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
+                <div className="flex space-x-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Pizza className="h-8 w-8 text-primary" />
+                  </div>
+                  <div 
+                    className="flex-1 min-w-0"
+                    onClick={() => setLocation(`/restaurant/${restaurant.id}`)}
+                  >
+                    <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                      {restaurant.name}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mb-1">{restaurant.category || 'Restaurante'}</p>
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">
+                        <Star className="w-3 h-3 mr-1" />
+                        {restaurant.rating || '4.5'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {restaurant.deliveryTime || 30} min
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        <Truck className="w-3 h-3 mr-1" />
+                        R$ {restaurant.deliveryFee || '0,00'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
