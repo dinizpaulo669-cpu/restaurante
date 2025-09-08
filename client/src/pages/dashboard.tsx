@@ -34,6 +34,10 @@ import {
   AlertTriangle,
   Package2
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 
 export default function Dashboard() {
@@ -53,6 +57,10 @@ export default function Dashboard() {
   // Estados para mesas
   const [showTableForm, setShowTableForm] = useState(false);
   const [editingTable, setEditingTable] = useState<any>(null);
+  
+  // Estados para edição de pedidos
+  const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [showOrderEditForm, setShowOrderEditForm] = useState(false);
   
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
@@ -2482,8 +2490,11 @@ export default function Dashboard() {
                     });
                   }}
                   onPrint={() => {
-                    console.log('Imprimir pedido:', order.id);
-                    // TODO: Implementar função de impressão
+                    // A função de impressão já está implementada no OrderCard
+                  }}
+                  onEdit={(order: any) => {
+                    setEditingOrder(order);
+                    setShowOrderEditForm(true);
                   }}
                   isUpdatingStatus={false}
                 />
@@ -2610,5 +2621,131 @@ export default function Dashboard() {
         </main>
       </div>
     </div>
+    
+    {/* Modal de edição de pedidos */}
+    <Dialog open={showOrderEditForm} onOpenChange={setShowOrderEditForm}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Editar Pedido #{editingOrder?.orderNumber}</DialogTitle>
+        </DialogHeader>
+        
+        {editingOrder && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customerName">Nome do Cliente</Label>
+                <Input
+                  id="customerName"
+                  value={editingOrder.customerName || ''}
+                  onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, customerName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="customerPhone">Telefone</Label>
+                <Input
+                  id="customerPhone"
+                  value={editingOrder.customerPhone || ''}
+                  onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, customerPhone: e.target.value }))}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="customerAddress">Endereço</Label>
+              <Textarea
+                id="customerAddress"
+                value={editingOrder.customerAddress || ''}
+                onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, customerAddress: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="orderNotes">Observações do Pedido</Label>
+              <Textarea
+                id="orderNotes"
+                value={editingOrder.notes || ''}
+                onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="total">Total</Label>
+                <Input
+                  id="total"
+                  type="number"
+                  step="0.01"
+                  value={editingOrder.total || ''}
+                  onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, total: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="deliveryFee">Taxa de Entrega</Label>
+                <Input
+                  id="deliveryFee"
+                  type="number"
+                  step="0.01"
+                  value={editingOrder.deliveryFee || ''}
+                  onChange={(e) => setEditingOrder((prev: any) => ({ ...prev, deliveryFee: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setShowOrderEditForm(false);
+              setEditingOrder(null);
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/orders/${editingOrder.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    customerName: editingOrder.customerName,
+                    customerPhone: editingOrder.customerPhone,
+                    customerAddress: editingOrder.customerAddress,
+                    notes: editingOrder.notes,
+                    total: parseFloat(editingOrder.total),
+                    deliveryFee: parseFloat(editingOrder.deliveryFee || 0)
+                  }),
+                  credentials: 'include'
+                });
+                
+                if (response.ok) {
+                  queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
+                  setShowOrderEditForm(false);
+                  setEditingOrder(null);
+                  toast({
+                    title: "Pedido atualizado",
+                    description: "O pedido foi atualizado com sucesso"
+                  });
+                } else {
+                  throw new Error('Erro ao atualizar pedido');
+                }
+              } catch (error) {
+                console.error('Erro ao atualizar pedido:', error);
+                toast({
+                  title: "Erro",
+                  description: "Não foi possível atualizar o pedido",
+                  variant: "destructive"
+                });
+              }
+            }}
+          >
+            Salvar Alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    
   );
 }

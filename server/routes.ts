@@ -347,6 +347,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update order
+  app.put("/api/orders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(orders.id, id))
+        .returning();
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating order:", error);
+      res.status(500).json({ message: "Failed to update order" });
+    }
+  });
+  
+  // Update order status
+  app.put("/api/orders/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          status,
+          updatedAt: new Date()
+        })
+        .where(eq(orders.id, id))
+        .returning();
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
   // === RESTAURANT ORDERS ROUTE ===
   app.get("/api/my-orders", async (req: any, res) => {
     try {
