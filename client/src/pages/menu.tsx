@@ -56,6 +56,12 @@ export default function Menu() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
 
+  // Detectar se é pedido de mesa através da URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const tableQrCode = urlParams.get('table');
+  const isTableOrder = !!tableQrCode;
+  const [tableData, setTableData] = useState<any>(null);
+
   // Buscar dados do restaurante
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -78,6 +84,12 @@ export default function Menu() {
   const { data: customerProfile } = useQuery({
     queryKey: ["/api/customer/profile"],
     enabled: isAuthenticated,
+  });
+
+  // Buscar dados da mesa se for pedido de mesa
+  const { data: tableInfo } = useQuery({
+    queryKey: [`/api/tables/qr/${tableQrCode}`],
+    enabled: !!tableQrCode,
   });
 
   const addToCart = (product: any) => {
@@ -128,6 +140,10 @@ export default function Menu() {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const getDeliveryFee = () => {
+    return isTableOrder ? 0 : parseFloat((restaurant as any)?.deliveryFee || "0");
+  };
+
   const handleOrder = async () => {
     // Validar se o cliente tem perfil completo
     if (!customerProfile) {
@@ -162,12 +178,15 @@ export default function Menu() {
     }
 
     try {
+      const deliveryFee = getDeliveryFee();
       const orderData = {
         restaurantId,
         customerName,
         customerPhone: (customerProfile as any)?.phone || '',
-        customerAddress: (customerProfile as any)?.address || 'Endereço não informado',
+        customerAddress: isTableOrder ? `Mesa ${tableInfo?.number || 'N/A'}` : (customerProfile as any)?.address || 'Endereço não informado',
         notes: customer.notes,
+        orderType: isTableOrder ? 'table' : 'delivery',
+        tableId: isTableOrder ? tableInfo?.id : null,
         items: cart.map(item => ({
           productId: item.id,
           quantity: item.quantity,
@@ -175,8 +194,8 @@ export default function Menu() {
           totalPrice: item.price * item.quantity
         })),
         subtotal: getTotalPrice(),
-        deliveryFee: parseFloat((restaurant as any)?.deliveryFee || "0"),
-        total: getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")
+        deliveryFee: deliveryFee,
+        total: getTotalPrice() + deliveryFee
       };
 
       const response = await fetch('/api/orders', {
@@ -275,10 +294,18 @@ export default function Menu() {
                   <Clock className="w-4 h-4" />
                   <span>{(restaurant as any)?.openingTime} - {(restaurant as any)?.closingTime}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Truck className="w-4 h-4" />
-                  <span>Taxa de entrega: R$ {(restaurant as any)?.deliveryFee}</span>
-                </div>
+                {!isTableOrder && (
+                  <div className="flex items-center gap-1">
+                    <Truck className="w-4 h-4" />
+                    <span>Taxa de entrega: R$ {(restaurant as any)?.deliveryFee}</span>
+                  </div>
+                )}
+                {isTableOrder && (
+                  <div className="flex items-center gap-1">
+                    <Home className="w-4 h-4" />
+                    <span>Pedido para consumir no local - Mesa {tableInfo?.number || 'N/A'}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 mt-2">
@@ -484,13 +511,21 @@ export default function Menu() {
                           <span>Subtotal:</span>
                           <span>R$ {getTotalPrice().toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Taxa de entrega:</span>
-                          <span>R$ {(restaurant as any)?.deliveryFee}</span>
-                        </div>
+                        {!isTableOrder && (
+                          <div className="flex justify-between">
+                            <span>Taxa de entrega:</span>
+                            <span>R$ {getDeliveryFee().toFixed(2)}</span>
+                          </div>
+                        )}
+                        {isTableOrder && (
+                          <div className="flex justify-between text-green-600">
+                            <span>Consumo no local:</span>
+                            <span>Sem taxa de entrega</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-bold text-lg">
                           <span>Total:</span>
-                          <span>R$ {(getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")).toFixed(2)}</span>
+                          <span>R$ {(getTotalPrice() + getDeliveryFee()).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -600,7 +635,7 @@ export default function Menu() {
               <div className="border-t pt-4">
                 <div className="flex justify-between font-bold">
                   <span>Total do pedido:</span>
-                  <span>R$ {(getTotalPrice() + parseFloat((restaurant as any)?.deliveryFee || "0")).toFixed(2)}</span>
+                  <span>R$ {(getTotalPrice() + getDeliveryFee()).toFixed(2)}</span>
                 </div>
               </div>
 

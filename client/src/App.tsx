@@ -34,6 +34,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/controle" component={ControlePage} />
       <Route path="/restaurant/:restaurantId" component={Menu} />
+      <Route path="/menu/:restaurantId" component={Menu} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1263,7 +1263,7 @@ export default function Dashboard() {
                       size="sm" 
                       variant="outline"
                       onClick={() => {
-                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/menu/' + (restaurant as any).id + '?table=' + table.qrCode)}`;
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/restaurant/' + (restaurant as any).id + '?table=' + table.qrCode)}`;
                         const link = document.createElement('a');
                         link.href = qrUrl;
                         link.download = `qr-mesa-${table.number}.png`;
