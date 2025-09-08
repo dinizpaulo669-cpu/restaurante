@@ -7,8 +7,8 @@ import path from "path";
 import fs from "fs";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema } from "@shared/schema";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -356,10 +356,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get restaurant owned by this user
+      // For development, use the specific dev restaurant owner ID
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       const userRestaurant = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, userId))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
       
       if (userRestaurant.length === 0) {
@@ -549,6 +551,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching restaurant:", error);
       res.status(500).json({ message: "Failed to fetch restaurant" });
+    }
+  });
+
+  // === TABLE ROUTES ===
+  
+  // Get tables for restaurant
+  app.get("/api/restaurants/:id/tables", async (req, res) => {
+    try {
+      const tablesResult = await db
+        .select()
+        .from(tables)
+        .where(eq(tables.restaurantId, req.params.id))
+        .orderBy(tables.number);
+      
+      res.json(tablesResult);
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+      res.status(500).json({ message: "Failed to fetch tables" });
+    }
+  });
+
+  // Create table
+  app.post("/api/tables", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Get restaurant owned by this user
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .limit(1);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Generate unique QR code
+      const qrCode = `table-${restaurant.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const tableData = insertTableSchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+        qrCode,
+      });
+
+      const [table] = await db.insert(tables).values(tableData).returning();
+      res.json(table);
+    } catch (error) {
+      console.error("Error creating table:", error);
+      res.status(500).json({ message: "Failed to create table" });
+    }
+  });
+
+  // Update table
+  app.put("/api/tables/:id", async (req, res) => {
+    try {
+      const [updatedTable] = await db
+        .update(tables)
+        .set({
+          ...req.body,
+          updatedAt: new Date()
+        })
+        .where(eq(tables.id, req.params.id))
+        .returning();
+      
+      if (!updatedTable) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json(updatedTable);
+    } catch (error) {
+      console.error("Error updating table:", error);
+      res.status(500).json({ message: "Failed to update table" });
+    }
+  });
+
+  // Delete table
+  app.delete("/api/tables/:id", async (req, res) => {
+    try {
+      await db.delete(tables).where(eq(tables.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting table:", error);
+      res.status(500).json({ message: "Failed to delete table" });
+    }
+  });
+
+  // Get table by QR code (for customer access)
+  app.get("/api/tables/qr/:qrCode", async (req, res) => {
+    try {
+      const [table] = await db
+        .select()
+        .from(tables)
+        .where(eq(tables.qrCode, req.params.qrCode))
+        .limit(1);
+      
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json(table);
+    } catch (error) {
+      console.error("Error fetching table by QR code:", error);
+      res.status(500).json({ message: "Failed to fetch table" });
+    }
+  });
+
+  // Development routes for tables
+  app.get("/api/dev/tables", async (req, res) => {
+    try {
+      // Get dev restaurant
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+      
+      const tablesResult = await db
+        .select()
+        .from(tables)
+        .where(eq(tables.restaurantId, restaurant.id))
+        .orderBy(tables.number);
+      
+      res.json(tablesResult);
+    } catch (error) {
+      console.error("Error fetching dev tables:", error);
+      res.status(500).json({ message: "Failed to fetch tables" });
+    }
+  });
+
+  app.post("/api/dev/tables", async (req, res) => {
+    try {
+      // Get dev restaurant
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+      
+      if (!restaurant) {
+        return res.status(404).json({ message: "Dev restaurant not found" });
+      }
+      
+      // Generate unique QR code
+      const qrCode = `table-${restaurant.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const tableData = insertTableSchema.parse({
+        ...req.body,
+        restaurantId: restaurant.id,
+        qrCode,
+      });
+
+      const [table] = await db.insert(tables).values(tableData).returning();
+      res.json(table);
+    } catch (error) {
+      console.error("Error creating dev table:", error);
+      res.status(500).json({ message: "Failed to create table" });
+    }
+  });
+
+  app.put("/api/dev/tables/:id", async (req, res) => {
+    try {
+      const [updatedTable] = await db
+        .update(tables)
+        .set({
+          ...req.body,
+          updatedAt: new Date()
+        })
+        .where(eq(tables.id, req.params.id))
+        .returning();
+      
+      if (!updatedTable) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json(updatedTable);
+    } catch (error) {
+      console.error("Error updating dev table:", error);
+      res.status(500).json({ message: "Failed to update table" });
+    }
+  });
+
+  app.delete("/api/dev/tables/:id", async (req, res) => {
+    try {
+      await db.delete(tables).where(eq(tables.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dev table:", error);
+      res.status(500).json({ message: "Failed to delete table" });
     }
   });
 
