@@ -53,9 +53,12 @@ export default function Menu() {
     address: "",
     notes: ""
   });
-  const [couponCode, setCouponCode] = useState('');
+  
+  // Estados para cupom
+  const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
   // Detectar se é pedido de mesa através da URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -145,6 +148,80 @@ export default function Menu() {
     return isTableOrder ? 0 : parseFloat((restaurant as any)?.deliveryFee || "0");
   };
 
+  // Função para aplicar cupom
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Digite um código de cupom");
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError("");
+
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/coupons/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          code: couponCode.trim().toUpperCase(),
+          orderValue: getTotalPrice()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setAppliedCoupon(data.coupon);
+        setCouponError("");
+        toast({
+          title: "Cupom aplicado!",
+          description: `Desconto de ${data.coupon.discountType === 'percentage' 
+            ? `${data.coupon.discountValue}%` 
+            : `R$ ${parseFloat(data.coupon.discountValue).toFixed(2)}`} aplicado`,
+        });
+      } else {
+        setCouponError(data.message || "Cupom inválido");
+      }
+    } catch (error) {
+      setCouponError("Erro ao validar cupom");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  // Função para remover cupom
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+    toast({
+      title: "Cupom removido",
+      description: "O desconto foi removido do pedido",
+    });
+  };
+
+  // Função para calcular desconto do cupom
+  const getCouponDiscount = () => {
+    if (!appliedCoupon) return 0;
+    
+    const subtotal = getTotalPrice();
+    if (appliedCoupon.discountType === 'percentage') {
+      return (subtotal * parseFloat(appliedCoupon.discountValue)) / 100;
+    } else {
+      return parseFloat(appliedCoupon.discountValue);
+    }
+  };
+
+  // Função para calcular total final com desconto
+  const getFinalTotal = () => {
+    const subtotal = getTotalPrice();
+    const discount = getCouponDiscount();
+    const deliveryFee = getDeliveryFee();
+    return Math.max(0, subtotal - discount + deliveryFee);
+  };
+
   const handleOrder = async () => {
     // Validar se o cliente tem perfil completo
     if (!customerProfile) {
@@ -180,6 +257,7 @@ export default function Menu() {
 
     try {
       const deliveryFee = getDeliveryFee();
+      const couponDiscount = getCouponDiscount();
       const orderData = {
         restaurantId,
         customerName,
@@ -196,7 +274,9 @@ export default function Menu() {
         })),
         subtotal: getTotalPrice(),
         deliveryFee: deliveryFee,
-        total: getTotalPrice() + deliveryFee
+        couponCode: appliedCoupon?.code || null,
+        couponDiscount: couponDiscount,
+        total: getFinalTotal()
       };
 
       const response = await fetch('/api/orders', {
@@ -216,9 +296,12 @@ export default function Menu() {
         description: "Seu pedido foi enviado com sucesso. Em breve entraremos em contato!",
       });
 
-      // Limpar carrinho e observações
+      // Limpar carrinho, observações e cupom
       setCart([]);
       setCustomer({ name: "", phone: "", address: "", notes: "" });
+      setAppliedCoupon(null);
+      setCouponCode("");
+      setCouponError("");
       setShowCheckout(false);
       setShowCart(false);
 
@@ -527,9 +610,15 @@ export default function Menu() {
                             <span>Sem taxa de entrega</span>
                           </div>
                         )}
+                        {appliedCoupon && (
+                          <div className="flex justify-between text-green-600">
+                            <span>Desconto ({appliedCoupon.code}):</span>
+                            <span>-R$ {getCouponDiscount().toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-bold text-lg">
                           <span>Total:</span>
-                          <span>R$ {(getTotalPrice() + getDeliveryFee()).toFixed(2)}</span>
+                          <span>R$ {getFinalTotal().toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -636,10 +725,99 @@ export default function Menu() {
                 />
               </div>
 
+              {/* Seção de Cupom */}
               <div className="border-t pt-4">
-                <div className="flex justify-between font-bold">
-                  <span>Total do pedido:</span>
-                  <span>R$ {(getTotalPrice() + getDeliveryFee()).toFixed(2)}</span>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Cupom de Desconto
+                </h3>
+                
+                {!appliedCoupon ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="Digite o código do cupom"
+                        className="flex-1"
+                        data-testid="input-coupon-code"
+                      />
+                      <Button 
+                        onClick={applyCoupon}
+                        disabled={couponLoading || !couponCode.trim()}
+                        size="sm"
+                        data-testid="button-apply-coupon"
+                      >
+                        {couponLoading ? "..." : "Aplicar"}
+                      </Button>
+                    </div>
+                    
+                    {couponError && (
+                      <p className="text-sm text-red-600" data-testid="text-coupon-error">
+                        {couponError}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          {appliedCoupon.code}
+                        </Badge>
+                        <span className="text-sm text-green-700">
+                          {appliedCoupon.discountType === 'percentage' 
+                            ? `${appliedCoupon.discountValue}% OFF`
+                            : `R$ ${parseFloat(appliedCoupon.discountValue).toFixed(2)} OFF`
+                          }
+                        </span>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={removeCoupon}
+                        data-testid="button-remove-coupon"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-green-600">
+                      {appliedCoupon.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>R$ {getTotalPrice().toFixed(2)}</span>
+                </div>
+                
+                {!isTableOrder && (
+                  <div className="flex justify-between">
+                    <span>Taxa de entrega:</span>
+                    <span>R$ {getDeliveryFee().toFixed(2)}</span>
+                  </div>
+                )}
+                
+                {isTableOrder && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Consumo no local:</span>
+                    <span>Sem taxa de entrega</span>
+                  </div>
+                )}
+                
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Desconto ({appliedCoupon.code}):</span>
+                    <span>-R$ {getCouponDiscount().toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total:</span>
+                  <span>R$ {getFinalTotal().toFixed(2)}</span>
                 </div>
               </div>
 
