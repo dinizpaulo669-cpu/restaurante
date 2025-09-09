@@ -2648,37 +2648,37 @@ export default function Dashboard() {
 
             <TabsContent value="deliverys" className="space-y-6">
               {/* Header com estatísticas de delivery */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-3 sm:p-4 text-center">
                     <p className="text-2xl font-bold text-blue-600">{deliveryOrderCounts.abertos}</p>
                     <p className="text-sm text-blue-600">Pendentes</p>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-yellow-50 border-yellow-200">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-3 sm:p-4 text-center">
                     <p className="text-2xl font-bold text-yellow-600">{deliveryOrderCounts.preparando}</p>
                     <p className="text-sm text-yellow-600">Preparando</p>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-purple-50 border-purple-200">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-3 sm:p-4 text-center">
                     <p className="text-2xl font-bold text-purple-600">{deliveryOrderCounts.entrega}</p>
                     <p className="text-sm text-purple-600">Entrega</p>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-green-50 border-green-200">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-3 sm:p-4 text-center">
                     <p className="text-2xl font-bold text-green-600">{deliveryOrderCounts.finalizados}</p>
                     <p className="text-sm text-green-600">Entregues</p>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-red-50 border-red-200">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-3 sm:p-4 text-center">
                     <p className="text-2xl font-bold text-red-600">{deliveryOrderCounts.cancelados}</p>
                     <p className="text-sm text-red-600">Cancelados</p>
                   </CardContent>
@@ -2756,7 +2756,7 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {tables.map((table: any) => {
                     const tableOrdersList = ordersByTable[table.id] || [];
                     const hasPendingOrders = tableOrdersList.some((order: any) => 

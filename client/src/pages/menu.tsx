@@ -456,8 +456,8 @@ export default function Menu() {
       {/* Seção de Cupons em Destaque */}
       <CouponsSection restaurantId={restaurantId} />
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Menu Principal */}
           <div className="flex-1">
             <h2 className="text-2xl font-bold mb-6">Cardápio</h2>
@@ -484,7 +484,7 @@ export default function Menu() {
                   return (
                     <div key={category.id}>
                       <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                         {categoryProducts.map((product: any) => (
                           <Card key={product.id} className="overflow-hidden">
                             {product.imageUrl && (
@@ -530,7 +530,7 @@ export default function Menu() {
                   return (
                     <div>
                       <h3 className="text-xl font-semibold mb-4">Outros Produtos</h3>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {uncategorizedProducts.map((product: any) => (
                           <Card key={product.id} className="overflow-hidden">
                             {product.imageUrl && (
@@ -573,8 +573,8 @@ export default function Menu() {
 
           {/* Sidebar do Carrinho */}
           {showCart && (
-            <div className="w-80">
-              <Card className="sticky top-6">
+            <div className="lg:w-80 w-full lg:relative fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto">
+              <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Carrinho</span>
@@ -669,9 +669,9 @@ export default function Menu() {
 
       {/* Modal de Checkout */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="w-full max-w-md my-8">
-            <Card className="w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-md my-4 sm:my-8">
+            <Card className="w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle>Finalizar Pedido</CardTitle>
             </CardHeader>
