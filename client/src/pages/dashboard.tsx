@@ -137,6 +137,53 @@ export default function Dashboard() {
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
 
+  // Query para cupons - movida para o topo para evitar erro de hooks
+  const { data: coupons = [] } = useQuery({
+    queryKey: ["/api/dev/coupons"],
+    enabled: isAuthenticated && activeSection === "cupons"
+  });
+
+  // Estados para formulário de cupom
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    description: "",
+    discountType: "percentage",
+    discountValue: "",
+    minOrderValue: "",
+    maxUses: "",
+    validFrom: "",
+    validUntil: ""
+  });
+
+  // Mutation para criar cupom - movida para o topo para evitar erro de hooks
+  const createCouponMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/dev/coupons", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
+      setCouponForm({
+        code: "",
+        description: "",
+        discountType: "percentage", 
+        discountValue: "",
+        minOrderValue: "",
+        maxUses: "",
+        validFrom: "",
+        validUntil: ""
+      });
+      toast({
+        title: "Cupom criado",
+        description: "Cupom criado com sucesso!"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar cupom",
+        variant: "destructive"
+      });
+    }
+  });
+
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
     enabled: isAuthenticated,
@@ -2416,49 +2463,6 @@ export default function Dashboard() {
     }
 
     if (activeSection === "cupons") {
-      const { data: coupons = [] } = useQuery({
-        queryKey: ["/api/dev/coupons"],
-        enabled: isAuthenticated
-      });
-
-      const [couponForm, setCouponForm] = useState({
-        code: "",
-        description: "",
-        discountType: "percentage",
-        discountValue: "",
-        minOrderValue: "",
-        maxUses: "",
-        validFrom: "",
-        validUntil: ""
-      });
-
-      const createCouponMutation = useMutation({
-        mutationFn: (data: any) => apiRequest("POST", "/api/dev/coupons", data),
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
-          setCouponForm({
-            code: "",
-            description: "",
-            discountType: "percentage", 
-            discountValue: "",
-            minOrderValue: "",
-            maxUses: "",
-            validFrom: "",
-            validUntil: ""
-          });
-          toast({
-            title: "Cupom criado",
-            description: "Cupom criado com sucesso!"
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Erro",
-            description: "Erro ao criar cupom",
-            variant: "destructive"
-          });
-        }
-      });
 
       return (
         <div className="space-y-6">
