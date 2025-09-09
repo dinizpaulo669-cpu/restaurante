@@ -94,7 +94,7 @@ export default function Menu() {
   const { data: tableInfo } = useQuery({
     queryKey: [`/api/tables/qr/${tableQrCode}`],
     enabled: !!tableQrCode,
-  });
+  }) as { data: { id: string; number: string; name: string; qrCode: string } | undefined };
 
   const addToCart = (product: any) => {
     setCart(prevCart => {
@@ -223,27 +223,40 @@ export default function Menu() {
   };
 
   const handleOrder = async () => {
-    // Validar se o cliente tem perfil completo
-    if (!customerProfile) {
-      toast({
-        title: "Perfil não encontrado",
-        description: "É necessário ter um perfil cadastrado para fazer pedidos.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Para pedidos de mesa, permitir sem autenticação completa
+    if (!isTableOrder) {
+      // Validar se o cliente tem perfil completo (apenas para delivery)
+      if (!customerProfile) {
+        toast({
+          title: "Perfil não encontrado",
+          description: "É necessário ter um perfil cadastrado para fazer pedidos.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    const customerName = (customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
-      ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
-      : (customerProfile as any)?.email;
+      const customerName = (customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+        ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+        : (customerProfile as any)?.email;
 
-    if (!customerName || !(customerProfile as any)?.email) {
-      toast({
-        title: "Dados incompletos",
-        description: "Complete seu perfil para fazer pedidos. Acesse 'Meu Perfil' no menu.",
-        variant: "destructive",
-      });
-      return;
+      if (!customerName || !(customerProfile as any)?.email) {
+        toast({
+          title: "Dados incompletos",
+          description: "Complete seu perfil para fazer pedidos. Acesse 'Meu Perfil' no menu.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Para mesas, validar apenas se o nome foi fornecido
+      if (!customer.name || customer.name.trim() === "") {
+        toast({
+          title: "Nome obrigatório",
+          description: "Por favor, informe seu nome para o pedido da mesa.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (cart.length === 0) {
@@ -258,11 +271,27 @@ export default function Menu() {
     try {
       const deliveryFee = getDeliveryFee();
       const couponDiscount = getCouponDiscount();
+      
+      // Definir dados do cliente baseado no tipo de pedido
+      const customerName = isTableOrder 
+        ? customer.name 
+        : ((customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+          ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+          : (customerProfile as any)?.email);
+      
+      const customerPhone = isTableOrder 
+        ? customer.phone || '' 
+        : (customerProfile as any)?.phone || '';
+      
+      const customerAddress = isTableOrder 
+        ? `Mesa ${tableInfo?.number || 'N/A'}` 
+        : (customerProfile as any)?.address || 'Endereço não informado';
+      
       const orderData = {
         restaurantId,
         customerName,
-        customerPhone: (customerProfile as any)?.phone || '',
-        customerAddress: isTableOrder ? `Mesa ${tableInfo?.number || 'N/A'}` : (customerProfile as any)?.address || 'Endereço não informado',
+        customerPhone,
+        customerAddress,
         notes: customer.notes,
         orderType: isTableOrder ? 'table' : 'delivery',
         tableId: isTableOrder ? tableInfo?.id : null,
@@ -647,8 +676,41 @@ export default function Menu() {
               <CardTitle>Finalizar Pedido</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Dados do cliente - somente leitura */}
-              {customerProfile ? (
+              {/* Dados do cliente */}
+              {isTableOrder ? (
+                // Formulário para pedidos de mesa (sem login)
+                <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                  <h3 className="font-medium text-sm text-blue-800 mb-2">
+                    📍 Pedido da Mesa {tableInfo?.number || 'N/A'}
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nome *</label>
+                    <Input
+                      value={customer.name}
+                      onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                      placeholder="Seu nome"
+                      data-testid="input-customer-name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Telefone (opcional)</label>
+                    <Input
+                      value={customer.phone}
+                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                      placeholder="(11) 99999-9999"
+                      data-testid="input-customer-phone"
+                    />
+                  </div>
+
+                  <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                    ℹ️ Seu pedido será entregue diretamente na mesa {tableInfo?.number || 'N/A'}
+                  </div>
+                </div>
+              ) : customerProfile ? (
+                // Dados do cliente autenticado (delivery)
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <h3 className="font-medium text-sm text-muted-foreground mb-2">Dados do Cliente</h3>
                   
@@ -703,6 +765,7 @@ export default function Menu() {
                   </p>
                 </div>
               ) : (
+                // Cliente não autenticado para delivery
                 <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                   <p className="text-sm text-red-800 font-medium">
                     🚫 Perfil não encontrado

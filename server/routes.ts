@@ -1578,6 +1578,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota temporária para criar tabela de cupons
+  app.post("/api/dev/create-coupon-tables", async (req, res) => {
+    try {
+      const { pool } = await import('./db');
+      
+      // Criar tabela de cupons se não existir
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS coupons (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+          restaurant_id VARCHAR NOT NULL REFERENCES restaurants(id),
+          code VARCHAR(50) NOT NULL,
+          description VARCHAR(255),
+          discount_type VARCHAR(20) NOT NULL,
+          discount_value DECIMAL(10, 2) NOT NULL,
+          min_order_value DECIMAL(10, 2),
+          max_uses INTEGER,
+          used_count INTEGER DEFAULT 0 NOT NULL,
+          valid_from TIMESTAMP NOT NULL,
+          valid_until TIMESTAMP NOT NULL,
+          is_active BOOLEAN DEFAULT true NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+      
+      // Criar tabela de uso de cupons se não existir
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS coupon_usages (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+          coupon_id VARCHAR NOT NULL REFERENCES coupons(id),
+          order_id VARCHAR NOT NULL REFERENCES orders(id),
+          discount_applied DECIMAL(10, 2) NOT NULL,
+          used_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+      
+      res.json({ message: "Coupon tables created successfully" });
+    } catch (error) {
+      console.error("Error creating coupon tables:", error);
+      res.status(500).json({ message: "Failed to create coupon tables", error: error.message });
+    }
+  });
+
   // WebSocket Setup
   const httpServer = createServer(app);
 
