@@ -475,6 +475,9 @@ export const insertCouponSchema = createInsertSchema(coupons).omit({
 }).extend({
   discountValue: z.union([z.string(), z.number()]).transform(val => String(val)),
   minOrderValue: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
+  maxUses: z.union([z.string(), z.number()]).transform(val => val ? Number(val) : null).optional(),
+  validFrom: z.union([z.string(), z.date()]).transform(val => typeof val === 'string' ? new Date(val) : val),
+  validUntil: z.union([z.string(), z.date()]).transform(val => typeof val === 'string' ? new Date(val) : val),
 });
 
 export const insertCouponUsageSchema = createInsertSchema(couponUsages).omit({
