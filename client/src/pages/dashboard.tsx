@@ -59,6 +59,8 @@ export default function Dashboard() {
   // Estados para mesas
   const [showTableForm, setShowTableForm] = useState(false);
   const [editingTable, setEditingTable] = useState<any>(null);
+  const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [showTableOrdersModal, setShowTableOrdersModal] = useState(false);
   
   // Estados para edição de pedidos
   const [editingOrder, setEditingOrder] = useState<any>(null);
@@ -2768,11 +2770,8 @@ export default function Dashboard() {
                           hasPendingOrders ? 'ring-2 ring-orange-500 bg-orange-50' : 'hover:border-primary'
                         }`}
                         onClick={() => {
-                          // Mostrar pedidos da mesa em modal ou expandir inline
-                          if (tableOrdersList.length > 0) {
-                            // Implementar visualização de pedidos da mesa
-                            console.log('Mostrar pedidos da mesa:', table.number, tableOrdersList);
-                          }
+                          setSelectedTable(table);
+                          setShowTableOrdersModal(true);
                         }}
                       >
                         <CardContent className="p-4">
@@ -3157,6 +3156,115 @@ export default function Dashboard() {
             }}
           >
             Salvar Alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal para pedidos da mesa */}
+    <Dialog open={showTableOrdersModal} onOpenChange={setShowTableOrdersModal}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Pedidos da Mesa {selectedTable?.number}
+            {selectedTable?.name && ` - ${selectedTable.name}`}
+          </DialogTitle>
+        </DialogHeader>
+        
+        {selectedTable && (
+          <div className="space-y-4">
+            {/* Informações da mesa */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Número:</span> {selectedTable.number}
+                  </div>
+                  <div>
+                    <span className="font-medium">Capacidade:</span> {selectedTable.capacity} pessoas
+                  </div>
+                  <div>
+                    <span className="font-medium">Status:</span>{' '}
+                    <Badge variant={selectedTable.isActive ? "default" : "secondary"}>
+                      {selectedTable.isActive ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Lista de pedidos da mesa */}
+            {(() => {
+              const tableOrders = (orders as any[]).filter((order: any) => order.tableId === selectedTable.id);
+              
+              if (tableOrders.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">Nenhum pedido</h3>
+                      <p className="text-muted-foreground">
+                        Esta mesa não possui pedidos no momento
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">
+                      Pedidos Ativos ({tableOrders.length})
+                    </h3>
+                  </div>
+                  
+                  {tableOrders.map((order: any) => (
+                    <OrderCard 
+                      key={order.id} 
+                      order={order} 
+                      onStatusUpdate={(status: string) => {
+                        fetch(`/api/orders/${order.id}/status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status }),
+                          credentials: 'include'
+                        }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
+                          toast({
+                            title: "Status atualizado",
+                            description: "O status do pedido foi atualizado com sucesso"
+                          });
+                        }).catch(error => {
+                          console.error('Erro ao atualizar status:', error);
+                          toast({
+                            title: "Erro",
+                            description: "Não foi possível atualizar o status",
+                            variant: "destructive"
+                          });
+                        });
+                      }}
+                      onPrint={() => {}}
+                      onEdit={(order: any) => {
+                        setEditingOrder(order);
+                        setShowOrderEditForm(true);
+                        setShowTableOrdersModal(false); // Fechar modal da mesa
+                      }}
+                      isUpdatingStatus={false}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowTableOrdersModal(false)}
+          >
+            Fechar
           </Button>
         </DialogFooter>
       </DialogContent>
