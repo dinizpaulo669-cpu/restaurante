@@ -1173,6 +1173,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Atualizar cupom
+  app.put("/api/dev/coupons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Verificar se o cupom pertence ao restaurante
+      const [existingCoupon] = await db
+        .select()
+        .from(coupons)
+        .where(and(
+          eq(coupons.id, id),
+          eq(coupons.restaurantId, restaurant.id)
+        ))
+        .limit(1);
+
+      if (!existingCoupon) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+
+      const [updatedCoupon] = await db
+        .update(coupons)
+        .set(updateData)
+        .where(eq(coupons.id, id))
+        .returning();
+
+      res.json(updatedCoupon);
+    } catch (error) {
+      console.error("Error updating coupon:", error);
+      res.status(500).json({ message: "Failed to update coupon" });
+    }
+  });
+
+  // Deletar cupom
+  app.delete("/api/dev/coupons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Buscar o restaurante do usuário de desenvolvimento
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Verificar se o cupom pertence ao restaurante e deletar
+      const [deletedCoupon] = await db
+        .delete(coupons)
+        .where(and(
+          eq(coupons.id, id),
+          eq(coupons.restaurantId, restaurant.id)
+        ))
+        .returning();
+
+      if (!deletedCoupon) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+
+      res.json({ message: "Coupon deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting coupon:", error);
+      res.status(500).json({ message: "Failed to delete coupon" });
+    }
+  });
+
+  // Listar cupons públicos ativos de um restaurante (para exibir em destaque)
+  app.get("/api/restaurants/:restaurantId/coupons", async (req, res) => {
+    try {
+      const { restaurantId } = req.params;
+      
+      const now = new Date();
+      const activeCoupons = await db
+        .select({
+          id: coupons.id,
+          code: coupons.code,
+          description: coupons.description,
+          discountType: coupons.discountType,
+          discountValue: coupons.discountValue,
+          minOrderValue: coupons.minOrderValue,
+          validUntil: coupons.validUntil
+        })
+        .from(coupons)
+        .where(and(
+          eq(coupons.restaurantId, restaurantId),
+          eq(coupons.isActive, true),
+          sql`${coupons.validFrom} <= ${now}`,
+          sql`${coupons.validUntil} >= ${now}`,
+          or(
+            sql`${coupons.maxUses} IS NULL`,
+            sql`${coupons.usedCount} < ${coupons.maxUses}`
+          )
+        ))
+        .orderBy(desc(coupons.createdAt))
+        .limit(5); // Mostrar apenas os 5 cupons mais recentes
+
+      res.json(activeCoupons);
+    } catch (error) {
+      console.error("Error fetching public coupons:", error);
+      res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
   // Endpoint para estatísticas do restaurante
   app.get("/api/restaurant/stats", async (req, res) => {
     try {
