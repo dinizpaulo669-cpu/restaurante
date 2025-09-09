@@ -922,49 +922,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { city, state } = req.params;
       
-      // Lista de bairros para grandes cidades brasileiras
+      // Lista expandida de bairros para grandes cidades brasileiras
       const neighborhoodsData: { [key: string]: string[] } = {
         'Rio de Janeiro': [
-          'Copacabana', 'Ipanema', 'Leblon', 'Botafogo', 'Flamengo', 
-          'Laranjeiras', 'Urca', 'Leme', 'Tijuca', 'Vila Isabel',
-          'Grajaú', 'Maracanã', 'Praça da Bandeira', 'São Cristóvão',
-          'Catumbi', 'Estácio', 'Rio Comprido', 'Santa Teresa',
-          'Centro', 'Lapa', 'Glória', 'Catete', 'Cosme Velho',
-          'Humaitá', 'Gávea', 'São Conrado', 'Barra da Tijuca',
-          'Recreio dos Bandeirantes', 'Jacarepaguá', 'Taquara',
-          'Freguesia', 'Pechincha', 'Curicica', 'Camorim', 'Benfica',
-          'Mangueira', 'Bonsucesso', 'Ramos', 'Olaria', 'Penha',
-          'Brás de Pina', 'Cordovil', 'Parada de Lucas', 'Vigário Geral',
-          'Jardim América', 'Irajá', 'Vicente de Carvalho', 'Vila da Penha',
-          'Vista Alegre', 'Colégio', 'Turiaçu', 'Rocha Miranda',
-          'Honório Gurgel', 'Oswaldo Cruz', 'Madureira', 'Vaz Lobo',
-          'Pavuna', 'Costa Barros', 'Anchieta', 'Parque Anchieta'
+          // Zona Sul
+          'Copacabana', 'Ipanema', 'Leblon', 'Botafogo', 'Flamengo', 'Laranjeiras', 'Urca', 'Leme',
+          'Glória', 'Catete', 'Cosme Velho', 'Humaitá', 'Gávea', 'São Conrado', 'Joá',
+          // Zona Norte
+          'Tijuca', 'Vila Isabel', 'Grajaú', 'Maracanã', 'Praça da Bandeira', 'São Cristóvão',
+          'Catumbi', 'Estácio', 'Rio Comprido', 'Santa Teresa', 'Centro', 'Lapa', 'Saúde',
+          'Gamboa', 'Santo Cristo', 'Caju', 'Benfica', 'Mangueira', 'Bonsucesso', 'Ramos',
+          'Olaria', 'Penha', 'Brás de Pina', 'Cordovil', 'Parada de Lucas', 'Vigário Geral',
+          'Jardim América', 'Irajá', 'Vicente de Carvalho', 'Vila da Penha', 'Vista Alegre',
+          'Colégio', 'Turiaçu', 'Rocha Miranda', 'Honório Gurgel', 'Oswaldo Cruz', 'Madureira',
+          'Vaz Lobo', 'Pavuna', 'Costa Barros', 'Anchieta', 'Parque Anchieta', 'Ricardo de Albuquerque',
+          'Coelho Neto', 'Acari', 'Barros Filho', 'Guadalupe', 'Deodoro', 'Vila Militar',
+          'Campo dos Afonsos', 'Jardim Sulacap', 'Magalhães Bastos', 'Realengo', 'Padre Miguel',
+          'Bangu', 'Senador Camará', 'Santíssimo', 'Campo Grande', 'Cosmos', 'Inhoaíba',
+          'Santa Cruz', 'Sepetiba', 'Guaratiba', 'Pedra de Guaratiba', 'Barra de Guaratiba',
+          // Zona Oeste
+          'Barra da Tijuca', 'Recreio dos Bandeirantes', 'Jacarepaguá', 'Taquara', 'Freguesia',
+          'Pechincha', 'Curicica', 'Camorim', 'Vargem Pequena', 'Vargem Grande', 'Itanhangá',
+          'Anil', 'Gardênia Azul', 'Cidade de Deus', 'Vila Valqueire', 'Praça Seca',
+          'Tanque', 'Campinho', 'Marechal Hermes', 'Bento Ribeiro', 'Oswaldo Cruz',
+          'Encantado', 'Abolição', 'Pilares', 'Água Santa', 'Cachambi', 'Engenho de Dentro',
+          'Méier', 'Todos os Santos', 'Engenho Novo', 'Sampaio', 'Riachuelo', 'Rocha',
+          'São Francisco Xavier', 'Maracanã', 'Alto da Boa Vista', 'Floresta da Tijuca',
+          'Andaraí', 'Usina', 'Manguinhos', 'Bonsucesso', 'Higienópolis', 'Maria da Graça',
+          'Del Castilho', 'Inhaúma', 'Engenho da Rainha', 'Tomás Coelho', 'Jacaré',
+          'Piedade', 'Quintino Bocaiúva', 'Cascadura', 'Cavalcanti', 'Engenheiro Leal',
+          'Amadoá', 'Rocha Miranda', 'Honório Gurgel', 'Fazenda Botafogo', 'Coelho Neto'
         ],
         'São Paulo': [
-          'Jardins', 'Pinheiros', 'Vila Madalena', 'Itaim Bibi',
-          'Moema', 'Vila Olímpia', 'Brooklin', 'Campo Belo',
-          'Santo Amaro', 'Morumbi', 'Butantã', 'Lapa', 'Perdizes',
-          'Pompeia', 'Vila Leopoldina', 'Bela Vista', 'Liberdade',
-          'Aclimação', 'Paraíso', 'Vila Mariana', 'Saúde',
-          'Ipiranga', 'Cambuci', 'Bom Retiro', 'Santa Ifigênia',
-          'República', 'Sé', 'Brás', 'Mooca', 'Tatuapé', 'Consolação',
-          'Cerqueira César', 'Jardim Paulista', 'Vila Buarque', 'Copacabana',
-          'Vila Andrade', 'Campo Limpo', 'Capela do Socorro', 'Jabaquara',
-          'Sacomã', 'Cursino', 'Vila Prudente', 'São Lucas', 'Sapopemba',
-          'São Mateus', 'Itaquera', 'Guaianases', 'Lajeado', 'Ermelino Matarazzo',
-          'São Miguel Paulista', 'Vila Jacuí', 'Tucuruvi', 'Santana',
-          'Mandaqui', 'Casa Verde', 'Limão', 'Freguesia do Ó',
-          'Brasilândia', 'Cachoeirinha', 'Pirituba', 'São Domingos'
+          // Zona Central
+          'Centro', 'Sé', 'República', 'Santa Ifigênia', 'Bom Retiro', 'Campos Elíseos', 'Santa Cecília',
+          'Higienópolis', 'Pacaembu', 'Consolação', 'Vila Buarque', 'Bela Vista', 'Liberdade',
+          'Aclimação', 'Bexiga', 'Luz', 'Barra Funda', 'Água Branca',
+          // Zona Sul
+          'Vila Mariana', 'Paraíso', 'Ibirapuera', 'Moema', 'Campo Belo', 'Brooklin', 'Vila Olímpia',
+          'Itaim Bibi', 'Jardins', 'Jardim Paulista', 'Cerqueira César', 'Vila Nova Conceição',
+          'Santo Amaro', 'Vila Andrade', 'Morumbi', 'Real Parque', 'Granja Julieta', 'Chácara Flora',
+          'Jabaquara', 'Saúde', 'Cursino', 'Vila Prudente', 'São Lucas', 'Sacomã', 'Ipiranga',
+          'Vila Carioca', 'Heliópolis', 'Cidade Tiradentes', 'Guaianases', 'Lajeado', 'Itaim Paulista',
+          'Campo Limpo', 'Capela do Socorro', 'Vila das Belezas', 'Jardim São Luís', 'Jardim Ângela',
+          'Cidade Ademar', 'Pedreira', 'Cidade Dutra', 'Grajaú', 'Parelheiros', 'Marsilac',
+          // Zona Oeste
+          'Pinheiros', 'Vila Madalena', 'Jardim Paulistano', 'Alto de Pinheiros', 'Butantã', 'Rio Pequeno',
+          'Raposo Tavares', 'Vila Sônia', 'Morumbi', 'Jaguaré', 'Vila Leopoldina', 'Lapa', 'Perdizes',
+          'Pompeia', 'Vila Romana', 'Sumaré', 'Barra Funda', 'Freguesia do Ó', 'Brasilândia',
+          'Cachoeirinha', 'Limão', 'Casa Verde', 'Mandaqui', 'Santana', 'Carandiru', 'Vila Guilherme',
+          'Vila Maria', 'Vila Medeiros', 'Tucuruvi', 'Jaçanã', 'Tremembé', 'Cantareira',
+          // Zona Norte
+          'Santana', 'Casa Verde', 'Limão', 'Freguesia do Ó', 'Brasilândia', 'Cachoeirinha',
+          'Mandaqui', 'Tucuruvi', 'Vila Guilherme', 'Vila Maria', 'Vila Medeiros', 'Jaçanã',
+          'Tremembé', 'Cantareira', 'Imirim', 'Lauzane Paulista', 'Vila Constança', 'Jardim Brasil',
+          // Zona Leste
+          'Mooca', 'Brás', 'Pari', 'Belenzinho', 'Tatuapé', 'Anália Franco', 'Vila Formosa',
+          'Carrão', 'Vila Prudente', 'São Lucas', 'Sapopemba', 'São Mateus', 'Iguatemi',
+          'Cidade Líder', 'Itaquera', 'José Bonifácio', 'Parque do Carmo', 'Cidade Tiradentes',
+          'Guaianases', 'Lajeado', 'Ermelino Matarazzo', 'São Miguel Paulista', 'Vila Jacuí',
+          'Jardim Helena', 'Itaim Paulista', 'Vila Curuçá', 'Penha', 'Cangaíba', 'Vila Matilde',
+          'Artur Alvim', 'Cidade Patriarca', 'Vila Esperança', 'Vila Ré', 'Ponte Rasa'
         ],
         'Belo Horizonte': [
-          'Centro', 'Savassi', 'Funcionários', 'Lourdes', 'Santo Agostinho',
-          'Cidade Nova', 'Boa Viagem', 'Carlos Prates', 'Floresta', 'Lagoinha',
-          'Bonfim', 'Concórdia', 'Santa Tereza', 'Santa Efigênia', 'Barro Preto',
-          'Santo Antônio', 'São Pedro', 'União', 'Sagrada Família', 'Coração de Jesus',
-          'São Lucas', 'Castelo', 'Anchieta', 'Sion', 'Cruzeiro', 'Carmo',
-          'Gutierrez', 'Belvedere', 'Mangabeiras', 'Buritis', 'Estoril',
-          'Jardim Atlântico', 'Nova Suíça', 'Planalto', 'São Bento',
-          'Pampulha', 'Ouro Preto', 'Trevo', 'Liberdade', 'Jaraguá'
+          // Região Central
+          'Centro', 'Savassi', 'Funcionários', 'Lourdes', 'Santo Agostinho', 'Santa Efigênia',
+          'Barro Preto', 'Santo Antônio', 'São Pedro', 'União', 'Sagrada Família', 'Coração de Jesus',
+          'São Lucas', 'Castelo', 'Anchieta', 'Sion', 'Cruzeiro', 'Carmo', 'Serra',
+          // Região Sul
+          'Belvedere', 'Mangabeiras', 'Vila Paris', 'Jardim Canadá', 'Nova Lima',
+          'Buritis', 'Estoril', 'Bandeirantes', 'Prado', 'Cidade Nova', 'Boa Viagem',
+          'Carlos Prates', 'Floresta', 'Lagoinha', 'Bonfim', 'Concórdia', 'Santa Tereza',
+          // Região Norte
+          'Pampulha', 'Ouro Preto', 'Trevo', 'Liberdade', 'Jaraguá', 'São Cristóvão',
+          'Ipiranga', 'Lagoinha', 'Bonfim', 'Concórdia', 'Aparecida', 'Cidade Nova',
+          // Região Leste
+          'Santa Efigênia', 'Barro Preto', 'Santo Antônio', 'São Pedro', 'União',
+          'Sagrada Família', 'Coração de Jesus', 'São Lucas', 'Castelo', 'Anchieta',
+          // Região Oeste
+          'Gutierrez', 'Padre Eustáquio', 'Betânia', 'Jardim Atlântico', 'Nova Suíça',
+          'Planalto', 'São Bento', 'Calafate', 'Barreiro', 'Lindéia', 'Jatobá'
         ],
         'Brasília': [
           'Asa Sul', 'Asa Norte', 'Lago Sul', 'Lago Norte', 'Sudoeste/Octogonal',
@@ -975,19 +1012,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Jardim Botânico', 'Itapoã', 'SIA', 'SCIA', 'Estrutural'
         ],
         'Salvador': [
-          'Pelourinho', 'Barra', 'Ondina', 'Rio Vermelho', 'Pituba', 'Itaigara',
-          'Caminho das Árvores', 'Graça', 'Vitória', 'Corredor da Vitória',
-          'Campo Grande', 'Nazaré', 'Piedade', 'Barris', 'Canela', 'Garcia',
-          'Federação', 'Costa Azul', 'Armação', 'Piatã', 'Itapuã', 'Stella Maris',
-          'Flamengo', 'Amaralina', 'Brotas', 'Engenho Velho de Brotas', 'Barbalho',
-          'Caixa D\'Água', 'Acupe de Brotas', 'Matatu', 'Alto das Pombas'
+          // Centro Histórico e Península de Itapagipe
+          'Pelourinho', 'Centro Histórico', 'Dois de Julho', 'Nazaré', 'Barris', 'Tororó',
+          'Barbalho', 'Caixa D\'Água', 'Largo do Tanque', 'Soledade', 'Lapinha', 'Liberdade',
+          'Curuzu', 'IAPI', 'São Caetano', 'Fazenda Grande do Retiro', 'Tancredo Neves',
+          'Beiru', 'Pernambués', 'Cabula', 'Engomadeira', 'Narandiba', 'Sussuarana',
+          'Castelo Branco', 'São Marcos', 'Paripe', 'Periperi', 'Coutos', 'Praia Grande',
+          'Ribeira', 'Massaranduba', 'Penha', 'Bonfim', 'Monte Serrat', 'Boa Viagem',
+          'Calçada', 'Mares', 'Roma', 'Uruguai', 'Alagados', 'Novos Alagados',
+          // Orla e Zona Sul
+          'Barra', 'Ondina', 'Rio Vermelho', 'Amaralina', 'Pituba', 'Costa Azul',
+          'Armação', 'Piatã', 'Itapuã', 'Stella Maris', 'Flamengo', 'Jardim Armação',
+          'Patamares', 'Pituaçu', 'Placaford', 'Jardim das Margaridas', 'Imbuí',
+          'Caminho das Árvores', 'Alphaville', 'Paralela', 'Iguatemi', 'Acupe de Brotas',
+          // Miolo e Subúrbios
+          'Graça', 'Vitória', 'Corredor da Vitória', 'Campo Grande', 'Piedade', 'Canela',
+          'Garcia', 'Federação', 'Brotas', 'Engenho Velho de Brotas', 'Matatu',
+          'Alto das Pombas', 'Chapada do Rio Vermelho', 'Horto Florestal', 'Candeal',
+          'Saúde', 'Cosme de Farias', 'Retiro', 'Pero Vaz', 'Fazenda Coutos',
+          'Boa Vista de São Caetano', 'Mata Escura', 'Calabetão', 'Jardim Cruzeiro',
+          'Alto do Cabrito', 'Nordeste de Amaralina', 'Vila Laura', 'Doron'
         ],
         'Fortaleza': [
-          'Centro', 'Aldeota', 'Meireles', 'Mucuripe', 'Varjota', 'Joaquim Távora',
-          'Dionísio Torres', 'Cocó', 'Dunas', 'Guararapes', 'Papicu', 'Praia do Futuro',
-          'Edson Queiroz', 'Água Fria', 'José de Alencar', 'Fátima', 'Jacarecanga',
-          'Monte Castelo', 'Antônio Bezerra', 'Quintino Cunha', 'Benfica', 'Rodolfo Teófilo',
-          'Montese', 'Damas', 'Bom Futuro', 'Parangaba', 'Vila União', 'Serrinha'
+          // Centro e Região Central
+          'Centro', 'Benfica', 'Fátima', 'José Bonifácio', 'Carlito Pamplona', 'Bom Jardim',
+          'Parquelândia', 'Rodolfo Teófilo', 'Monte Castelo', 'Jacarecanga', 'Álvaro Weyne',
+          'Vila Ellery', 'Antônio Bezerra', 'Quintino Cunha', 'Henrique Jorge', 'João XXIII',
+          'Granja Portugal', 'Granja Lisboa', 'Bela Vista', 'Amadeu Furtado', 'Pirambu',
+          'Cristo Redentor', 'Floresta', 'Conjunto Ceará', 'Bom Sucesso', 'Autran Nunes',
+          // Região Nobre (Zona Leste)
+          'Aldeota', 'Meireles', 'Mucuripe', 'Varjota', 'Joaquim Távora', 'Dionísio Torres',
+          'Cocó', 'Dunas', 'Guararapes', 'Papicu', 'Praia do Futuro', 'Salinas',
+          'Cidade 2000', 'Edson Queiroz', 'De Lourdes', 'São João do Tauape', 'Itaoca',
+          'Parreão', 'Praia de Iracema', 'Cais do Porto', 'Vicente Pinzon', 'Volta da Jurema',
+          'Náutico', 'Manuel Dias Branco', 'Engenheiro Luciano Cavalcante', 'Sapiranga',
+          'Coaçu', 'Sabiaguaba', 'Cambeba', 'Lagoa Redonda', 'Messejana', 'Curió',
+          // Zona Sul
+          'José de Alencar', 'Pedras', 'Dendê', 'Paupina', 'Couto Fernandes', 'Damas',
+          'Montese', 'Bom Futuro', 'Parangaba', 'Vila União', 'Serrinha', 'Maraponga',
+          'Jóquei Clube', 'Parque Araxá', 'Itaperi', 'Passaré', 'Barroso', 'Castelão',
+          'Aeroporto', 'Água Fria', 'Prefeito José Walter', 'Jardim das Oliveiras'
         ],
         'Recife': [
           'Boa Viagem', 'Pina', 'Brasília Teimosa', 'Imbiribeira', 'Setúbal',
@@ -1013,10 +1077,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Bom Retiro', 'Taboão', 'Vila Izabel', 'Parolin', 'Guaíra'
         ],
         'Petrópolis': [
-          'Centro', 'Corrêas', 'Itaipava', 'Nogueira', 'Quitandinha',
-          'Cascatinha', 'Duchas', 'Retiro', 'Valparaíso', 'Cremerie',
-          'Bingen', 'Mosela', 'Carangola', 'Vila Felipe', 'Alto da Serra',
-          'Pedro do Rio', 'Posse', 'Araras', 'Secretário', 'Meio da Serra'
+          // Centro e Região Central
+          'Centro', 'Alto da Serra', 'Bingen', 'Mosela', 'Carangola', 'Vila Felipe',
+          'Castelânea', 'Cremerie', 'Valparaíso', 'Retiro', 'Duchas', 'Cascatinha',
+          'Quitandinha', 'Nogueira', 'Corrêas', 'Itaipava', 'Pedro do Rio',
+          'Posse', 'Araras', 'Secretário', 'Meio da Serra', 'Vila Imperial',
+          'São Sebastião', 'Quarteirão Brasileiro', 'Quarteirão Italiano', 'Rua do Imperador',
+          // Distritos
+          'São Pedro', 'Vale da Boa Esperança', 'Taquara', 'Fazenda Inglesa',
+          'Independência', 'Alcobacinha', 'Morin', 'Castrioto', 'Vale Florido',
+          'Samambaia', 'Rocio', 'Jardim Salvador', 'Chácara Flora', 'Quarteirão Inglês'
+        ],
+        // Adicionando mais cidades importantes
+        'Niterói': [
+          'Icaraí', 'São Francisco', 'Charitas', 'Jurujuba', 'Ingá', 'Centro',
+          'Fonseca', 'Santa Rosa', 'Viradouro', 'Barreto', 'Ilha da Conceição',
+          'Ponta da Areia', 'Boa Viagem', 'Camboinhas', 'Piratininga', 'Jacaré',
+          'São Lourenço', 'Várzea das Moças', 'Vital Brazil', 'Pendotiba',
+          'Largo da Batalha', 'Santana', 'Cachoeiras', 'Sapê', 'Cantagalo',
+          'Cubango', 'Morro do Estado', 'Cafubá', 'Itacoatiara', 'Engenho do Mato'
+        ],
+        'Campinas': [
+          'Centro', 'Cambuí', 'Guanabara', 'Vila Nova', 'Jardim Chapadão',
+          'Barão Geraldo', 'Cidade Universitária', 'Bosque', 'Taquaral', 'Nova Campinas',
+          'Jardim Garcia', 'Vila Brandina', 'Jardim das Paineiras', 'Vila Marieta',
+          'Jardim Proença', 'Jardim Santa Genebra', 'Mansões Santo Antônio',
+          'Parque Taquaral', 'Jardim do Lago', 'Vila Olímpia', 'Jardim Flamboyant',
+          'Cambará', 'Vila Industrial', 'Jardim Eulina', 'Vila Costa e Silva',
+          'Jardim São Gabriel', 'Parque Industrial', 'Vila União', 'DIC I',
+          'DIC II', 'DIC III', 'DIC IV', 'DIC V', 'DIC VI', 'Jardim Campos Elíseos'
+        ],
+        'Santos': [
+          'Centro', 'Gonzaga', 'Boqueirão', 'Embaré', 'Aparecida', 'Ponta da Praia',
+          'José Menino', 'Vila Belmiro', 'Vila Mathias', 'Encruzilhada', 'Campo Grande',
+          'Macuco', 'Estuário', 'Valongo', 'Paquetá', 'Vila Nova', 'Pompéia',
+          'Caneleira', 'Rádio Clube', 'Saboó', 'Alemoa', 'Chico de Paula',
+          'Areia Branca', 'Bom Retiro', 'Jardim Castelo', 'Marapé', 'Jabaquara',
+          'Monte Serrat', 'Morro José Menino', 'Morro da Penha', 'Morro Pacheco',
+          'Morro Santa Terezinha', 'Morro São Bento', 'Morro Nova Cintra'
         ]
       };
       
