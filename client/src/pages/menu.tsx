@@ -22,6 +22,7 @@ import {
   Tag,
   X
 } from "lucide-react";
+import { CouponsSection } from "@/components/coupons-section";
 
 interface CartItem {
   id: string;
@@ -339,6 +340,9 @@ export default function Menu() {
           </div>
         </div>
       </div>
+
+      {/* Seção de Cupons em Destaque */}
+      <CouponsSection restaurantId={restaurantId} />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-6">
