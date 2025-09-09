@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 export default function Dashboard() {
@@ -2608,101 +2609,230 @@ export default function Dashboard() {
     }
 
     if (activeSection === "comandas") {
+      // Separar pedidos por tipo
+      const deliveryOrders = (orders as any[]).filter((order: any) => order.orderType === 'delivery' || !order.orderType);
+      const tableOrders = (orders as any[]).filter((order: any) => order.orderType === 'table');
+      
+      // Contadores por tipo
+      const deliveryOrderCounts = {
+        abertos: deliveryOrders.filter((order: any) => order.status === 'pending').length,
+        preparando: deliveryOrders.filter((order: any) => order.status === 'preparing').length,
+        entrega: deliveryOrders.filter((order: any) => order.status === 'out_for_delivery').length,
+        finalizados: deliveryOrders.filter((order: any) => order.status === 'delivered').length,
+        cancelados: deliveryOrders.filter((order: any) => order.status === 'cancelled').length,
+      };
+
+      // Agrupar pedidos de mesa por mesa
+      const ordersByTable = tableOrders.reduce((acc: any, order: any) => {
+        const tableId = order.tableId || 'unknown';
+        if (!acc[tableId]) acc[tableId] = [];
+        acc[tableId].push(order);
+        return acc;
+      }, {});
+
       return (
         <div className="space-y-6">
-          {/* Header com estatísticas */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{orderCounts.abertos}</p>
-                <p className="text-sm text-blue-600">Pendentes</p>
-              </CardContent>
-            </Card>
+          <Tabs defaultValue="deliverys" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="deliverys" className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Deliverys ({deliveryOrders.length})
+              </TabsTrigger>
+              <TabsTrigger value="mesas" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Mesas ({tableOrders.length} pedidos)
+              </TabsTrigger>
+            </TabsList>
 
-            <Card className="bg-yellow-50 border-yellow-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-yellow-600">{orderCounts.preparando}</p>
-                <p className="text-sm text-yellow-600">Preparando</p>
-              </CardContent>
-            </Card>
+            <TabsContent value="deliverys" className="space-y-6">
+              {/* Header com estatísticas de delivery */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-blue-600">{deliveryOrderCounts.abertos}</p>
+                    <p className="text-sm text-blue-600">Pendentes</p>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-purple-50 border-purple-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-purple-600">{orderCounts.entrega}</p>
-                <p className="text-sm text-purple-600">Entrega</p>
-              </CardContent>
-            </Card>
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{deliveryOrderCounts.preparando}</p>
+                    <p className="text-sm text-yellow-600">Preparando</p>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-green-600">{orderCounts.finalizados}</p>
-                <p className="text-sm text-green-600">Entregues</p>
-              </CardContent>
-            </Card>
+                <Card className="bg-purple-50 border-purple-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-purple-600">{deliveryOrderCounts.entrega}</p>
+                    <p className="text-sm text-purple-600">Entrega</p>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-red-50 border-red-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-red-600">{orderCounts.cancelados}</p>
-                <p className="text-sm text-red-600">Cancelados</p>
-              </CardContent>
-            </Card>
-          </div>
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{deliveryOrderCounts.finalizados}</p>
+                    <p className="text-sm text-green-600">Entregues</p>
+                  </CardContent>
+                </Card>
 
-          {/* Lista de pedidos */}
-          {ordersLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : (orders as any[]).length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhum pedido</h3>
-                <p className="text-muted-foreground">
-                  Os pedidos aparecerão aqui quando os clientes fizerem seus pedidos
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {(orders as any[]).map((order: any) => (
-                <OrderCard 
-                  key={order.id} 
-                  order={order} 
-                  onStatusUpdate={(status: string) => {
-                    // Atualizar status do pedido
-                    fetch(`/api/orders/${order.id}/status`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ status }),
-                      credentials: 'include'
-                    }).then(() => {
-                      queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
-                      toast({
-                        title: "Status atualizado",
-                        description: "O status do pedido foi atualizado com sucesso"
-                      });
-                    }).catch(error => {
-                      console.error('Erro ao atualizar status:', error);
-                      toast({
-                        title: "Erro",
-                        description: "Não foi possível atualizar o status",
-                        variant: "destructive"
-                      });
-                    });
-                  }}
-                  onPrint={() => {
-                    // A função de impressão já está implementada no OrderCard
-                  }}
-                  onEdit={(order: any) => {
-                    setEditingOrder(order);
-                    setShowOrderEditForm(true);
-                  }}
-                  isUpdatingStatus={false}
-                />
-              ))}
-            </div>
-          )}
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-red-600">{deliveryOrderCounts.cancelados}</p>
+                    <p className="text-sm text-red-600">Cancelados</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Lista de pedidos delivery */}
+              {ordersLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : deliveryOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Package className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Nenhum pedido de delivery</h3>
+                    <p className="text-muted-foreground">
+                      Os pedidos de entrega aparecerão aqui quando os clientes fizerem seus pedidos
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {deliveryOrders.map((order: any) => (
+                    <OrderCard 
+                      key={order.id} 
+                      order={order} 
+                      onStatusUpdate={(status: string) => {
+                        fetch(`/api/orders/${order.id}/status`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status }),
+                          credentials: 'include'
+                        }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
+                          toast({
+                            title: "Status atualizado",
+                            description: "O status do pedido foi atualizado com sucesso"
+                          });
+                        }).catch(error => {
+                          console.error('Erro ao atualizar status:', error);
+                          toast({
+                            title: "Erro",
+                            description: "Não foi possível atualizar o status",
+                            variant: "destructive"
+                          });
+                        });
+                      }}
+                      onPrint={() => {}}
+                      onEdit={(order: any) => {
+                        setEditingOrder(order);
+                        setShowOrderEditForm(true);
+                      }}
+                      isUpdatingStatus={false}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="mesas" className="space-y-6">
+              {/* Grid de mesas */}
+              {tablesLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : tables.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Nenhuma mesa cadastrada</h3>
+                    <p className="text-muted-foreground">
+                      Cadastre mesas na seção "Mesas" para visualizar pedidos por mesa
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {tables.map((table: any) => {
+                    const tableOrdersList = ordersByTable[table.id] || [];
+                    const hasPendingOrders = tableOrdersList.some((order: any) => 
+                      order.status === 'pending' || order.status === 'preparing'
+                    );
+                    
+                    return (
+                      <Card 
+                        key={table.id} 
+                        className={`cursor-pointer transition-all hover:shadow-lg ${
+                          hasPendingOrders ? 'ring-2 ring-orange-500 bg-orange-50' : 'hover:border-primary'
+                        }`}
+                        onClick={() => {
+                          // Mostrar pedidos da mesa em modal ou expandir inline
+                          if (tableOrdersList.length > 0) {
+                            // Implementar visualização de pedidos da mesa
+                            console.log('Mostrar pedidos da mesa:', table.number, tableOrdersList);
+                          }
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-lg">Mesa {table.number}</h3>
+                            {hasPendingOrders && (
+                              <Badge variant="destructive" className="animate-pulse">
+                                {tableOrdersList.filter((o: any) => o.status === 'pending' || o.status === 'preparing').length}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="text-sm text-muted-foreground mb-3">
+                            {table.name && <p>Nome: {table.name}</p>}
+                            <p>Capacidade: {table.capacity} pessoas</p>
+                          </div>
+
+                          {tableOrdersList.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Pedidos ativos: {tableOrdersList.length}
+                              </div>
+                              {tableOrdersList.slice(0, 2).map((order: any) => (
+                                <div key={order.id} className="text-xs bg-white p-2 rounded border">
+                                  <div className="flex justify-between items-center">
+                                    <span>#{order.orderNumber}</span>
+                                    <Badge 
+                                      variant={order.status === 'pending' ? 'default' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {order.status === 'pending' ? 'Pendente' : 
+                                       order.status === 'preparing' ? 'Preparando' : 
+                                       order.status === 'ready' ? 'Pronto' : order.status}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-muted-foreground mt-1">
+                                    {order.customerName} - R$ {parseFloat(order.total).toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                              {tableOrdersList.length > 2 && (
+                                <div className="text-xs text-center text-muted-foreground">
+                                  +{tableOrdersList.length - 2} mais...
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center text-muted-foreground text-sm">
+                              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              Mesa livre
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       );
     }
