@@ -627,13 +627,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === DEV RESTAURANT ===
-  app.get("/api/dev/my-restaurant", async (req, res) => {
+  app.get("/api/dev/my-restaurant", async (req: any, res) => {
     try {
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Map dev-user-internal to dev-user-123 for restaurant ownership
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
       // Buscar o restaurante do dev user
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
