@@ -873,6 +873,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para atualizar número do WhatsApp
+  app.put("/api/dev/restaurant/whatsapp", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      const { whatsappNumber } = req.body;
+
+      if (!whatsappNumber) {
+        return res.status(400).json({ message: "WhatsApp number is required" });
+      }
+
+      const [updatedRestaurant] = await db
+        .update(restaurants)
+        .set({
+          notificationWhatsapp: whatsappNumber,
+          updatedAt: new Date()
+        })
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .returning();
+
+      if (!updatedRestaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      console.log(`WhatsApp number updated for restaurant ${updatedRestaurant.id}: ${whatsappNumber}`);
+
+      res.json({
+        success: true,
+        message: "WhatsApp number updated successfully",
+        restaurant: updatedRestaurant
+      });
+    } catch (error) {
+      console.error("Error updating WhatsApp number:", error);
+      res.status(500).json({ message: "Failed to update WhatsApp number" });
+    }
+  });
+
   // === TABLE ROUTES ===
   
   // Get tables for restaurant

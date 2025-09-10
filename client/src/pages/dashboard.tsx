@@ -244,7 +244,7 @@ export default function Dashboard() {
         phone: restaurant.phone || "",
         email: restaurant.email || "",
       });
-      setWhatsappNumber(restaurant.whatsappNumber || "");
+      setWhatsappNumber(restaurant.notificationWhatsapp || "");
     }
   }, [restaurant]);
 
@@ -2713,17 +2713,24 @@ export default function Dashboard() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status }),
                           credentials: 'include'
-                        }).then(() => {
+                        }).then(async response => {
+                          if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`HTTP ${response.status}: ${errorText}`);
+                          }
+                          return response.json();
+                        }).then((updatedOrder) => {
                           queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
                           toast({
                             title: "Status atualizado",
                             description: "O status do pedido foi atualizado com sucesso"
                           });
+                          console.log('Pedido atualizado:', updatedOrder);
                         }).catch(error => {
                           console.error('Erro ao atualizar status:', error);
                           toast({
                             title: "Erro",
-                            description: "Não foi possível atualizar o status",
+                            description: `Falha ao atualizar status: ${error.message}`,
                             variant: "destructive"
                           });
                         });
@@ -3230,17 +3237,24 @@ export default function Dashboard() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status }),
                           credentials: 'include'
-                        }).then(() => {
+                        }).then(async response => {
+                          if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`HTTP ${response.status}: ${errorText}`);
+                          }
+                          return response.json();
+                        }).then((updatedOrder) => {
                           queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
                           toast({
                             title: "Status atualizado",
                             description: "O status do pedido foi atualizado com sucesso"
                           });
+                          console.log('Pedido atualizado:', updatedOrder);
                         }).catch(error => {
                           console.error('Erro ao atualizar status:', error);
                           toast({
                             title: "Erro",
-                            description: "Não foi possível atualizar o status",
+                            description: `Falha ao atualizar status: ${error.message}`,
                             variant: "destructive"
                           });
                         });
