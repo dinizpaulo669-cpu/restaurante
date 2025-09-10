@@ -408,8 +408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get restaurant owned by this user
-      // For development, use the dev-user-internal as owner
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-internal" : userId;
+      // For development, use the correct owner ID
+      const actualOwnerId = userId === "dev-user-internal" ? "owner-123" : userId;
       const userRestaurant = await db
         .select()
         .from(restaurants)
