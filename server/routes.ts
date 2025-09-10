@@ -2006,6 +2006,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === WHATSAPP EVOLUTION API TEST ENDPOINT (DEV ONLY) ===
+  app.post("/api/test-whatsapp", isDevAuthenticated, async (req: any, res) => {
+    try {
+      const { phoneNumber, message } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Phone number is required",
+          message: "Please provide a phoneNumber in the request body"
+        });
+      }
+      
+      // Limit to development environment for security
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({
+          success: false,
+          error: "Test endpoint disabled in production",
+          message: "This endpoint is only available in development mode"
+        });
+      }
+      
+      // Validate and normalize phone number
+      const cleanPhone = phoneNumber.replace(/\D/g, "");
+      const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      
+      if (formattedPhone.length < 13) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid phone number format",
+          message: "Phone number should have at least 13 digits (55 + DDD + number)"
+        });
+      }
+      
+      // Use fixed test message for security
+      const testMessage = "🤖 Teste de conectividade da Evolution API - Integração funcionando!";
+      
+      console.log(`🧪 Testing WhatsApp connectivity with Evolution API`);
+      console.log(`   - Phone: ${formattedPhone}`);
+      
+      const result = await whatsappService.sendMessage({
+        number: formattedPhone,
+        text: testMessage
+      });
+      
+      if (result) {
+        console.log(`✅ WhatsApp test message sent successfully!`);
+        res.json({
+          success: true,
+          message: "WhatsApp message sent successfully!",
+          result: result,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.log(`❌ WhatsApp test message failed`);
+        res.status(500).json({
+          success: false,
+          error: "Failed to send WhatsApp message",
+          message: "Check server logs for detailed error information",
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error in WhatsApp test endpoint:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Endpoint to check Evolution API connection status (DEV ONLY)
+  app.get("/api/whatsapp-status", isDevAuthenticated, async (req: any, res) => {
+    try {
+      const instanceName = "Restaurante"; // Same as in WhatsAppService
+      const apiUrl = process.env.EVOLUTION_API_URL;
+      const apiKey = process.env.EVOLUTION_API_KEY;
+      
+      console.log(`🔍 Checking Evolution API instance status...`);
+      
+      // Limit to development environment for security
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({
+          success: false,
+          error: "Status endpoint disabled in production",
+          message: "This endpoint is only available in development mode"
+        });
+      }
+      
+      if (!apiUrl || !apiKey) {
+        return res.status(500).json({
+          success: false,
+          configured: false,
+          error: "Evolution API credentials not configured",
+          message: "Please set EVOLUTION_API_URL and EVOLUTION_API_KEY environment variables"
+        });
+      }
+      
+      // Try to check instance connection state
+      const cleanApiUrl = apiUrl.replace(/\/+$/, '');
+      const statusEndpoint = `${cleanApiUrl}/instance/connectionState/${instanceName}`;
+      
+      console.log(`   - Checking: ${statusEndpoint}`);
+      
+      const response = await fetch(statusEndpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": apiKey,
+        },
+      });
+      
+      console.log(`   - Response Status: ${response.status} ${response.statusText}`);
+      
+      let statusData = null;
+      if (response.ok) {
+        try {
+          statusData = await response.json();
+          console.log(`   - Status Data:`, statusData);
+        } catch (jsonError) {
+          console.log(`   - Response is not JSON`);
+        }
+      } else {
+        const errorText = await response.text();
+        console.log(`   - Error Response: ${errorText}`);
+      }
+      
+      res.json({
+        success: response.ok,
+        configured: true,
+        instanceName: instanceName,
+        status: response.status,
+        statusText: response.statusText,
+        connected: statusData?.state === 'open' || false,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error checking WhatsApp status:", error);
+      res.status(500).json({
+        success: false,
+        configured: false,
+        error: "Failed to check Evolution API status",
+        message: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // WebSocket Setup
   const httpServer = createServer(app);
 
