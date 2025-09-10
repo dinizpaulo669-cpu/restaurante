@@ -14,6 +14,11 @@ class WhatsAppService {
 
   constructor() {
     this.apiUrl = process.env.EVOLUTION_API_URL || "";
+    // Force HTTPS if URL contains render.com
+    if (this.apiUrl.includes('render.com') && this.apiUrl.startsWith('http://')) {
+      this.apiUrl = this.apiUrl.replace('http://', 'https://');
+      console.log(`Converted API URL to HTTPS: ${this.apiUrl}`);
+    }
     this.apiKey = process.env.EVOLUTION_API_KEY || "";
     
     if (!this.apiUrl || !this.apiKey) {
@@ -45,7 +50,9 @@ class WhatsAppService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
         console.error(`WhatsApp API error: ${response.status} ${response.statusText}`);
+        console.error(`Response body: ${errorText}`);
         return null;
       }
 
