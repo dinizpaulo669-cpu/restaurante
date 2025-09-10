@@ -70,6 +70,7 @@ export const restaurants = pgTable("restaurants", {
   openingHours: jsonb("opening_hours"), // JSON with daily hours
   deliveryZipCodes: text("delivery_zip_codes").array(),
   whatsappNumber: varchar("whatsapp_number"),
+  notificationWhatsapp: varchar("notification_whatsapp"), // Número para envio de notificações
   seoTitle: varchar("seo_title"),
   seoDescription: text("seo_description"),
   createdAt: timestamp("created_at").defaultNow(),
