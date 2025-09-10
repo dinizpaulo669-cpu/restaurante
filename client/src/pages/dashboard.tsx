@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import type { Restaurant, User, Coupon, Table, Product, Order } from "@shared/schema";
 import { ProductForm } from "@/components/product-form";
 import { ProductCard } from "@/components/product-card";
 import { CategoryForm } from "@/components/category-form";
@@ -141,7 +142,7 @@ export default function Dashboard() {
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
 
   // Query para cupons - movida para o topo para evitar erro de hooks
-  const { data: coupons = [] } = useQuery({
+  const { data: coupons = [] } = useQuery<Coupon[]>({
     queryKey: ["/api/dev/coupons"],
     enabled: isAuthenticated && activeSection === "cupons"
   });
@@ -187,7 +188,7 @@ export default function Dashboard() {
     }
   });
 
-  const { data: restaurant, isLoading: restaurantLoading } = useQuery({
+  const { data: restaurant, isLoading: restaurantLoading } = useQuery<Restaurant>({
     queryKey: ["/api/dev/my-restaurant"], // Usar rota de desenvolvimento
     enabled: isAuthenticated,
     retry: 3,
@@ -195,7 +196,7 @@ export default function Dashboard() {
   });
 
   // Buscar produtos disponíveis para edição de pedidos
-  const { data: availableProducts } = useQuery({
+  const { data: availableProducts } = useQuery<Product[]>({
     queryKey: ["/api/restaurants", restaurant?.id, "products"],
     enabled: !!restaurant?.id && showOrderEditForm
   });
@@ -203,27 +204,27 @@ export default function Dashboard() {
   // Debug log
   console.log("Dashboard Debug:", {
     isAuthenticated,
-    userRole: (user as any)?.role,
+    userRole: user?.role,
     restaurant,
     restaurantLoading,
     activeSection,
     productSubSection
   });
 
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+  const { data: orders = [], isLoading: ordersLoading } = useQuery<Order[]>({
     queryKey: ["/api/my-orders"],
     enabled: isAuthenticated && !!restaurant,
     retry: false,
   });
 
-  const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: [`/api/restaurants/${(restaurant as any)?.id}/products`],
+  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: [`/api/restaurants/${restaurant?.id}/products`],
     enabled: isAuthenticated && !!restaurant,
     retry: false,
   });
 
   // Queries para mesas
-  const { data: tables = [], isLoading: tablesLoading } = useQuery({
+  const { data: tables = [], isLoading: tablesLoading } = useQuery<Table[]>({
     queryKey: ["/api/dev/tables"],
     enabled: !!restaurant,
     retry: false,
@@ -232,18 +233,18 @@ export default function Dashboard() {
   // Atualizar estados quando restaurant carrega
   useEffect(() => {
     if (restaurant) {
-      setDescription((restaurant as any)?.description || "");
-      setLogoUrl((restaurant as any)?.logoUrl || "");
-      setBannerUrl((restaurant as any)?.bannerUrl || "");
+      setDescription(restaurant.description || "");
+      setLogoUrl(restaurant.logoUrl || "");
+      setBannerUrl(restaurant.bannerUrl || "");
       setCompanyFormData({
-        name: (restaurant as any)?.name || "",
-        description: (restaurant as any)?.description || "",
-        category: (restaurant as any)?.category || "",
-        address: (restaurant as any)?.address || "",
-        phone: (restaurant as any)?.phone || "",
-        email: (restaurant as any)?.email || "",
+        name: restaurant.name || "",
+        description: restaurant.description || "",
+        category: restaurant.category || "",
+        address: restaurant.address || "",
+        phone: restaurant.phone || "",
+        email: restaurant.email || "",
       });
-      setWhatsappNumber((restaurant as any)?.whatsappNumber || "");
+      setWhatsappNumber(restaurant.whatsappNumber || "");
     }
   }, [restaurant]);
 
@@ -290,7 +291,7 @@ export default function Dashboard() {
     }
   };
 
-  const { city, state } = restaurant ? extractCityState((restaurant as any).address) : { city: '', state: '' };
+  const { city, state } = restaurant ? extractCityState(restaurant.address) : { city: '', state: '' };
 
   // Buscar bairros da cidade quando o componente carregar
   useEffect(() => {
@@ -314,8 +315,8 @@ export default function Dashboard() {
 
   // Buscar áreas de serviço existentes
   useEffect(() => {
-    if ((restaurant as any)?.id && configurationSubSection === "cep") {
-      fetch(`/api/service-areas/${(restaurant as any).id}`)
+    if (restaurant?.id && configurationSubSection === "cep") {
+      fetch(`/api/service-areas/${restaurant.id}`)
         .then(res => res.json())
         .then(data => {
           setServiceAreas(data);
@@ -331,7 +332,7 @@ export default function Dashboard() {
         })
         .catch(error => console.error('Erro ao buscar áreas de serviço:', error));
     }
-  }, [(restaurant as any)?.id, configurationSubSection]);
+  }, [restaurant?.id, configurationSubSection]);
 
   const handleNeighborhoodChange = (neighborhood: string, field: 'selected' | 'fee', value: boolean | string) => {
     setSelectedNeighborhoods(prev => ({
@@ -344,7 +345,7 @@ export default function Dashboard() {
   };
 
   const saveServiceAreas = async () => {
-    if (!(restaurant as any)?.id || !city || !state) return;
+    if (!restaurant?.id || !city || !state) return;
 
     try {
       // Primeiro, remover todas as áreas existentes
@@ -360,7 +361,7 @@ export default function Dashboard() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              restaurantId: (restaurant as any).id,
+              restaurantId: restaurant.id,
               neighborhood,
               city,
               state,
@@ -2851,7 +2852,7 @@ export default function Dashboard() {
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold text-primary">RestaurantePro</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Bem vindo(a), {(user as any)?.firstName || (user as any)?.email?.split('@')[0] || 'Paulo'} teste!
+            Bem vindo(a), {user?.firstName || user?.email?.split('@')[0] || 'Paulo'} teste!
           </p>
         </div>
 
@@ -2943,7 +2944,7 @@ export default function Dashboard() {
       <div className="flex-1">
         <header className="bg-card shadow-sm border-b p-4">
           <h2 className="text-xl font-semibold capitalize">
-            {activeSection === "home" ? (restaurant as any).name : activeSection}
+            {activeSection === "home" ? restaurant?.name : activeSection}
           </h2>
         </header>
 
