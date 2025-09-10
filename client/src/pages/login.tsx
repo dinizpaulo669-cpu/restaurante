@@ -44,22 +44,6 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {/* Aviso se já está logado */}
-              {isAuthenticated && user && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                  <p className="text-sm text-yellow-800 mb-2">
-                    Você já está logado como: <strong>{String((user as any)?.role === "restaurant_owner" ? "Dono de Restaurante" : "Cliente")}</strong>
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.location.href = "/api/logout"}
-                    className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
-                  >
-                    Fazer Logout
-                  </Button>
-                </div>
-              )}
 
               {/* Seleção de tipo de usuário */}
               <div className="space-y-3">
