@@ -67,7 +67,9 @@ class WhatsAppService {
     const endpoint = `/message/sendText/${this.instanceName}`;
     const data = {
       number: message.number,
-      text: message.text,
+      textMessage: {
+        text: message.text
+      }
     };
 
     return await this.makeRequest(endpoint, data);
