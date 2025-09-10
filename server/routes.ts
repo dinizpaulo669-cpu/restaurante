@@ -199,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, userId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
       if (!restaurant) {
@@ -823,11 +824,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
       const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       
-      // Buscar o restaurante do usuário
+      // Buscar o restaurante mais recente do usuário
       let [restaurant] = await db
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
       // Se não existir restaurante, criar um automaticamente
