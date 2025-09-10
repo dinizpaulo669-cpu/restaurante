@@ -977,11 +977,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Development routes for tables
   app.get("/api/dev/tables", async (req, res) => {
     try {
-      // Get dev restaurant
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
       
       if (!restaurant) {
@@ -1003,11 +1013,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dev/tables", async (req, res) => {
     try {
-      // Get dev restaurant
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
       
       if (!restaurant) {
@@ -1066,11 +1086,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // === DEV PRODUCTS ===
   app.post("/api/dev/products", upload.single('image'), async (req: any, res) => {
     try {
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
       if (!restaurant) {
@@ -1104,11 +1134,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dev/categories", async (req: any, res) => {
     try {
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
       if (!restaurant) {
