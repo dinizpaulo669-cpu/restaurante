@@ -5,6 +5,7 @@ import WebSocket from "ws";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
@@ -609,20 +610,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // === INTERNAL LOGIN ===
   app.post("/api/internal-login", async (req: any, res) => {
     try {
-      const { role } = req.body;
-      const user = {
-        id: "dev-user-internal",
-        email: "dev@example.com", 
-        firstName: "Usuario",
-        lastName: "Logado",
-        role: role || "customer"
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+      
+      // Buscar usuário no banco pelo email
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Email ou senha incorretos" });
+      }
+      
+      // Verificar senha
+      if (!user.password) {
+        return res.status(401).json({ message: "Usuário não tem senha configurada" });
+      }
+      
+      const passwordValid = await bcrypt.compare(password, user.password);
+      if (!passwordValid) {
+        return res.status(401).json({ message: "Email ou senha incorretos" });
+      }
+      
+      // Criar sessão com dados do usuário real
+      const sessionUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
       };
       
-      req.session.user = user;
-      res.json({ message: "Login realizado com sucesso", user });
+      req.session.user = sessionUser;
+      res.json({ message: "Login realizado com sucesso", user: sessionUser });
     } catch (error) {
       console.error("Error in internal login:", error);
-      res.status(500).json({ message: "Failed to login" });
+      res.status(500).json({ message: "Falha no login" });
     }
   });
 
