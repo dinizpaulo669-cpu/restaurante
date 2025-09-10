@@ -258,12 +258,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const nextOrderNumber = (lastOrder?.orderNumber || 0) + 1;
       
+      // Get customer ID from Replit Auth or session or use dev default
+      let customerId = "dev-user-internal";
+      if ((req as any).user?.claims?.sub) {
+        customerId = (req as any).user.claims.sub;
+      } else if ((req as any).session?.user?.id) {
+        customerId = (req as any).session.user.id;
+      }
+      
       // Create order
       const [order] = await db
         .insert(orders)
         .values({
           ...orderData,
-          customerId: orderData.orderType === 'table' ? null : "dev-user-internal", // Allow null for table orders
+          customerId: customerId, // Always associate orders with the customer who created them
           orderNumber: nextOrderNumber,
           status: "pending",
           orderType: orderData.orderType || "delivery", // Use the orderType from frontend
@@ -971,6 +979,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching table by QR code:", error);
       res.status(500).json({ message: "Failed to fetch table" });
+    }
+  });
+
+  // Get orders for a specific table
+  app.get("/api/tables/:tableId/orders", async (req, res) => {
+    try {
+      const tableId = req.params.tableId;
+      
+      // Get all orders for this table
+      const tableOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerId: orders.customerId,
+          restaurantId: orders.restaurantId,
+          tableId: orders.tableId,
+          customerName: orders.customerName,
+          customerPhone: orders.customerPhone,
+          customerAddress: orders.customerAddress,
+          status: orders.status,
+          orderType: orders.orderType,
+          subtotal: orders.subtotal,
+          deliveryFee: orders.deliveryFee,
+          total: orders.total,
+          paymentMethod: orders.paymentMethod,
+          notes: orders.notes,
+          estimatedDeliveryTime: orders.estimatedDeliveryTime,
+          deliveredAt: orders.deliveredAt,
+          createdAt: orders.createdAt,
+          updatedAt: orders.updatedAt
+        })
+        .from(orders)
+        .where(eq(orders.tableId, tableId))
+        .orderBy(desc(orders.createdAt));
+        
+      // Get order items for each order
+      const ordersWithItems = await Promise.all(
+        tableOrders.map(async (order) => {
+          const items = await db
+            .select({
+              id: orderItems.id,
+              quantity: orderItems.quantity,
+              unitPrice: orderItems.unitPrice,
+              totalPrice: orderItems.totalPrice,
+              specialInstructions: orderItems.specialInstructions,
+              product: {
+                id: products.id,
+                name: products.name,
+                description: products.description,
+                imageUrl: products.imageUrl
+              }
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .where(eq(orderItems.orderId, order.id));
+          
+          return {
+            ...order,
+            items
+          };
+        })
+      );
+      
+      res.json(ordersWithItems);
+    } catch (error) {
+      console.error("Error fetching table orders:", error);
+      res.status(500).json({ message: "Failed to fetch table orders" });
     }
   });
 
