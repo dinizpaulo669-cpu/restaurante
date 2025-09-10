@@ -1461,18 +1461,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Vendas por categoria
       const categoryStats = await db
         .select({
-          category: products.category,
+          category: categories.name,
           count: sql<number>`sum(${orderItems.quantity})`,
           revenue: sql<number>`sum(${orderItems.totalPrice})`
         })
         .from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
         .leftJoin(orders, eq(orderItems.orderId, orders.id))
         .where(and(
           eq(orders.restaurantId, restaurant.id),
-          sql`${products.category} IS NOT NULL`
+          sql`${categories.name} IS NOT NULL`
         ))
-        .groupBy(products.category)
+        .groupBy(categories.name)
         .orderBy(sql`sum(${orderItems.totalPrice}) DESC`);
 
       // Vendas dos últimos 7 dias
@@ -1617,7 +1618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Coupon tables created successfully" });
     } catch (error) {
       console.error("Error creating coupon tables:", error);
-      res.status(500).json({ message: "Failed to create coupon tables", error: error.message });
+      res.status(500).json({ message: "Failed to create coupon tables", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
