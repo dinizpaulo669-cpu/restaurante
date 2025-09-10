@@ -187,6 +187,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get restaurant owned by authenticated user
+  app.get("/api/my-restaurant", isDevAuthenticated, async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error fetching user restaurant:", error);
+      res.status(500).json({ message: "Failed to fetch restaurant" });
+    }
+  });
+
   app.get("/api/restaurants/:id/products", async (req, res) => {
     try {
       const result = await db
@@ -826,11 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             category: "Diversos",
             ownerId: actualOwnerId,
             isActive: true,
-            deliveryFee: 5.00,
-            minimumOrder: 20.00,
-            averageDeliveryTime: 45,
-            rating: 5.0,
-            totalRatings: 1
+            deliveryFee: "5.00"
           })
           .returning();
       }
