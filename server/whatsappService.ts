@@ -28,7 +28,14 @@ class WhatsAppService {
     }
 
     try {
-      const response = await fetch(`${this.apiUrl}${endpoint}`, {
+      // Remove trailing slash from apiUrl and leading slash from endpoint to avoid double slashes
+      const cleanApiUrl = this.apiUrl.replace(/\/+$/, '');
+      const cleanEndpoint = endpoint.replace(/^\/+/, '');
+      const fullUrl = `${cleanApiUrl}/${cleanEndpoint}`;
+      
+      console.log(`Sending WhatsApp request to: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
