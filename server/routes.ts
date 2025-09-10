@@ -2106,11 +2106,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Try to check instance connection state
+      // First check if instances exist
       const cleanApiUrl = apiUrl.replace(/\/+$/, '');
+      const fetchInstancesEndpoint = `${cleanApiUrl}/instance/fetchInstances`;
+      
+      console.log(`   - Fetching instances: ${fetchInstancesEndpoint}`);
+      
+      const instancesResponse = await fetch(fetchInstancesEndpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": apiKey,
+        },
+      });
+      
+      let instances = [];
+      let instancesError = null;
+      if (instancesResponse.ok) {
+        try {
+          const instancesData = await instancesResponse.json();
+          console.log(`   - Raw instances response:`, instancesData);
+          
+          // Handle different response structures
+          if (Array.isArray(instancesData)) {
+            instances = instancesData;
+          } else if (instancesData.instances && Array.isArray(instancesData.instances)) {
+            instances = instancesData.instances;
+          } else if (instancesData.data && Array.isArray(instancesData.data)) {
+            instances = instancesData.data;
+          } else {
+            console.log(`   - Unexpected instances response structure`);
+            instances = [];
+          }
+          
+          console.log(`   - Parsed instances (${instances.length}):`, instances);
+        } catch (e) {
+          console.log(`   - Could not parse instances response:`, e);
+          instancesError = "Failed to parse instances response";
+        }
+      } else {
+        instancesError = `Failed to fetch instances: ${instancesResponse.status} ${instancesResponse.statusText}`;
+        console.log(`   - ${instancesError}`);
+      }
+      
+      // Check if our target instance exists (only if we have valid instances array)
+      const targetInstanceExists = Array.isArray(instances) && instances.some((inst: any) => 
+        inst.instance?.instanceName === instanceName || inst.instanceName === instanceName
+      );
+      
+      console.log(`   - Target instance "${instanceName}" exists: ${targetInstanceExists}`);
+      
+      // Try to check instance connection state
       const statusEndpoint = `${cleanApiUrl}/instance/connectionState/${instanceName}`;
       
-      console.log(`   - Checking: ${statusEndpoint}`);
+      console.log(`   - Checking connection state: ${statusEndpoint}`);
       
       const response = await fetch(statusEndpoint, {
         method: "GET",
@@ -2139,9 +2188,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: response.ok,
         configured: true,
         instanceName: instanceName,
+        instanceExists: targetInstanceExists,
         status: response.status,
         statusText: response.statusText,
         connected: statusData?.state === 'open' || false,
+        availableInstances: Array.isArray(instances) ? instances.map((inst: any) => inst.instance?.instanceName || inst.instanceName || 'unknown') : [],
+        instancesError: instancesError,
+        recommendation: instancesError
+          ? `Cannot check instances: ${instancesError}. Verify Evolution API is running and credentials are correct`
+          : !targetInstanceExists 
+          ? `Instance "${instanceName}" not found. Create it first using POST /instance/create with body: {"instanceName": "${instanceName}"}`
+          : statusData?.state !== 'open'
+          ? `Instance exists but not connected. Use GET /instance/connect/${instanceName} to connect to WhatsApp`
+          : 'Instance is ready and connected',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
