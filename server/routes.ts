@@ -8,6 +8,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
+import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
@@ -391,6 +392,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedOrder) {
         return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Enviar notificação WhatsApp quando o status mudar
+      if (updatedOrder.customerPhone) {
+        try {
+          await whatsappService.sendOrderStatusNotification(
+            updatedOrder.restaurantId,
+            updatedOrder.customerPhone,
+            updatedOrder.orderNumber,
+            status,
+            updatedOrder.customerName
+          );
+        } catch (error) {
+          console.error("Error sending WhatsApp notification:", error);
+          // Não falhar a atualização do pedido se a notificação falhar
+        }
       }
       
       res.json(updatedOrder);
