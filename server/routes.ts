@@ -727,22 +727,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId = (req.session as any).user.id;
       }
       
-      // Map dev-user-internal to dev-user-123 for restaurant ownership
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
       const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       
-      // Buscar o restaurante do dev user
-      const [restaurant] = await db
+      // Buscar o restaurante do usuário
+      let [restaurant] = await db
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
+      // Se não existir restaurante, criar um automaticamente
       if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
+        // Buscar dados do usuário para nome do restaurante
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, actualOwnerId))
+          .limit(1);
+        
+        const restaurantName = user ? `Restaurante ${user.firstName} ${user.lastName}` : "Meu Restaurante";
+        
+        [restaurant] = await db
+          .insert(restaurants)
+          .values({
+            name: restaurantName,
+            description: "Descrição do restaurante a ser configurada",
+            address: "Endereço a ser configurado",
+            phone: user?.phone || "Telefone a ser configurado",
+            category: "Diversos",
+            ownerId: actualOwnerId,
+            isActive: true,
+            deliveryFee: 5.00,
+            minimumOrder: 20.00,
+            averageDeliveryTime: 45,
+            rating: 5.0,
+            totalRatings: 1
+          })
+          .returning();
       }
+      
       res.json(restaurant);
     } catch (error) {
-      console.error("Error fetching restaurant:", error);
+      console.error("Error fetching/creating restaurant:", error);
       res.status(500).json({ message: "Failed to fetch restaurant" });
     }
   });

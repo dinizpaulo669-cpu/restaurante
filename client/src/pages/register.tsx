@@ -12,6 +12,9 @@ import { apiRequest } from "@/lib/queryClient";
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Recuperar o tipo de usuário selecionado
+  const selectedUserType = localStorage.getItem('selectedUserType') || "customer";
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -38,8 +41,15 @@ export default function Register() {
         description: "Bem-vindo ao RestaurantePro!",
       });
       
-      // Redirecionar diretamente para o painel do cliente
-      setLocation("/customer-panel");
+      // Limpar o tipo selecionado
+      localStorage.removeItem('selectedUserType');
+      
+      // Redirecionar baseado no tipo de usuário
+      if (selectedUserType === "restaurant_owner") {
+        setLocation("/dashboard");
+      } else {
+        setLocation("/customer-panel");
+      }
     },
     onError: (error: any) => {
       console.error("Erro ao criar conta:", error);
@@ -95,7 +105,7 @@ export default function Register() {
       cidade: formData.cidade,
       estado: formData.estado,
       pontoReferencia: formData.pontoReferencia,
-      role: "customer"
+      role: selectedUserType
     });
   };
 
