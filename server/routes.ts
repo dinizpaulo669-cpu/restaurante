@@ -136,6 +136,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new restaurant
+  app.post("/api/restaurants", isDevAuthenticated, async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      const restaurantData = insertRestaurantSchema.parse({
+        ...req.body,
+        ownerId: userId,
+      });
+      
+      // Update user role to restaurant_owner if authenticated with real user
+      if (req.user?.claims?.sub) {
+        await db
+          .insert(users)
+          .values({
+            id: userId,
+            email: req.user.claims.email || "",
+            firstName: req.user.claims.firstName || "",
+            lastName: req.user.claims.lastName || "",
+            profileImageUrl: req.user.claims.profile_image_url || "",
+            role: "restaurant_owner",
+            subscriptionPlan: "trial",
+            isTrialActive: true,
+            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          })
+          .onConflictDoUpdate({
+            target: users.id,
+            set: {
+              role: "restaurant_owner",
+              updatedAt: new Date()
+            }
+          });
+      }
+
+      // Create the restaurant
+      const [restaurant] = await db
+        .insert(restaurants)
+        .values(restaurantData)
+        .returning();
+      
+      console.log("Restaurant created successfully:", restaurant.id);
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error creating restaurant:", error);
+      res.status(500).json({ message: "Failed to create restaurant" });
+    }
+  });
+
   app.get("/api/restaurants/:id/products", async (req, res) => {
     try {
       const result = await db
