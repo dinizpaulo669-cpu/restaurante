@@ -31,26 +31,21 @@ export default function Register() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const createProfileMutation = useMutation({
-    mutationFn: (profileData: any) => apiRequest("PUT", "/api/customer/profile", profileData),
+    mutationFn: (profileData: any) => apiRequest("POST", "/api/register", profileData),
     onSuccess: async (userData) => {
-      // Salvar dados do usuário no localStorage
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      
       toast({
         title: "Cadastro realizado!",
         description: "Bem-vindo ao RestaurantePro!",
       });
       
-      // Pequeno delay para garantir que o localStorage foi atualizado
-      setTimeout(() => {
-        setLocation("/customer-panel");
-      }, 100);
+      // Redirecionar diretamente para o painel do cliente
+      setLocation("/customer-panel");
     },
-    onError: (error) => {
-      console.error("Erro ao salvar perfil:", error);
+    onError: (error: any) => {
+      console.error("Erro ao criar conta:", error);
       toast({
         title: "Erro no cadastro",
-        description: "Não foi possível salvar seus dados. Tente novamente.",
+        description: error.message || "Não foi possível criar sua conta. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -86,15 +81,21 @@ export default function Register() {
       return;
     }
 
-    // Concatenar endereço completo
-    const endereco = `${formData.rua}, ${formData.numero}${formData.pontoReferencia ? ` - ${formData.pontoReferencia}` : ''} - ${formData.bairro}, ${formData.cidade} - ${formData.estado}, CEP: ${formData.cep}`;
-
-    // Enviar dados para o servidor com firstName e lastName separados
+    // Enviar todos os dados para o servidor
     createProfileMutation.mutate({
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
+      email: formData.email.trim(),
       phone: formData.phone,
-      address: endereco,
+      senha: formData.senha,
+      cep: formData.cep,
+      rua: formData.rua,
+      numero: formData.numero,
+      bairro: formData.bairro,
+      cidade: formData.cidade,
+      estado: formData.estado,
+      pontoReferencia: formData.pontoReferencia,
+      role: "customer"
     });
   };
 
