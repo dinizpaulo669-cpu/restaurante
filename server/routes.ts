@@ -607,6 +607,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === REGISTRO ===
+  app.post("/api/register", async (req: any, res) => {
+    try {
+      const { firstName, lastName, email, phone, senha, cep, rua, numero, bairro, cidade, estado, pontoReferencia, role } = req.body;
+      
+      // Validar campos obrigatórios
+      if (!firstName || !lastName || !email || !phone || !senha) {
+        return res.status(400).json({ message: "Todos os campos obrigatórios devem ser preenchidos" });
+      }
+      
+      // Verificar se o email já existe
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Email já está em uso" });
+      }
+      
+      // Criar endereço completo se os dados estiverem presentes
+      let endereco = null;
+      if (cep && rua && numero && bairro && cidade && estado) {
+        endereco = `${rua}, ${numero}${pontoReferencia ? ` - ${pontoReferencia}` : ''} - ${bairro}, ${cidade} - ${estado}, CEP: ${cep}`;
+      }
+      
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(senha, 10);
+      
+      // Criar usuário no banco de dados
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: phone,
+          address: endereco,
+          password: hashedPassword,
+          role: role || "customer"
+        })
+        .returning();
+      
+      // Criar sessão com dados do usuário
+      const sessionUser = {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role
+      };
+      
+      req.session.user = sessionUser;
+      
+      res.json({ 
+        message: "Cadastro realizado com sucesso", 
+        user: sessionUser 
+      });
+    } catch (error) {
+      console.error("Error in registration:", error);
+      res.status(500).json({ message: "Falha no cadastro" });
+    }
+  });
+
   // === INTERNAL LOGIN ===
   app.post("/api/internal-login", async (req: any, res) => {
     try {
