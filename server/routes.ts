@@ -480,7 +480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Enviar notificação WhatsApp quando o status mudar
+      console.log(`📱 Checking WhatsApp notification for order ${updatedOrder.orderNumber}:`);
+      console.log(`   - Customer Phone: ${updatedOrder.customerPhone}`);
+      console.log(`   - Customer Name: ${updatedOrder.customerName}`);
+      console.log(`   - Restaurant ID: ${updatedOrder.restaurantId}`);
+      console.log(`   - New Status: ${status}`);
+      
       if (updatedOrder.customerPhone) {
+        console.log(`🚀 Sending WhatsApp notification...`);
         try {
           await whatsappService.sendOrderStatusNotification(
             updatedOrder.restaurantId,
@@ -489,10 +496,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status,
             updatedOrder.customerName
           );
+          console.log(`✅ WhatsApp notification sent successfully!`);
         } catch (error) {
-          console.error("Error sending WhatsApp notification:", error);
+          console.error("❌ Error sending WhatsApp notification:", error);
           // Não falhar a atualização do pedido se a notificação falhar
         }
+      } else {
+        console.log(`⚠️  No customer phone found - WhatsApp notification skipped`);
       }
       
       res.json(updatedOrder);
@@ -512,12 +522,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get restaurant owned by this user
       // For development, use the correct owner ID
-      const actualOwnerId = userId === "dev-user-internal" ? "owner-123" : userId;
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      console.log(`🔍 Looking for restaurant with owner_id: ${actualOwnerId} (original userId: ${userId})`);
+      
       const userRestaurant = await db
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
+      
+      console.log(`📊 Found ${userRestaurant.length} restaurants for owner ${actualOwnerId}`);
+      if (userRestaurant.length > 0) {
+        console.log(`🏪 Restaurant found: ${userRestaurant[0].name} (ID: ${userRestaurant[0].id})`);
+      }
       
       if (userRestaurant.length === 0) {
         return res.status(404).json({ message: "Restaurant not found" });
