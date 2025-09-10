@@ -184,10 +184,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .insert(orders)
         .values({
           ...orderData,
-          customerId: "dev-user-internal", // Default customer ID
+          customerId: orderData.orderType === 'table' ? null : "dev-user-internal", // Allow null for table orders
           orderNumber: nextOrderNumber,
           status: "pending",
-          orderType: "delivery",
+          orderType: orderData.orderType || "delivery", // Use the orderType from frontend
           paymentMethod: "pix"
         })
         .returning();
@@ -408,8 +408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get restaurant owned by this user
-      // For development, use the specific dev restaurant owner ID
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // For development, use the dev-user-internal as owner
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-internal" : userId;
       const userRestaurant = await db
         .select()
         .from(restaurants)
