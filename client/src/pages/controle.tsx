@@ -65,6 +65,12 @@ export default function ControlePage() {
     enabled: isAuthenticated
   });
 
+  // Buscar relatório de lucro
+  const { data: profitReport } = useQuery<any>({
+    queryKey: ["/api/restaurant/profit-report"],
+    enabled: isAuthenticated
+  });
+
   // Usar dados reais das estatísticas ou fallback para dados mockados
   const salesData = restaurantStats?.salesByDay || [
     { date: '01/01', vendas: 1200, pedidos: 24 },
@@ -247,6 +253,185 @@ export default function ControlePage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Relatório de Lucro */}
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Relatório de Lucro</h2>
+            <p className="text-gray-600">Análise detalhada da rentabilidade baseada nos preços de venda e custo dos produtos</p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+            {/* Lucro Total */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Lucro Total</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      R$ {(profitReport?.totalProfit?.totalProfit || 0).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-green-600 flex items-center mt-1">
+                      <ArrowUp className="w-4 h-4 mr-1" />
+                      Pedidos entregues
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Margem de Lucro */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Margem de Lucro</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {(profitReport?.totalProfit?.profitMargin || 0).toFixed(1)}%
+                    </p>
+                    <p className="text-sm text-blue-600 flex items-center mt-1">
+                      <ArrowUp className="w-4 h-4 mr-1" />
+                      Rentabilidade
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Custo Total */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Custo Total</p>
+                    <p className="text-3xl font-bold text-red-600">
+                      R$ {(profitReport?.totalProfit?.totalCost || 0).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-red-600 flex items-center mt-1">
+                      <ArrowDown className="w-4 h-4 mr-1" />
+                      Gastos com produtos
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ROI */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">ROI</p>
+                    <p className="text-3xl font-bold text-purple-600">
+                      {profitReport?.totalProfit?.totalCost > 0 
+                        ? ((profitReport?.totalProfit?.totalProfit || 0) / (profitReport?.totalProfit?.totalCost || 1) * 100).toFixed(1)
+                        : 0}%
+                    </p>
+                    <p className="text-sm text-purple-600 flex items-center mt-1">
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                      Retorno sobre custo
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Package className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráfico de Lucro por Período */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Lucro por Período
+                </CardTitle>
+                <CardDescription>
+                  Evolução do lucro nos últimos 7 dias
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={profitReport?.profitByDay || []}>
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: any, name: string) => [
+                        `R$ ${Number(value).toFixed(2)}`, 
+                        name === 'totalProfit' ? 'Lucro' : 
+                        name === 'totalRevenue' ? 'Receita' : 'Custo'
+                      ]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="totalProfit" 
+                      stroke="#22c55e" 
+                      strokeWidth={2}
+                      name="Lucro"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="totalRevenue" 
+                      stroke="#3b82f6" 
+                      strokeWidth={1}
+                      name="Receita"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="totalCost" 
+                      stroke="#ef4444" 
+                      strokeWidth={1}
+                      name="Custo"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Top Produtos por Lucro */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Produtos Mais Lucrativos</CardTitle>
+                <CardDescription>
+                  Ranking dos produtos com maior lucro
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {(profitReport?.profitByProduct || []).slice(0, 5).map((product: any, index: number) => (
+                    <div key={product.productId} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg" data-testid={`profit-product-${index}`}>
+                      <div className="flex items-center space-x-4">
+                        <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-green-600 font-semibold">#{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{product.productName}</p>
+                          <p className="text-sm text-gray-600">
+                            {product.totalQuantitySold} vendas • Margem: {product.profitMargin.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">R$ {product.totalProfit.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">lucro total</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Gráficos */}
