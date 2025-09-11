@@ -118,6 +118,43 @@ export const productVariations = pgTable("product_variations", {
   isActive: boolean("is_active").default(true),
 });
 
+// PIX Payments table
+export const pixPayments = pgTable("pix_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  asaasPaymentId: varchar("asaas_payment_id"),
+  asaasCustomerId: varchar("asaas_customer_id"),
+  qrCodePayload: text("qr_code_payload"),
+  qrCodeImage: text("qr_code_image"),
+  status: varchar("status").notNull().default("pending"), // "pending" | "paid" | "expired" | "cancelled"
+  expirationDate: timestamp("expiration_date"),
+  paidAt: timestamp("paid_at"),
+  billingPeriodMonths: integer("billing_period_months").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment History table
+export const paymentHistory = pgTable("payment_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  pixPaymentId: varchar("pix_payment_id").references(() => pixPayments.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: varchar("method").notNull().default("pix"), // "pix" | "credit_card" | "bank_slip"
+  status: varchar("status").notNull(), // "paid" | "refunded" | "cancelled"
+  paidAt: timestamp("paid_at").notNull(),
+  refundedAt: timestamp("refunded_at"),
+  planStartDate: timestamp("plan_start_date").notNull(),
+  planEndDate: timestamp("plan_end_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Additional items (extras)
 export const additionals = pgTable("additionals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -605,6 +642,32 @@ export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
   updatedAt: true,
   lastLoginAt: true,
 });
+
+// PIX Payments schemas
+export const insertPixPaymentSchema = createInsertSchema(pixPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentHistorySchema = createInsertSchema(paymentHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// PIX Payment relations
+export const pixPaymentsRelations = relations(pixPayments, ({ one }) => ({
+  restaurant: one(restaurants, { fields: [pixPayments.restaurantId], references: [restaurants.id] }),
+  user: one(users, { fields: [pixPayments.userId], references: [users.id] }),
+  plan: one(subscriptionPlans, { fields: [pixPayments.planId], references: [subscriptionPlans.id] }),
+}));
+
+export const paymentHistoryRelations = relations(paymentHistory, ({ one }) => ({
+  restaurant: one(restaurants, { fields: [paymentHistory.restaurantId], references: [restaurants.id] }),
+  user: one(users, { fields: [paymentHistory.userId], references: [users.id] }),
+  plan: one(subscriptionPlans, { fields: [paymentHistory.planId], references: [subscriptionPlans.id] }),
+  pixPayment: one(pixPayments, { fields: [paymentHistory.pixPaymentId], references: [pixPayments.id] }),
+}));
 
 export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
   id: true,
