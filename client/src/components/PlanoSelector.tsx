@@ -251,7 +251,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
 
       {/* Modal de Pagamento PIX */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="w-5 h-5" />
@@ -260,7 +260,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
           </DialogHeader>
           
           {paymentData && (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               <div className="text-center">
                 <img
                   src={paymentData.qrCodeImage}
