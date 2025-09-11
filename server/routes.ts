@@ -3346,7 +3346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (plan) {
             const planStartDate = new Date();
             const planEndDate = new Date();
-            planEndDate.setMonth(planEndDate.getMonth() + pixPayment.billingPeriodMonths);
+            planEndDate.setMonth(planEndDate.getMonth() + (pixPayment.billingPeriodMonths || 1));
 
             // Update user subscription
             await db

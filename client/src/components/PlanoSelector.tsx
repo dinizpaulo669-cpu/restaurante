@@ -272,7 +272,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Valor:</span>
-                  <span className="font-bold">R$ {paymentData.amount.toFixed(2)}</span>
+                  <span className="font-bold">R$ {parseFloat(paymentData.amount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Vencimento:</span>
