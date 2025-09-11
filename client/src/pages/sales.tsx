@@ -1,52 +1,38 @@
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, BarChart3, Utensils, Receipt, MessageSquare, Settings, Printer } from "lucide-react";
+import { ArrowLeft, CheckCircle, BarChart3, Utensils, Receipt, MessageSquare, Settings, Printer, Crown, Zap, Sparkles } from "lucide-react";
 
-const plans = [
-  {
-    id: "basic",
-    name: "Básico",
-    price: 97,
-    period: "/mês",
-    features: [
-      "Dashboard básico",
-      "Até 100 produtos",
-      "Gestão de pedidos",
-      "Suporte por email",
-    ],
-    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_BASIC,
-    popular: false,
-  },
-  {
-    id: "pro",
-    name: "Profissional",
-    price: 197,
-    period: "/mês",
-    features: [
-      "Dashboard completo",
-      "Produtos ilimitados",
-      "Integração WhatsApp",
-      "Analytics avançado",
-      "Suporte prioritário",
-    ],
-    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_PRO,
-    popular: true,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 397,
-    period: "/mês",
-    features: [
-      "Múltiplos restaurantes",
-      "API personalizada",
-      "Relatórios avançados",
-      "Suporte 24/7",
-    ],
-    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_ENTERPRISE,
-    popular: false,
-  },
-];
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  billingPeriod: string;
+  maxRestaurants: number;
+  maxProducts: number;
+  maxOrders: number;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+interface PlanFeature {
+  planFeature: {
+    id: string;
+    planId: string;
+    featureId: string;
+    isIncluded: boolean;
+  };
+  feature: {
+    id: string;
+    name: string;
+    description: string;
+    featureKey: string;
+    category: string;
+    isActive: boolean;
+  };
+}
 
 const features = [
   {
@@ -82,6 +68,32 @@ const features = [
 ];
 
 export default function Sales() {
+  // Buscar planos reais do banco de dados
+  const { data: plans } = useQuery<SubscriptionPlan[]>({
+    queryKey: ["/api/admin/plans"],
+    retry: false,
+  });
+
+  // Função para formatar preço
+  const formatPrice = (price: string) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(Number(price));
+  };
+
+  // Função para determinar se o plano é popular (Pro é o mais popular)
+  const isPlanPopular = (planName: string) => {
+    return planName.toLowerCase() === "pro";
+  };
+
+  // Função para determinar o ícone do plano
+  const getPlanIcon = (planName: string) => {
+    if (planName.toLowerCase() === "enterprise") return Crown;
+    if (planName.toLowerCase() === "pro") return Zap;
+    return Sparkles;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -175,54 +187,108 @@ export default function Sales() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-8" data-testid="pricing-title">Escolha seu plano</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
-                className={`rounded-lg p-6 border-2 transition-all ${
-                  plan.popular
-                    ? "bg-primary text-primary-foreground border-primary scale-105 shadow-lg"
-                    : "bg-card border-border shadow-md hover:shadow-lg"
-                }`}
-                data-testid={`plan-${plan.id}`}
-              >
-                <div className="text-center mb-6">
-                  {plan.popular && (
-                    <div className="bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm font-medium mb-2 inline-block">
-                      Mais Popular
+            {plans?.filter(plan => plan.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map((plan) => {
+              const popular = isPlanPopular(plan.name);
+              const PlanIcon = getPlanIcon(plan.name);
+              
+              return (
+                <div
+                  key={plan.id}
+                  className={`rounded-lg p-6 border-2 transition-all relative ${
+                    popular
+                      ? "bg-primary text-primary-foreground border-primary scale-105 shadow-lg"
+                      : "bg-card border-border shadow-md hover:shadow-lg"
+                  }`}
+                  data-testid={`plan-${plan.id}`}
+                >
+                  {popular && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <div className="bg-accent text-accent-foreground px-4 py-1 rounded-full text-sm font-medium">
+                        Mais Popular
+                      </div>
                     </div>
                   )}
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <div className="text-4xl font-bold mb-2">R$ {plan.price}</div>
-                  <div className={plan.popular ? "opacity-80" : "text-muted-foreground"}>
-                    {plan.period}
+                  
+                  <div className="text-center mb-6">
+                    <div className="flex justify-center mb-3">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        popular ? "bg-white/20" : "bg-primary/10"
+                      }`}>
+                        <PlanIcon className={`h-6 w-6 ${popular ? "text-white" : "text-primary"}`} />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                    <p className={`text-sm mb-4 ${popular ? "text-white/80" : "text-muted-foreground"}`}>
+                      {plan.description}
+                    </p>
+                    <div className="text-4xl font-bold mb-2">{formatPrice(plan.price)}</div>
+                    <div className={popular ? "opacity-80" : "text-muted-foreground"}>
+                      /{plan.billingPeriod === "monthly" ? "mês" : "ano"}
+                    </div>
                   </div>
-                </div>
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <CheckCircle className={`mr-3 h-4 w-4 ${plan.popular ? "text-white" : "text-green-500"}`} />
-                      <span>{feature}</span>
+                  
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-center">
+                      <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                      <span>{plan.maxRestaurants === 1 ? "1 restaurante" : `${plan.maxRestaurants} restaurantes`}</span>
                     </li>
-                  ))}
-                </ul>
-                <Button
-                  onClick={() => {
-                    // Save selected plan to localStorage
-                    localStorage.setItem('selectedPlan', plan.name);
-                    // Redirect to restaurant setup
-                    window.location.href = "/setup-restaurant";
-                  }}
-                  className={`w-full py-3 font-semibold transition-colors ${
-                    plan.popular
-                      ? "bg-white text-primary hover:bg-gray-100"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  }`}
-                  data-testid={`button-select-${plan.id}`}
-                >
-                  Começar agora
-                </Button>
-              </div>
-            ))}
+                    <li className="flex items-center">
+                      <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                      <span>Até {plan.maxProducts} produtos</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                      <span>{plan.maxOrders} pedidos/mês</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                      <span>Dashboard completo</span>
+                    </li>
+                    {plan.name.toLowerCase() !== "trial" && (
+                      <>
+                        <li className="flex items-center">
+                          <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                          <span>Relatórios de lucro</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                          <span>Integração WhatsApp</span>
+                        </li>
+                      </>
+                    )}
+                    {plan.name.toLowerCase() === "enterprise" && (
+                      <>
+                        <li className="flex items-center">
+                          <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                          <span>API personalizada</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className={`mr-3 h-4 w-4 ${popular ? "text-white" : "text-green-500"}`} />
+                          <span>Suporte prioritário</span>
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                  
+                  <Button
+                    onClick={() => {
+                      // Save selected plan to localStorage
+                      localStorage.setItem('selectedPlan', plan.name);
+                      // Redirect to restaurant setup
+                      window.location.href = "/setup-restaurant";
+                    }}
+                    className={`w-full py-3 font-semibold transition-colors ${
+                      popular
+                        ? "bg-white text-primary hover:bg-gray-100"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    }`}
+                    data-testid={`button-select-${plan.id}`}
+                  >
+                    {plan.name.toLowerCase() === "trial" ? "Teste Grátis" : "Começar Agora"}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

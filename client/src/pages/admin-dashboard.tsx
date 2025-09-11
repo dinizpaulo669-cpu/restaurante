@@ -27,8 +27,13 @@ import {
   Calendar,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Cog
 } from "lucide-react";
+
+import PlanModal from "@/components/admin/PlanModal";
+import FeatureModal from "@/components/admin/FeatureModal";
+import PlanFeaturesModal from "@/components/admin/PlanFeaturesModal";
 
 interface AdminUser {
   id: string;
@@ -97,6 +102,14 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  // Modal states
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | undefined>();
+  const [featureModalOpen, setFeatureModalOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<any | undefined>();
+  const [planFeaturesModalOpen, setPlanFeaturesModalOpen] = useState(false);
+  const [selectedPlanForFeatures, setSelectedPlanForFeatures] = useState<SubscriptionPlan | undefined>();
 
   // Verificar autenticação admin
   const { data: adminUser, isLoading: adminLoading } = useQuery<AdminUser>({
@@ -158,6 +171,52 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  // Modal handlers
+  const handleCreatePlan = () => {
+    setSelectedPlan(undefined);
+    setPlanModalOpen(true);
+  };
+
+  const handleEditPlan = (plan: SubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setPlanModalOpen(true);
+  };
+
+  const handleManagePlanFeatures = (plan: SubscriptionPlan) => {
+    setSelectedPlanForFeatures(plan);
+    setPlanFeaturesModalOpen(true);
+  };
+
+  const handleCreateFeature = () => {
+    setSelectedFeature(undefined);
+    setFeatureModalOpen(true);
+  };
+
+  // Delete mutations
+  const deletePlanMutation = useMutation({
+    mutationFn: (planId: string) => apiRequest("DELETE", `/api/admin/plans/${planId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plans"] });
+      toast({
+        title: "Plano excluído!",
+        description: "O plano foi excluído com sucesso",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir plano",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeletePlan = (planId: string) => {
+    if (confirm("Tem certeza que deseja excluir este plano?")) {
+      deletePlanMutation.mutate(planId);
+    }
   };
 
   // Função para formatar data
@@ -454,7 +513,7 @@ export default function AdminDashboard() {
           <TabsContent value="plans" className="space-y-6 mt-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
-              <Button data-testid="button-create-plan">
+              <Button onClick={handleCreatePlan} data-testid="button-create-plan">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Plano
               </Button>
@@ -487,11 +546,31 @@ export default function AdminDashboard() {
                       <p>• {plan.maxOrders} pedidos/mês</p>
                     </div>
                     <div className="flex space-x-2 pt-4">
-                      <Button size="sm" variant="outline" data-testid={`button-edit-plan-${plan.id}`}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleEditPlan(plan)}
+                        data-testid={`button-edit-plan-${plan.id}`}
+                      >
                         <Edit className="h-3 w-3 mr-1" />
                         Editar
                       </Button>
-                      <Button size="sm" variant="outline" data-testid={`button-delete-plan-${plan.id}`}>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleManagePlanFeatures(plan)}
+                        data-testid={`button-features-plan-${plan.id}`}
+                      >
+                        <Cog className="h-3 w-3 mr-1" />
+                        Funcionalidades
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDeletePlan(plan.id)}
+                        disabled={deletePlanMutation.isPending}
+                        data-testid={`button-delete-plan-${plan.id}`}
+                      >
                         <Trash2 className="h-3 w-3 mr-1" />
                         Excluir
                       </Button>
@@ -506,7 +585,7 @@ export default function AdminDashboard() {
           <TabsContent value="features" className="space-y-6 mt-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Funcionalidades do Sistema</h2>
-              <Button data-testid="button-create-feature">
+              <Button onClick={handleCreateFeature} data-testid="button-create-feature">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Funcionalidade
               </Button>
@@ -563,6 +642,27 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modals */}
+      <PlanModal
+        plan={selectedPlan}
+        isOpen={planModalOpen}
+        onClose={() => setPlanModalOpen(false)}
+      />
+
+      <FeatureModal
+        feature={selectedFeature}
+        isOpen={featureModalOpen}
+        onClose={() => setFeatureModalOpen(false)}
+      />
+
+      {selectedPlanForFeatures && (
+        <PlanFeaturesModal
+          plan={selectedPlanForFeatures}
+          isOpen={planFeaturesModalOpen}
+          onClose={() => setPlanFeaturesModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
