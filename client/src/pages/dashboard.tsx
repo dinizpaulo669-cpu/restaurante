@@ -16,6 +16,7 @@ import { CategoryList } from "@/components/category-list";
 import { AdditionalForm } from "@/components/additional-form";
 import { AdditionalList } from "@/components/additional-list";
 import { OrderCard } from "@/components/order-card";
+import { PlanoSelector } from "@/components/PlanoSelector";
 import { 
   Home, 
   Package, 
@@ -2976,9 +2977,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground">Selecione um plano e gere o pagamento PIX</p>
             </CardHeader>
             <CardContent>
-              <div id="planos-container" className="space-y-4">
-                <p className="text-center text-muted-foreground">Carregando planos disponíveis...</p>
-              </div>
+              <PlanoSelector restaurantId={restaurant?.id} />
             </CardContent>
           </Card>
         </div>
