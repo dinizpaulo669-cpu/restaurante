@@ -547,6 +547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderNumber: orders.orderNumber,
           customerId: orders.customerId,
           restaurantId: orders.restaurantId,
+          tableId: orders.tableId, // CRITICAL: Adding missing tableId field
           customerName: orders.customerName,
           customerPhone: orders.customerPhone,
           customerAddress: orders.customerAddress,
@@ -621,6 +622,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching favorites:", error);
       res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  // Adicionar restaurante aos favoritos
+  app.post("/api/customer/favorites/:restaurantId", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const { restaurantId } = req.params;
+      
+      // Verificar se o restaurante existe
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurante não encontrado" });
+      }
+      
+      // Verificar se já existe nos favoritos
+      const [existingFavorite] = await db
+        .select()
+        .from(userFavorites)
+        .where(and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.restaurantId, restaurantId)
+        ))
+        .limit(1);
+        
+      if (existingFavorite) {
+        return res.status(400).json({ message: "Restaurante já está nos favoritos" });
+      }
+      
+      // Adicionar aos favoritos
+      await db.insert(userFavorites).values({
+        userId: userId,
+        restaurantId: restaurantId
+      });
+      
+      res.json({ message: "Restaurante adicionado aos favoritos com sucesso" });
+    } catch (error) {
+      console.error("Error adding to favorites:", error);
+      res.status(500).json({ message: "Erro ao adicionar aos favoritos" });
+    }
+  });
+
+  // Remover restaurante dos favoritos
+  app.delete("/api/customer/favorites/:restaurantId", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const { restaurantId } = req.params;
+      
+      // Remover dos favoritos
+      await db
+        .delete(userFavorites)
+        .where(and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.restaurantId, restaurantId)
+        ));
+      
+      res.json({ message: "Restaurante removido dos favoritos com sucesso" });
+    } catch (error) {
+      console.error("Error removing from favorites:", error);
+      res.status(500).json({ message: "Erro ao remover dos favoritos" });
     }
   });
 
@@ -1508,14 +1582,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (cityKey) {
-        res.json(neighborhoodsData[cityKey]);
+        // Ordenar os bairros alfabeticamente antes de retornar
+        const sortedNeighborhoods = neighborhoodsData[cityKey].sort((a, b) => 
+          a.toLowerCase().localeCompare(b.toLowerCase(), 'pt-BR')
+        );
+        res.json(sortedNeighborhoods);
       } else {
         // Se não tiver dados locais, retornar uma lista genérica baseada no nome da cidade
         const genericNeighborhoods = [
           'Centro', 'Vila Nova', 'Jardim', 'São José', 'Santa Maria',
           'Boa Vista', 'Alto', 'Bairro Novo', 'Industrial', 'Residencial'
         ];
-        res.json(genericNeighborhoods);
+        // Ordenar também a lista genérica alfabeticamente
+        const sortedGenericNeighborhoods = genericNeighborhoods.sort((a, b) => 
+          a.toLowerCase().localeCompare(b.toLowerCase(), 'pt-BR')
+        );
+        res.json(sortedGenericNeighborhoods);
       }
     } catch (error) {
       console.error("Error fetching neighborhoods:", error);
@@ -1773,6 +1855,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public coupons:", error);
       res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
+  // Validar cupom para restaurante específico
+  app.post("/api/restaurants/:restaurantId/coupons/validate", async (req, res) => {
+    try {
+      const { restaurantId } = req.params;
+      const { code, orderValue } = req.body;
+      
+      if (!code || !orderValue) {
+        return res.status(400).json({ message: "Código do cupom e valor do pedido são obrigatórios" });
+      }
+
+      const [coupon] = await db
+        .select()
+        .from(coupons)
+        .where(and(
+          eq(coupons.code, code.toUpperCase()),
+          eq(coupons.restaurantId, restaurantId),
+          eq(coupons.isActive, true)
+        ))
+        .limit(1);
+
+      if (!coupon) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: "Cupom não encontrado ou inválido" 
+        });
+      }
+
+      const now = new Date();
+      if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: "Cupom fora do período de validade" 
+        });
+      }
+
+      if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: "Cupom esgotado" 
+        });
+      }
+
+      if (coupon.minOrderValue && parseFloat(orderValue) < parseFloat(coupon.minOrderValue)) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: `Valor mínimo do pedido deve ser R$ ${parseFloat(coupon.minOrderValue).toFixed(2)}` 
+        });
+      }
+
+      // Calcular desconto
+      let discount = 0;
+      if (coupon.discountType === "percentage") {
+        discount = parseFloat(orderValue) * (parseFloat(coupon.discountValue) / 100);
+      } else {
+        discount = parseFloat(coupon.discountValue);
+      }
+
+      // Desconto não pode ser maior que o valor do pedido
+      discount = Math.min(discount, parseFloat(orderValue));
+
+      res.json({
+        valid: true,
+        coupon: {
+          id: coupon.id,
+          code: coupon.code,
+          description: coupon.description,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue
+        },
+        discount: discount
+      });
+    } catch (error) {
+      console.error("Error validating coupon:", error);
+      res.status(500).json({ 
+        valid: false, 
+        message: "Erro interno ao validar cupom" 
+      });
     }
   });
 

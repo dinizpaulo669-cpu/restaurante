@@ -140,6 +140,7 @@ export default function Dashboard() {
   const [serviceAreas, setServiceAreas] = useState<any[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<{[key: string]: {selected: boolean, fee: string}}>({});
+  const [neighborhoodSearchTerm, setNeighborhoodSearchTerm] = useState("");
 
   // Query para cupons - movida para o topo para evitar erro de hooks
   const { data: coupons = [] } = useQuery<Coupon[]>({
@@ -2341,8 +2342,39 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {neighborhoods.map(neighborhood => (
-                            <div key={neighborhood} className="flex items-center gap-4 p-3 border rounded-lg">
+                          {/* Barra de pesquisa de bairros */}
+                          <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                            <input
+                              type="text"
+                              placeholder="Pesquisar bairros..."
+                              value={neighborhoodSearchTerm}
+                              onChange={(e) => setNeighborhoodSearchTerm(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                              data-testid="input-neighborhood-search"
+                            />
+                          </div>
+
+                          {(() => {
+                            const filteredNeighborhoods = neighborhoods.filter(neighborhood => 
+                              neighborhood.toLowerCase().includes(neighborhoodSearchTerm.toLowerCase())
+                            );
+
+                            if (filteredNeighborhoods.length === 0 && neighborhoodSearchTerm) {
+                              return (
+                                <div className="text-center py-6">
+                                  <p className="text-muted-foreground">
+                                    Nenhum bairro encontrado para "{neighborhoodSearchTerm}"
+                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    Tente outro termo de busca
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            return filteredNeighborhoods.map(neighborhood => (
+                              <div key={neighborhood} className="flex items-center gap-4 p-3 border rounded-lg">
                               <input
                                 type="checkbox"
                                 checked={selectedNeighborhoods[neighborhood]?.selected || false}
@@ -2369,7 +2401,8 @@ export default function Dashboard() {
                                 <span className="text-sm text-muted-foreground">R$</span>
                               </div>
                             </div>
-                          ))}
+                            ));
+                          })()}
                         </div>
                       )}
 
