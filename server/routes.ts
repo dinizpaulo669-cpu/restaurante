@@ -2151,7 +2151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(orders)
         .where(and(
           eq(orders.restaurantId, restaurant.id),
-          sql`${orders.status} IN ('delivered', 'preparing', 'out_for_delivery')`
+          eq(orders.status, 'delivered')
         ));
 
       const [todayOrdersResult] = await db
@@ -2247,6 +2247,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching restaurant stats:", error);
       res.status(500).json({ message: "Failed to fetch restaurant stats" });
+    }
+  });
+
+  // Endpoint para relatório de lucro do restaurante
+  app.get("/api/restaurant/profit-report", isDevAuthenticated, async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante do usuário autenticado
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Calcular lucro por produto baseado em vendas
+      const profitByProduct = await db
+        .select({
+          productId: orderItems.productId,
+          productName: products.name,
+          price: products.price,
+          costPrice: products.costPrice,
+          totalQuantitySold: sql<number>`sum(${orderItems.quantity})`,
+          totalRevenue: sql<number>`sum(${orderItems.totalPrice})`,
+          totalCost: sql<number>`sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          totalProfit: sql<number>`sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          profitMargin: sql<number>`case when sum(${orderItems.totalPrice}) > 0 then ((sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))) / sum(${orderItems.totalPrice})) * 100 else 0 end`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          eq(orders.status, 'delivered')
+        ))
+        .groupBy(orderItems.productId, products.name, products.price, products.costPrice)
+        .orderBy(sql`sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0)) DESC`);
+
+      // Lucro total do restaurante
+      const [totalProfitResult] = await db
+        .select({
+          totalRevenue: sql<number>`coalesce(sum(${orderItems.totalPrice}), 0)`,
+          totalCost: sql<number>`coalesce(sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0)), 0)`,
+          totalProfit: sql<number>`coalesce(sum(${orderItems.totalPrice}), 0) - coalesce(sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0)), 0)`,
+          profitMargin: sql<number>`case when sum(${orderItems.totalPrice}) > 0 then ((sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))) / sum(${orderItems.totalPrice})) * 100 else 0 end`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          eq(orders.status, 'delivered')
+        ));
+
+      // Lucro por categoria
+      const profitByCategory = await db
+        .select({
+          category: categories.name,
+          totalRevenue: sql<number>`sum(${orderItems.totalPrice})`,
+          totalCost: sql<number>`sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          totalProfit: sql<number>`sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          profitMargin: sql<number>`case when sum(${orderItems.totalPrice}) > 0 then ((sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))) / sum(${orderItems.totalPrice})) * 100 else 0 end`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`${categories.name} IS NOT NULL`,
+          sql`${orders.status} IN ('delivered', 'preparing', 'out_for_delivery')`
+        ))
+        .groupBy(categories.name)
+        .orderBy(sql`sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0)) DESC`);
+
+      // Lucro por dia (últimos 7 dias)
+      const profitByDay = await db
+        .select({
+          date: sql<string>`DATE(${orders.createdAt})`,
+          totalRevenue: sql<number>`sum(${orderItems.totalPrice})`,
+          totalCost: sql<number>`sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          totalProfit: sql<number>`sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))`,
+          profitMargin: sql<number>`case when sum(${orderItems.totalPrice}) > 0 then ((sum(${orderItems.totalPrice}) - sum(${orderItems.quantity} * coalesce(${products.costPrice}, 0))) / sum(${orderItems.totalPrice})) * 100 else 0 end`
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`,
+          sql`${orders.status} IN ('delivered', 'preparing', 'out_for_delivery')`
+        ))
+        .groupBy(sql`DATE(${orders.createdAt})`)
+        .orderBy(sql`DATE(${orders.createdAt}) ASC`);
+
+      res.json({
+        totalProfit: {
+          totalRevenue: Number(totalProfitResult?.totalRevenue || 0),
+          totalCost: Number(totalProfitResult?.totalCost || 0),
+          totalProfit: Number(totalProfitResult?.totalProfit || 0),
+          profitMargin: Number(totalProfitResult?.profitMargin || 0)
+        },
+        profitByProduct: profitByProduct.map(item => ({
+          productId: item.productId,
+          productName: item.productName,
+          price: Number(item.price || 0),
+          costPrice: Number(item.costPrice || 0),
+          totalQuantitySold: Number(item.totalQuantitySold || 0),
+          totalRevenue: Number(item.totalRevenue || 0),
+          totalCost: Number(item.totalCost || 0),
+          totalProfit: Number(item.totalProfit || 0),
+          profitMargin: Number(item.profitMargin || 0)
+        })),
+        profitByCategory: profitByCategory.map(item => ({
+          category: item.category,
+          totalRevenue: Number(item.totalRevenue || 0),
+          totalCost: Number(item.totalCost || 0),
+          totalProfit: Number(item.totalProfit || 0),
+          profitMargin: Number(item.profitMargin || 0)
+        })),
+        profitByDay: profitByDay.map(item => ({
+          date: item.date,
+          totalRevenue: Number(item.totalRevenue || 0),
+          totalCost: Number(item.totalCost || 0),
+          totalProfit: Number(item.totalProfit || 0),
+          profitMargin: Number(item.profitMargin || 0)
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching profit report:", error);
+      res.status(500).json({ message: "Failed to fetch profit report" });
     }
   });
 
