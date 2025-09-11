@@ -51,7 +51,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
         planId,
         billingPeriodMonths,
       });
-      return response as PixPaymentResponse;
+      return await response.json() as PixPaymentResponse;
     },
     onSuccess: (data) => {
       console.log("PIX payment data received:", data);
