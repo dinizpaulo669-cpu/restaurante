@@ -9,8 +9,8 @@ import bcrypt from "bcrypt";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -2709,6 +2709,445 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // === ADMIN ROUTES ===
+
+  // Middleware para autenticação de admin
+  const isAdminAuthenticated = async (req: any, res: any, next: any) => {
+    try {
+      if (req.session.adminUser) {
+        return next();
+      }
+      
+      return res.status(401).json({ message: "Admin authentication required" });
+    } catch (error) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+  };
+
+  // Login administrativo
+  app.post('/api/admin/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password required" });
+      }
+      
+      // Verificar se é o usuário padrão Paulo135
+      if (username === "Paulo135" && password === "Paulo135") {
+        // Criar/buscar usuário admin no banco
+        let [adminUser] = await db.select().from(adminUsers).where(eq(adminUsers.username, username)).limit(1);
+        
+        if (!adminUser) {
+          const hashedPassword = await bcrypt.hash(password, 12);
+          [adminUser] = await db.insert(adminUsers).values({
+            username,
+            password: hashedPassword,
+            fullName: "Paulo Administrador",
+            email: "paulo135@admin.com",
+            role: "superadmin"
+          }).returning();
+        }
+        
+        // Atualizar último login
+        await db.update(adminUsers)
+          .set({ lastLoginAt: new Date() })
+          .where(eq(adminUsers.id, adminUser.id));
+        
+        // Salvar na sessão
+        (req as any).session.adminUser = {
+          id: adminUser.id,
+          username: adminUser.username,
+          fullName: adminUser.fullName,
+          role: adminUser.role
+        };
+        
+        res.json({ 
+          message: "Login successful", 
+          user: {
+            id: adminUser.id,
+            username: adminUser.username,
+            fullName: adminUser.fullName,
+            role: adminUser.role
+          }
+        });
+      } else {
+        res.status(401).json({ message: "Invalid credentials" });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Logout administrativo
+  app.post('/api/admin/logout', isAdminAuthenticated, async (req: any, res) => {
+    req.session.adminUser = null;
+    res.json({ message: "Logout successful" });
+  });
+
+  // Verificar sessão admin
+  app.get('/api/admin/me', async (req: any, res) => {
+    try {
+      if (req.session.adminUser) {
+        res.json(req.session.adminUser);
+      } else {
+        res.status(401).json({ message: "Not authenticated" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user info" });
+    }
+  });
+
+  // Dashboard - estatísticas gerais
+  app.get('/api/admin/dashboard', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      // Total de restaurantes
+      const [totalRestaurantsResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(restaurants);
+      
+      // Total de usuários
+      const [totalUsersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+      
+      // Total de pedidos
+      const [totalOrdersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders);
+      
+      // Restaurantes ativos
+      const [activeRestaurantsResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(restaurants)
+        .where(eq(restaurants.isActive, true));
+      
+      // Usuários em trial
+      const [trialUsersResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.isTrialActive, true));
+      
+      // Receita total (aproximada baseada em pedidos delivered)
+      const [revenueResult] = await db
+        .select({ total: sql<number>`COALESCE(sum(${orders.total}), 0)` })
+        .from(orders)
+        .where(eq(orders.status, "delivered"));
+
+      res.json({
+        totalRestaurants: totalRestaurantsResult.count,
+        totalUsers: totalUsersResult.count,
+        totalOrders: totalOrdersResult.count,
+        activeRestaurants: activeRestaurantsResult.count,
+        trialUsers: trialUsersResult.count,
+        totalRevenue: Number(revenueResult.total || 0)
+      });
+    } catch (error) {
+      console.error("Dashboard error:", error);
+      res.status(500).json({ message: "Failed to get dashboard data" });
+    }
+  });
+
+  // Listar todos os restaurantes
+  app.get('/api/admin/restaurants', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string;
+      const offset = (page - 1) * limit;
+
+      const whereConditions = [];
+      if (search) {
+        whereConditions.push(
+          or(
+            ilike(restaurants.name, `%${search}%`),
+            ilike(restaurants.email, `%${search}%`),
+            ilike(users.email, `%${search}%`)
+          )
+        );
+      }
+
+      let query = db
+        .select({
+          restaurant: restaurants,
+          owner: {
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            subscriptionPlan: users.subscriptionPlan,
+            isTrialActive: users.isTrialActive,
+            trialEndsAt: users.trialEndsAt
+          }
+        })
+        .from(restaurants)
+        .leftJoin(users, eq(restaurants.ownerId, users.id))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      if (whereConditions.length > 0) {
+        query = query.where(and(...whereConditions));
+      }
+
+      const restaurantsData = await query;
+
+      // Contar total
+      let countQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(restaurants)
+        .leftJoin(users, eq(restaurants.ownerId, users.id));
+
+      if (whereConditions.length > 0) {
+        countQuery = countQuery.where(and(...whereConditions));
+      }
+
+      const [{ count }] = await countQuery;
+
+      res.json({
+        restaurants: restaurantsData,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          pages: Math.ceil(count / limit)
+        }
+      });
+    } catch (error) {
+      console.error("Admin restaurants error:", error);
+      res.status(500).json({ message: "Failed to get restaurants" });
+    }
+  });
+
+  // Listar todos os usuários
+  app.get('/api/admin/users', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string;
+      const role = req.query.role as string;
+      const offset = (page - 1) * limit;
+
+      const conditions = [];
+      
+      if (search) {
+        conditions.push(
+          or(
+            ilike(users.email, `%${search}%`),
+            ilike(users.firstName, `%${search}%`),
+            ilike(users.lastName, `%${search}%`)
+          )
+        );
+      }
+      
+      if (role) {
+        conditions.push(eq(users.role, role));
+      }
+
+      let query = db
+        .select()
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const usersData = await query;
+
+      // Contar total
+      let countQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+
+      if (conditions.length > 0) {
+        countQuery = countQuery.where(and(...conditions));
+      }
+
+      const [{ count }] = await countQuery;
+
+      res.json({
+        users: usersData,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          pages: Math.ceil(count / limit)
+        }
+      });
+    } catch (error) {
+      console.error("Admin users error:", error);
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // CRUD para planos de assinatura
+  app.get('/api/admin/plans', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const plans = await db
+        .select()
+        .from(subscriptionPlans)
+        .orderBy(subscriptionPlans.sortOrder, subscriptionPlans.createdAt);
+
+      res.json(plans);
+    } catch (error) {
+      console.error("Plans error:", error);
+      res.status(500).json({ message: "Failed to get plans" });
+    }
+  });
+
+  app.post('/api/admin/plans', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const planData = insertSubscriptionPlanSchema.parse(req.body);
+      
+      const [newPlan] = await db
+        .insert(subscriptionPlans)
+        .values(planData)
+        .returning();
+
+      res.json(newPlan);
+    } catch (error) {
+      console.error("Create plan error:", error);
+      res.status(500).json({ message: "Failed to create plan" });
+    }
+  });
+
+  app.put('/api/admin/plans/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const planId = req.params.id;
+      const planData = insertSubscriptionPlanSchema.parse(req.body);
+      
+      const [updatedPlan] = await db
+        .update(subscriptionPlans)
+        .set({ ...planData, updatedAt: new Date() })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+
+      if (!updatedPlan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      res.json(updatedPlan);
+    } catch (error) {
+      console.error("Update plan error:", error);
+      res.status(500).json({ message: "Failed to update plan" });
+    }
+  });
+
+  app.delete('/api/admin/plans/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const planId = req.params.id;
+      
+      const [deletedPlan] = await db
+        .delete(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+
+      if (!deletedPlan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      res.json({ message: "Plan deleted successfully" });
+    } catch (error) {
+      console.error("Delete plan error:", error);
+      res.status(500).json({ message: "Failed to delete plan" });
+    }
+  });
+
+  // CRUD para funcionalidades do sistema
+  app.get('/api/admin/features', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const features = await db
+        .select()
+        .from(systemFeatures)
+        .orderBy(systemFeatures.category, systemFeatures.name);
+
+      res.json(features);
+    } catch (error) {
+      console.error("Features error:", error);
+      res.status(500).json({ message: "Failed to get features" });
+    }
+  });
+
+  app.post('/api/admin/features', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const featureData = insertSystemFeatureSchema.parse(req.body);
+      
+      const [newFeature] = await db
+        .insert(systemFeatures)
+        .values(featureData)
+        .returning();
+
+      res.json(newFeature);
+    } catch (error) {
+      console.error("Create feature error:", error);
+      res.status(500).json({ message: "Failed to create feature" });
+    }
+  });
+
+  // Associar funcionalidades a planos
+  app.get('/api/admin/plans/:planId/features', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const planId = req.params.planId;
+
+      const planFeaturesData = await db
+        .select({
+          planFeature: planFeatures,
+          feature: systemFeatures
+        })
+        .from(planFeatures)
+        .leftJoin(systemFeatures, eq(planFeatures.featureId, systemFeatures.id))
+        .where(eq(planFeatures.planId, planId));
+
+      res.json(planFeaturesData);
+    } catch (error) {
+      console.error("Plan features error:", error);
+      res.status(500).json({ message: "Failed to get plan features" });
+    }
+  });
+
+  app.post('/api/admin/plans/:planId/features', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const planId = req.params.planId;
+      const { featureId, isIncluded } = req.body;
+
+      // Verificar se já existe
+      const [existing] = await db
+        .select()
+        .from(planFeatures)
+        .where(and(
+          eq(planFeatures.planId, planId),
+          eq(planFeatures.featureId, featureId)
+        ))
+        .limit(1);
+
+      if (existing) {
+        // Atualizar existente
+        const [updated] = await db
+          .update(planFeatures)
+          .set({ isIncluded })
+          .where(eq(planFeatures.id, existing.id))
+          .returning();
+        
+        res.json(updated);
+      } else {
+        // Criar novo
+        const [newPlanFeature] = await db
+          .insert(planFeatures)
+          .values({ planId, featureId, isIncluded })
+          .returning();
+
+        res.json(newPlanFeature);
+      }
+    } catch (error) {
+      console.error("Add plan feature error:", error);
+      res.status(500).json({ message: "Failed to add plan feature" });
     }
   });
 

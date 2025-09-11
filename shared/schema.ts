@@ -493,3 +493,135 @@ export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type CouponUsage = typeof couponUsages.$inferSelect;
 export type InsertCouponUsage = z.infer<typeof insertCouponUsageSchema>;
+
+// Tabela de Planos de Assinatura
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // "Básico", "Pro", "Enterprise"
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  billingPeriod: varchar("billing_period").notNull().default("monthly"), // "monthly" | "yearly"
+  maxRestaurants: integer("max_restaurants").default(1),
+  maxProducts: integer("max_products").default(50),
+  maxOrders: integer("max_orders").default(100), // Por mês
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tabela de Funcionalidades do Sistema
+export const systemFeatures = pgTable("system_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // "Relatórios de Lucro", "WhatsApp", "Sistema de Cupons"
+  description: text("description"),
+  featureKey: varchar("feature_key").unique().notNull(), // "profit_reports", "whatsapp_integration"
+  category: varchar("category").notNull(), // "reporting", "communication", "marketing"
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Tabela de Relação entre Planos e Funcionalidades
+export const planFeatures = pgTable("plan_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  featureId: varchar("feature_id").notNull().references(() => systemFeatures.id),
+  isIncluded: boolean("is_included").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Tabela de Usuários Administrativos
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username").unique().notNull(),
+  password: varchar("password").notNull(), // Hashed
+  email: varchar("email").unique(),
+  fullName: varchar("full_name"),
+  role: varchar("role").notNull().default("admin"), // "admin", "superadmin"
+  isActive: boolean("is_active").default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tabela de Logs de Atividade Admin
+export const adminLogs = pgTable("admin_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => adminUsers.id),
+  action: varchar("action").notNull(), // "create_plan", "update_user", "view_reports"
+  entityType: varchar("entity_type"), // "user", "restaurant", "plan"
+  entityId: varchar("entity_id"),
+  details: jsonb("details"), // JSON com detalhes da ação
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations para novas tabelas
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  planFeatures: many(planFeatures),
+}));
+
+export const systemFeaturesRelations = relations(systemFeatures, ({ many }) => ({
+  planFeatures: many(planFeatures),
+}));
+
+export const planFeaturesRelations = relations(planFeatures, ({ one }) => ({
+  plan: one(subscriptionPlans, { fields: [planFeatures.planId], references: [subscriptionPlans.id] }),
+  feature: one(systemFeatures, { fields: [planFeatures.featureId], references: [systemFeatures.id] }),
+}));
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  logs: many(adminLogs),
+}));
+
+export const adminLogsRelations = relations(adminLogs, ({ one }) => ({
+  admin: one(adminUsers, { fields: [adminLogs.adminId], references: [adminUsers.id] }),
+}));
+
+// Insert schemas para novas tabelas
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  price: z.union([z.string(), z.number()]).transform(val => String(val)),
+});
+
+export const insertSystemFeatureSchema = createInsertSchema(systemFeatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlanFeatureSchema = createInsertSchema(planFeatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+});
+
+export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Tipos para novas tabelas
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+
+export type SystemFeature = typeof systemFeatures.$inferSelect;
+export type InsertSystemFeature = z.infer<typeof insertSystemFeatureSchema>;
+
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = z.infer<typeof insertPlanFeatureSchema>;
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+
+export type AdminLog = typeof adminLogs.$inferSelect;
+export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
