@@ -396,27 +396,57 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Dono</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Restaurante</TableHead>
+                      <TableHead>Proprietário</TableHead>
                       <TableHead>Plano</TableHead>
                       <TableHead>Status Trial</TableHead>
-                      <TableHead>Cadastro</TableHead>
+                      <TableHead>Data de Cadastro</TableHead>
+                      <TableHead>Status Pagamento</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {restaurantsData?.restaurants?.map((item: Restaurant) => {
                       const trialStatus = getTrialStatus(item.owner.isTrialActive, item.owner.trialEndsAt);
+                      const createdAt = new Date(item.restaurant.createdAt);
+                      const now = new Date();
+                      const daysSinceCreated = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+                      
+                      // Determinar status de pagamento
+                      let paymentStatus = { label: "Em teste", color: "default" };
+                      if (!item.owner.isTrialActive) {
+                        // Se não está em trial mais, verificar se tem atraso
+                        if (daysSinceCreated > 35) { // 30 dias trial + 5 dias tolerância
+                          paymentStatus = { label: "Atrasado", color: "destructive" };
+                        } else {
+                          paymentStatus = { label: "Em dia", color: "default" };
+                        }
+                      }
+                      
                       return (
                         <TableRow key={item.restaurant.id} data-testid={`row-restaurant-${item.restaurant.id}`}>
-                          <TableCell className="font-medium">
-                            {item.restaurant.name}
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{item.restaurant.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.restaurant.category}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {item.owner.firstName} {item.owner.lastName}
+                            <div>
+                              <div className="font-medium">
+                                {item.owner.firstName} {item.owner.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.owner.email}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Tel: {item.owner.phone || 'N/A'}
+                              </div>
+                            </div>
                           </TableCell>
-                          <TableCell>{item.owner.email}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {item.owner.subscriptionPlan || "trial"}
@@ -428,12 +458,32 @@ export default function AdminDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {formatDate(item.restaurant.createdAt)}
+                            <div>
+                              <div>{formatDate(item.restaurant.createdAt)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {daysSinceCreated} dia{daysSinceCreated !== 1 ? 's' : ''} atrás
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={paymentStatus.color as any}>
+                              {paymentStatus.label}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant={item.restaurant.isActive ? "default" : "secondary"}>
                               {item.restaurant.isActive ? "Ativo" : "Inativo"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -466,26 +516,51 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Tipo</TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Role</TableHead>
                       <TableHead>Plano</TableHead>
                       <TableHead>Status Trial</TableHead>
-                      <TableHead>Cadastro</TableHead>
+                      <TableHead>Stripe Info</TableHead>
+                      <TableHead>Data de Cadastro</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersData?.users?.map((user: User) => {
                       const trialStatus = getTrialStatus(user.isTrialActive, user.trialEndsAt);
+                      const createdAt = new Date(user.createdAt);
+                      const now = new Date();
+                      const daysSinceCreated = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+                      
                       return (
                         <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                          <TableCell className="font-medium">
-                            {user.firstName} {user.lastName}
-                          </TableCell>
-                          <TableCell>{user.email}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {user.role === "restaurant_owner" ? "Restaurante" : "Cliente"}
+                            <div>
+                              <div className="font-medium">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                ID: {user.id.substring(0, 8)}...
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{user.email}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Tel: {user.phone || 'N/A'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Endereço: {user.address || 'N/A'}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={user.role === "restaurant_owner" ? "default" : "secondary"}>
+                              {user.role === "restaurant_owner" ? "Dono Restaurante" : 
+                               user.role === "customer" ? "Cliente" : 
+                               user.role === "employee" ? "Funcionário" : user.role}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -499,7 +574,38 @@ export default function AdminDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {formatDate(user.createdAt)}
+                            <div className="text-xs">
+                              <div>
+                                Customer: {user.stripeCustomerId ? 
+                                  <span className="text-green-600">✓ {user.stripeCustomerId.substring(0, 12)}...</span> : 
+                                  <span className="text-gray-500">N/A</span>
+                                }
+                              </div>
+                              <div>
+                                Subscription: {user.stripeSubscriptionId ? 
+                                  <span className="text-green-600">✓ {user.stripeSubscriptionId.substring(0, 12)}...</span> : 
+                                  <span className="text-gray-500">N/A</span>
+                                }
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div>{formatDate(user.createdAt)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {daysSinceCreated} dia{daysSinceCreated !== 1 ? 's' : ''} atrás
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

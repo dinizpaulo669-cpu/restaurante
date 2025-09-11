@@ -65,7 +65,10 @@ export default function PlanFeaturesModal({ plan, isOpen, onClose }: PlanFeature
     mutationFn: ({ featureId, isIncluded }: { featureId: string; isIncluded: boolean }) =>
       apiRequest("POST", `/api/admin/plans/${plan.id}/features`, { featureId, isIncluded }),
     onSuccess: () => {
+      // Invalidar múltiplas queries relacionadas
       queryClient.invalidateQueries({ queryKey: ["/api/admin/plans", plan.id, "features"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/features"] });
       toast({
         title: "Funcionalidade atualizada!",
         description: "A associação foi atualizada com sucesso",
