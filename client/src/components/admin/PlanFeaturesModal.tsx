@@ -52,11 +52,14 @@ export default function PlanFeaturesModal({ plan, isOpen, onClose }: PlanFeature
   });
 
   // Buscar funcionalidades já associadas ao plano
-  const { data: planFeatures } = useQuery<PlanFeature[]>({
+  const { data: planFeaturesData } = useQuery({
     queryKey: ["/api/admin/plans", plan.id, "features"],
     queryFn: () => apiRequest("GET", `/api/admin/plans/${plan.id}/features`),
     enabled: isOpen && !!plan.id,
   });
+
+  // Garantir que planFeatures seja um array
+  const planFeatures = Array.isArray(planFeaturesData) ? planFeaturesData : [];
 
   const updateFeatureMutation = useMutation({
     mutationFn: ({ featureId, isIncluded }: { featureId: string; isIncluded: boolean }) =>
@@ -103,7 +106,8 @@ export default function PlanFeaturesModal({ plan, isOpen, onClose }: PlanFeature
   };
 
   const isFeatureIncluded = (featureId: string): boolean => {
-    return planFeatures?.some(pf => pf.feature.id === featureId && pf.planFeature.isIncluded) || false;
+    if (!Array.isArray(planFeatures)) return false;
+    return planFeatures.some(pf => pf.feature.id === featureId && pf.planFeature.isIncluded) || false;
   };
 
   const formatPrice = (price: string) => {
