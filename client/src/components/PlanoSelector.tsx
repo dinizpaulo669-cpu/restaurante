@@ -128,7 +128,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
             Escolha seu plano:
           </Label>
           <div className="grid gap-4 mt-3">
-            {plans.map((plan) => (
+            {plans?.map((plan) => (
               <Card
                 key={plan.id}
                 className={`cursor-pointer transition-all ${
@@ -152,7 +152,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {plan.features.map((feature, index) => (
+                    {plan.features?.map((feature, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500" />
                         <span className="text-sm">{feature}</span>

@@ -3342,13 +3342,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available subscription plans for frontend
   app.get('/api/subscription-plans', async (req: any, res) => {
     try {
+      // Buscar todos os planos ativos
       const plans = await db
         .select()
         .from(subscriptionPlans)
         .where(eq(subscriptionPlans.isActive, true))
         .orderBy(subscriptionPlans.sortOrder);
 
-      res.json(plans);
+      // Buscar as features de cada plano
+      const plansWithFeatures = await Promise.all(
+        plans.map(async (plan) => {
+          const features = await db
+            .select({
+              name: systemFeatures.name,
+              description: systemFeatures.description
+            })
+            .from(planFeatures)
+            .innerJoin(systemFeatures, eq(planFeatures.featureId, systemFeatures.id))
+            .where(
+              and(
+                eq(planFeatures.planId, plan.id),
+                eq(planFeatures.isIncluded, true),
+                eq(systemFeatures.isActive, true)
+              )
+            );
+
+          return {
+            ...plan,
+            features: features.map(feature => feature.name || feature.description)
+          };
+        })
+      );
+
+      res.json(plansWithFeatures);
     } catch (error) {
       console.error("Error fetching plans:", error);
       res.status(500).json({ error: "Erro ao buscar planos" });
