@@ -17,6 +17,8 @@ import SetupRestaurant from "@/pages/setup-restaurant";
 import AuthCallback from "@/pages/auth-callback";
 import InternalLogin from "@/pages/internal-login";
 import ControlePage from "@/pages/controle";
+import DevLogin from "@/pages/desenvolvedor";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   return (
@@ -33,6 +35,8 @@ function Router() {
       <Route path="/setup-restaurant" component={SetupRestaurant} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/controle" component={ControlePage} />
+      <Route path="/desenvolvedor" component={DevLogin} />
+      <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/restaurant/:restaurantId" component={Menu} />
       <Route path="/menu/:restaurantId" component={Menu} />
       <Route component={NotFound} />
