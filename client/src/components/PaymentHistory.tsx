@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, CreditCard, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle, Clock, CreditCard, AlertCircle, QrCode, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
 
 interface PaymentRecord {
   id: string;
@@ -34,12 +39,26 @@ interface PendingPayment {
   };
 }
 
+interface PixPaymentDetails {
+  id: string;
+  amount: string;
+  expirationDate: string;
+  qrCodeImage: string;
+  qrCodePayload: string;
+  asaasPaymentId?: string;
+}
+
 interface PaymentHistoryData {
   paymentHistory: PaymentRecord[];
   pendingPayments: PendingPayment[];
 }
 
 export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
+  const [showPixModal, setShowPixModal] = useState(false);
+  const [pixDetails, setPixDetails] = useState<PixPaymentDetails | null>(null);
+  const [isLoadingPix, setIsLoadingPix] = useState(false);
+  const { toast } = useToast();
+
   const { data, isLoading } = useQuery<PaymentHistoryData>({
     queryKey: ["/api/payment-history", restaurantId],
     queryFn: async () => {
@@ -53,6 +72,49 @@ export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
     },
     enabled: !!restaurantId
   });
+
+  const handleViewPixDetails = async (paymentId: string) => {
+    setIsLoadingPix(true);
+    try {
+      const response = await fetch(`/api/pix/payment-details/${paymentId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch PIX details');
+      }
+      const details = await response.json();
+      setPixDetails(details);
+      setShowPixModal(true);
+    } catch (error) {
+      console.error('Error fetching PIX details:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os detalhes do PIX",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPix(false);
+    }
+  };
+
+  const handleCopyPixCode = async () => {
+    if (!pixDetails?.qrCodePayload) return;
+    
+    try {
+      await navigator.clipboard.writeText(pixDetails.qrCodePayload);
+      toast({
+        title: "Copiado!",
+        description: "Código PIX copiado para a área de transferência",
+      });
+    } catch (error) {
+      console.error('Error copying PIX code:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o código PIX",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -137,11 +199,28 @@ export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
                       Expira em: {formatDate(payment.expirationDate)}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right space-y-2">
                     <div className="text-lg font-bold text-orange-700">
                       {formatCurrency(payment.amount)}
                     </div>
                     {getStatusBadge(payment.status)}
+                    <div className="mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewPixDetails(payment.id)}
+                        disabled={isLoadingPix}
+                        className="text-xs"
+                        data-testid={`button-view-pix-${payment.id}`}
+                      >
+                        {isLoadingPix ? (
+                          <Clock className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <Eye className="w-3 h-3 mr-1" />
+                        )}
+                        Ver PIX
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -185,6 +264,79 @@ export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
           ))}
         </div>
       )}
+      
+      {/* Modal de Detalhes do PIX */}
+      <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Detalhes do PIX
+            </DialogTitle>
+          </DialogHeader>
+          
+          {pixDetails && (
+            <div className="space-y-4 pb-4">
+              <div className="text-center">
+                <img
+                  src={pixDetails.qrCodeImage}
+                  alt="QR Code PIX"
+                  className="mx-auto max-w-full h-auto border rounded"
+                  data-testid="img-pix-qr-code"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Valor:</span>
+                  <span className="font-bold">{formatCurrency(pixDetails.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Vencimento:</span>
+                  <span>{formatDate(pixDetails.expirationDate)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  Ou copie o código PIX:
+                </Label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={pixDetails.qrCodePayload}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-xs border rounded bg-gray-50"
+                    data-testid="input-pix-payload"
+                  />
+                  <Button
+                    onClick={handleCopyPixCode}
+                    size="sm"
+                    variant="outline"
+                    data-testid="button-copy-pix-payload"
+                  >
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-center text-sm text-muted-foreground">
+                Após o pagamento, seu plano será ativado automaticamente.
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowPixModal(false)}
+              variant="outline"
+              data-testid="button-close-pix-modal"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

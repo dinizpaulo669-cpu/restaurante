@@ -3310,6 +3310,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get PIX payment details by ID
+  app.get('/api/pix/payment-details/:paymentId', async (req: any, res) => {
+    try {
+      const { paymentId } = req.params;
+      let userId = "dev-user-internal";
+      
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+
+      // Find PIX payment in database
+      const [pixPayment] = await db
+        .select()
+        .from(pixPayments)
+        .where(
+          and(
+            eq(pixPayments.id, paymentId),
+            eq(pixPayments.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!pixPayment) {
+        return res.status(404).json({ error: 'PIX payment not found' });
+      }
+
+      // If we don't have QR code data stored, get from Asaas
+      let qrCodePayload = pixPayment.qrCodePayload;
+      let qrCodeImage = pixPayment.qrCodeImage;
+
+      if (!qrCodePayload && pixPayment.asaasPaymentId) {
+        try {
+          const qrCodeResponse = await fetch(`${process.env.ASAAS_BASE_URL}/payments/${pixPayment.asaasPaymentId}/pixQrCode`, {
+            method: 'GET',
+            headers: {
+              'access_token': process.env.ASAAS_API_TOKEN || '',
+            },
+          });
+
+          if (qrCodeResponse.ok) {
+            const qrCodeData = await qrCodeResponse.json();
+            qrCodePayload = qrCodeData.payload;
+            qrCodeImage = qrCodeData.encodedImage;
+          }
+        } catch (error) {
+          console.error('Error fetching QR code from Asaas:', error);
+        }
+      }
+
+      res.json({
+        id: pixPayment.id,
+        amount: pixPayment.amount,
+        expirationDate: pixPayment.expirationDate,
+        qrCodeImage: qrCodeImage ? `data:image/png;base64,${qrCodeImage}` : '',
+        qrCodePayload: qrCodePayload || '',
+        asaasPaymentId: pixPayment.asaasPaymentId
+      });
+
+    } catch (error) {
+      console.error('Error fetching PIX details:', error);
+      res.status(500).json({ error: 'Failed to fetch PIX details' });
+    }
+  });
+
   // Webhook to receive payment notifications from Asaas
   app.post('/api/webhooks/asaas', async (req: any, res) => {
     try {
