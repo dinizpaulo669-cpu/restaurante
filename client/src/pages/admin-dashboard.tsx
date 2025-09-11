@@ -55,7 +55,7 @@ interface Restaurant {
   restaurant: {
     id: string;
     name: string;
-    email: string;
+    category?: string;
     isActive: boolean;
     createdAt: string;
   };
@@ -64,7 +64,8 @@ interface Restaurant {
     email: string;
     firstName: string;
     lastName: string;
-    subscriptionPlan: string;
+    phone?: string;
+    subscriptionPlan?: string;
     isTrialActive: boolean;
     trialEndsAt: string | null;
   };
@@ -75,8 +76,12 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
+  address?: string;
   role: string;
-  subscriptionPlan: string;
+  subscriptionPlan?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
   isTrialActive: boolean;
   trialEndsAt: string | null;
   createdAt: string;
@@ -132,18 +137,16 @@ export default function AdminDashboard() {
   });
 
   // Listar restaurantes
-  const { data: restaurantsData } = useQuery<{restaurants: Restaurant[], pagination: any}>({
+  const { data: restaurantsData } = useQuery({
     queryKey: ["/api/admin/restaurants", searchTerm],
-    queryFn: () => apiRequest("GET", `/api/admin/restaurants?search=${searchTerm}&limit=50`),
     enabled: !!adminUser,
-  });
+  }) as { data?: { restaurants: any[], pagination: any } };
 
   // Listar usuários
-  const { data: usersData } = useQuery<{users: User[], pagination: any}>({
+  const { data: usersData } = useQuery({
     queryKey: ["/api/admin/users", userSearchTerm],
-    queryFn: () => apiRequest("GET", `/api/admin/users?search=${userSearchTerm}&limit=50`),
     enabled: !!adminUser,
-  });
+  }) as { data?: { users: any[], pagination: any } };
 
   // Listar planos
   const { data: plans } = useQuery<SubscriptionPlan[]>({
@@ -407,7 +410,7 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {restaurantsData?.restaurants?.map((item: Restaurant) => {
+                    {restaurantsData?.restaurants?.map((item: any) => {
                       const trialStatus = getTrialStatus(item.owner.isTrialActive, item.owner.trialEndsAt);
                       const createdAt = new Date(item.restaurant.createdAt);
                       const now = new Date();
@@ -430,7 +433,7 @@ export default function AdminDashboard() {
                             <div>
                               <div className="font-medium">{item.restaurant.name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {item.restaurant.category}
+                                {item.restaurant.category || 'N/A'}
                               </div>
                             </div>
                           </TableCell>
@@ -527,7 +530,7 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {usersData?.users?.map((user: User) => {
+                    {usersData?.users?.map((user: any) => {
                       const trialStatus = getTrialStatus(user.isTrialActive, user.trialEndsAt);
                       const createdAt = new Date(user.createdAt);
                       const now = new Date();
