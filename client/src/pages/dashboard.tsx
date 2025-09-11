@@ -737,6 +737,7 @@ export default function Dashboard() {
     { id: "comandas", label: "Comandas", icon: FileText, hasSubmenu: false },
     { id: "historico", label: "Histórico de Pedidos", icon: Clock, hasSubmenu: false },
     { id: "cupons", label: "Criar Cupom", icon: CreditCard, hasSubmenu: false },
+    { id: "plano", label: "Plano", icon: CreditCard, hasSubmenu: false },
     { 
       id: "configuracoes", 
       label: "Configurações", 
@@ -2930,6 +2931,56 @@ export default function Dashboard() {
               )}
             </TabsContent>
           </Tabs>
+        </div>
+      );
+    }
+
+    if (activeSection === "plano") {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Gerenciar Plano</h2>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Seu Plano Atual</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium">Plano: {userInfo?.subscriptionPlan || 'Trial'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {userInfo?.isTrialActive 
+                      ? `Trial ativo até ${userInfo?.trialEndsAt ? new Date(userInfo.trialEndsAt).toLocaleDateString('pt-BR') : 'N/A'}`
+                      : 'Plano pago ativo'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium">Status: 
+                    <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                      userInfo?.isTrialActive ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {userInfo?.isTrialActive ? 'Trial' : 'Ativo'}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Escolha Seu Novo Plano</CardTitle>
+              <p className="text-muted-foreground">Selecione um plano e gere o pagamento PIX</p>
+            </CardHeader>
+            <CardContent>
+              <div id="planos-container" className="space-y-4">
+                <p className="text-center text-muted-foreground">Carregando planos disponíveis...</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       );
     }

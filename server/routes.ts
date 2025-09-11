@@ -3151,6 +3151,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === PIX PAYMENT ROUTES ===
+  
+  // Create PIX payment for plan upgrade
+  app.post('/api/pix/create-payment', async (req: any, res) => {
+    try {
+      const { planId, billingPeriodMonths = 1 } = req.body;
+      
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+
+      // Get user's restaurant
+      const [userRestaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .limit(1);
+
+      if (!userRestaurant) {
+        return res.status(404).json({ error: "Restaurante não encontrado" });
+      }
+
+      // Get plan details
+      const [plan] = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, planId))
+        .limit(1);
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plano não encontrado" });
+      }
+
+      const amount = parseFloat(plan.price) * billingPeriodMonths;
+
+      // Create Asaas payment
+      const asaasPayment = {
+        customer: userId,
+        billingType: "PIX",
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+        value: amount,
+        description: `Plano ${plan.name} - ${billingPeriodMonths} mês(es)`,
+      };
+
+      const asaasResponse = await fetch(`${process.env.ASAAS_BASE_URL}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': process.env.ASAAS_API_TOKEN || '',
+        },
+        body: JSON.stringify(asaasPayment),
+      });
+
+      if (!asaasResponse.ok) {
+        const error = await asaasResponse.text();
+        console.error('Asaas API error:', error);
+        return res.status(500).json({ error: "Erro ao criar pagamento PIX" });
+      }
+
+      const paymentData = await asaasResponse.json();
+
+      // Get PIX QR Code from Asaas
+      const qrCodeResponse = await fetch(`${process.env.ASAAS_BASE_URL}/payments/${paymentData.id}/pixQrCode`, {
+        method: 'GET',
+        headers: {
+          'access_token': process.env.ASAAS_API_TOKEN || '',
+        },
+      });
+
+      if (!qrCodeResponse.ok) {
+        console.error('Error getting QR code:', await qrCodeResponse.text());
+        return res.status(500).json({ error: "Erro ao gerar QR Code PIX" });
+      }
+
+      const qrCodeData = await qrCodeResponse.json();
+
+      // Save payment in database
+      const [pixPayment] = await db
+        .insert(pixPayments)
+        .values({
+          restaurantId: userRestaurant.id,
+          userId: userId,
+          planId: planId,
+          amount: amount.toString(),
+          description: `Plano ${plan.name} - ${billingPeriodMonths} mês(es)`,
+          asaasPaymentId: paymentData.id,
+          qrCodePayload: qrCodeData.payload,
+          qrCodeImage: qrCodeData.encodedImage,
+          status: 'pending',
+          expirationDate: new Date(paymentData.dueDate),
+          billingPeriodMonths: billingPeriodMonths,
+        })
+        .returning();
+
+      res.json({
+        success: true,
+        paymentId: pixPayment.id,
+        qrCodePayload: qrCodeData.payload,
+        qrCodeImage: `data:image/png;base64,${qrCodeData.encodedImage}`,
+        amount: amount,
+        expirationDate: paymentData.dueDate,
+        asaasPaymentId: paymentData.id,
+      });
+
+    } catch (error) {
+      console.error("PIX payment creation error:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Webhook to receive payment notifications from Asaas
+  app.post('/api/webhooks/asaas', async (req: any, res) => {
+    try {
+      const { event, payment } = req.body;
+      
+      console.log('Asaas webhook received:', { event, paymentId: payment?.id });
+
+      if (event === 'PAYMENT_RECEIVED' && payment?.id) {
+        // Find the payment in our database
+        const [pixPayment] = await db
+          .select()
+          .from(pixPayments)
+          .where(eq(pixPayments.asaasPaymentId, payment.id))
+          .limit(1);
+
+        if (pixPayment) {
+          // Update payment status
+          await db
+            .update(pixPayments)
+            .set({
+              status: 'paid',
+              paidAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(pixPayments.id, pixPayment.id));
+
+          // Get plan details
+          const [plan] = await db
+            .select()
+            .from(subscriptionPlans)
+            .where(eq(subscriptionPlans.id, pixPayment.planId))
+            .limit(1);
+
+          if (plan) {
+            const planStartDate = new Date();
+            const planEndDate = new Date();
+            planEndDate.setMonth(planEndDate.getMonth() + pixPayment.billingPeriodMonths);
+
+            // Update user subscription
+            await db
+              .update(users)
+              .set({
+                subscriptionPlan: plan.name.toLowerCase(),
+                isTrialActive: false,
+                trialEndsAt: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, pixPayment.userId));
+
+            // Create payment history record
+            await db
+              .insert(paymentHistory)
+              .values({
+                restaurantId: pixPayment.restaurantId,
+                userId: pixPayment.userId,
+                planId: pixPayment.planId,
+                pixPaymentId: pixPayment.id,
+                amount: pixPayment.amount,
+                method: 'pix',
+                status: 'paid',
+                paidAt: new Date(),
+                planStartDate: planStartDate,
+                planEndDate: planEndDate,
+              });
+
+            console.log(`✅ Payment processed successfully for user ${pixPayment.userId}, plan: ${plan.name}`);
+          }
+        }
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Webhook processing error:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+
+  // Get available subscription plans for frontend
+  app.get('/api/subscription-plans', async (req: any, res) => {
+    try {
+      const plans = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.isActive, true))
+        .orderBy(subscriptionPlans.sortOrder);
+
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+      res.status(500).json({ error: "Erro ao buscar planos" });
+    }
+  });
+
   // WebSocket Setup
   const httpServer = createServer(app);
 
