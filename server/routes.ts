@@ -2119,13 +2119,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para estatísticas do restaurante
-  app.get("/api/restaurant/stats", async (req, res) => {
+  app.get("/api/restaurant/stats", isDevAuthenticated, async (req: any, res) => {
     try {
-      // Buscar o restaurante do usuário de desenvolvimento
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
