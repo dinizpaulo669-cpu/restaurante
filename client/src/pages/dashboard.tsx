@@ -67,6 +67,20 @@ export default function Dashboard() {
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [showOrderEditForm, setShowOrderEditForm] = useState(false);
   
+  // Estados para fechamento de conta
+  const [showCloseTableModal, setShowCloseTableModal] = useState(false);
+  const [selectedTableForClose, setSelectedTableForClose] = useState<any>(null);
+  const [splitBill, setSplitBill] = useState(false);
+  const [numberOfPeople, setNumberOfPeople] = useState(1);
+  
+  // Estados para histórico de pedidos
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
+  const [tableFilter, setTableFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
   const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
@@ -229,6 +243,22 @@ export default function Dashboard() {
     queryKey: ["/api/dev/tables"],
     enabled: !!restaurant,
     retry: false,
+  });
+
+  // Query para buscar histórico de pedidos com paginação
+  const { 
+    data: historyData, 
+    isLoading: historyLoading 
+  } = useQuery({
+    queryKey: ["/api/dev/orders/history", { 
+      dateFrom, 
+      dateTo, 
+      orderType: orderTypeFilter, 
+      tableId: tableFilter, 
+      page: currentPage, 
+      pageSize 
+    }],
+    enabled: activeSection === "historico"
   });
 
   // Atualizar estados quando restaurant carrega
@@ -443,6 +473,32 @@ export default function Dashboard() {
         title: "Erro",
         description: "Falha ao excluir mesa.",
         variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation para fechar conta da mesa
+  const closeTableMutation = useMutation({
+    mutationFn: ({ tableId, splitBill, numberOfPeople }: { tableId: string, splitBill: boolean, numberOfPeople: number }) => 
+      apiRequest("POST", `/api/dev/tables/${tableId}/close`, { splitBill, numberOfPeople }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/orders/history"] });
+      setShowCloseTableModal(false);
+      setSplitBill(false);
+      setNumberOfPeople(1);
+      toast({
+        title: "Conta fechada",
+        description: "A conta da mesa foi fechada com sucesso! Mesa liberada."
+      });
+    },
+    onError: (error: any) => {
+      console.error('Erro ao fechar conta:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fechar a conta",
+        variant: "destructive"
       });
     },
   });
@@ -679,6 +735,7 @@ export default function Dashboard() {
     { id: "logo", label: "Logo", icon: Edit, hasSubmenu: false },
     { id: "banner", label: "Banner", icon: Package, hasSubmenu: false },
     { id: "comandas", label: "Comandas", icon: FileText, hasSubmenu: false },
+    { id: "historico", label: "Histórico de Pedidos", icon: Clock, hasSubmenu: false },
     { id: "cupons", label: "Criar Cupom", icon: CreditCard, hasSubmenu: false },
     { 
       id: "configuracoes", 
@@ -2877,6 +2934,170 @@ export default function Dashboard() {
       );
     }
 
+    if (activeSection === "historico") {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Histórico de Pedidos</h2>
+          </div>
+
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="dateFrom">Data Inicial</Label>
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    data-testid="input-date-from"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dateTo">Data Final</Label>
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    data-testid="input-date-to"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="orderType">Tipo de Pedido</Label>
+                  <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter} data-testid="select-order-type">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="delivery">Delivery</SelectItem>
+                      <SelectItem value="table">Mesa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="tableNumber">Mesa</Label>
+                  <Select value={tableFilter} onValueChange={setTableFilter} data-testid="select-table">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {tables.map((table: any) => (
+                        <SelectItem key={table.id} value={table.id}>
+                          Mesa {table.number}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button 
+                  onClick={() => {
+                    // Filtros já aplicados através dos estados
+                    toast({
+                      title: "Filtros aplicados",
+                      description: "Os filtros foram aplicados com sucesso"
+                    });
+                  }}
+                  data-testid="button-apply-filters"
+                >
+                  Aplicar Filtros
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lista de pedidos históricos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pedidos Realizados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {historyLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : (() => {
+                const historicalOrders = historyData?.orders || [];
+
+                if (historicalOrders.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">Nenhum pedido histórico</h3>
+                      <p className="text-muted-foreground">
+                        Os pedidos finalizados aparecerão aqui
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {historicalOrders.map((order: any) => (
+                      <Card key={order.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4 mb-2">
+                              <span className="font-bold">#{order.orderNumber}</span>
+                              <Badge 
+                                variant={order.status === 'delivered' ? 'default' : 'destructive'}
+                                data-testid={`status-${order.id}`}
+                              >
+                                {order.status === 'delivered' ? 'Entregue' : 'Cancelado'}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {order.orderType === 'table' ? `Mesa ${tables.find((t: any) => t.id === order.tableId)?.number || order.tableId}` : 'Delivery'}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <p><strong>Cliente:</strong> {order.customerName}</p>
+                              {order.customerPhone && <p><strong>Telefone:</strong> {order.customerPhone}</p>}
+                              <p><strong>Data:</strong> {new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+                              {order.deliveredAt && (
+                                <p><strong>Finalizado em:</strong> {new Date(order.deliveredAt).toLocaleString('pt-BR')}</p>
+                              )}
+                            </div>
+
+                            <div className="text-sm">
+                              <strong>Itens:</strong>
+                              <ul className="mt-1 space-y-1">
+                                {order.items?.map((item: any, index: number) => (
+                                  <li key={index} className="flex justify-between">
+                                    <span>{item.quantity}x {item.productName}</span>
+                                    <span>R$ {(item.quantity * parseFloat(item.price)).toFixed(2)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-green-600">
+                              R$ {parseFloat(order.total).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-4 capitalize">{activeSection}</h2>
@@ -3308,12 +3529,211 @@ export default function Dashboard() {
         )}
         
         <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowTableOrdersModal(false)}
-          >
-            Fechar
-          </Button>
+          {(() => {
+            const tableOrders = (orders as any[]).filter((order: any) => order.tableId === selectedTable?.id);
+            const hasActiveOrders = tableOrders.some((order: any) => 
+              order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
+            );
+            
+            return (
+              <div className="flex gap-2">
+                {hasActiveOrders && (
+                  <Button 
+                    onClick={() => {
+                      setSelectedTableForClose(selectedTable);
+                      setShowCloseTableModal(true);
+                      setShowTableOrdersModal(false);
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="button-close-table"
+                  >
+                    Fechar Conta
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowTableOrdersModal(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal para fechar conta da mesa */}
+    <Dialog open={showCloseTableModal} onOpenChange={setShowCloseTableModal}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Fechar Conta - Mesa {selectedTableForClose?.number}
+            {selectedTableForClose?.name && ` - ${selectedTableForClose.name}`}
+          </DialogTitle>
+        </DialogHeader>
+        
+        {selectedTableForClose && (() => {
+          const tableOrders = (orders as any[]).filter((order: any) => order.tableId === selectedTableForClose.id);
+          const activeOrders = tableOrders.filter((order: any) => 
+            order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
+          );
+          
+          // Agrupar todos os produtos dos pedidos ativos
+          const consolidatedItems: any = {};
+          let totalAmount = 0;
+          
+          activeOrders.forEach((order: any) => {
+            totalAmount += parseFloat(order.total || 0);
+            order.items?.forEach((item: any) => {
+              const key = `${item.productId}-${item.price}`;
+              if (consolidatedItems[key]) {
+                consolidatedItems[key].quantity += item.quantity;
+                consolidatedItems[key].subtotal += item.quantity * parseFloat(item.price);
+              } else {
+                consolidatedItems[key] = {
+                  ...item,
+                  subtotal: item.quantity * parseFloat(item.price)
+                };
+              }
+            });
+          });
+          
+          const itemsList = Object.values(consolidatedItems);
+          const amountPerPerson = splitBill ? totalAmount / numberOfPeople : totalAmount;
+          
+          return (
+            <div className="space-y-6">
+              {/* Resumo da mesa */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Mesa:</span> {selectedTableForClose.number}
+                    </div>
+                    <div>
+                      <span className="font-medium">Pedidos Ativos:</span> {activeOrders.length}
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Geral:</span> R$ {totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Produtos consolidados */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo dos Produtos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {itemsList.length === 0 ? (
+                      <p className="text-center text-muted-foreground">Nenhum produto encontrado</p>
+                    ) : (
+                      itemsList.map((item: any, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <span className="font-medium">{item.productName}</span>
+                            <div className="text-sm text-muted-foreground">
+                              {item.quantity}x R$ {parseFloat(item.price).toFixed(2)}
+                            </div>
+                          </div>
+                          <div className="text-lg font-semibold">
+                            R$ {item.subtotal.toFixed(2)}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Opção de dividir conta */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Opções de Pagamento</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="splitBill"
+                      checked={splitBill}
+                      onChange={(e) => setSplitBill(e.target.checked)}
+                      className="rounded"
+                      data-testid="checkbox-split-bill"
+                    />
+                    <Label htmlFor="splitBill">Dividir conta</Label>
+                  </div>
+                  
+                  {splitBill && (
+                    <div className="space-y-2">
+                      <Label htmlFor="numberOfPeople">Número de pessoas:</Label>
+                      <Input
+                        id="numberOfPeople"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={numberOfPeople}
+                        onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-32"
+                        data-testid="input-number-people"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Valor por pessoa: R$ {amountPerPerson.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Total final */}
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center text-xl font-bold">
+                    <span>Total a Pagar:</span>
+                    <span className="text-green-700">
+                      {splitBill ? (
+                        <>R$ {amountPerPerson.toFixed(2)} (por pessoa)</>
+                      ) : (
+                        <>R$ {totalAmount.toFixed(2)}</>
+                      )}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })()}
+        
+        <DialogFooter>
+          <div className="flex gap-2 w-full justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowCloseTableModal(false);
+                setSplitBill(false);
+                setNumberOfPeople(1);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => {
+                closeTableMutation.mutate({
+                  tableId: selectedTableForClose.id,
+                  splitBill,
+                  numberOfPeople: splitBill ? numberOfPeople : 1
+                });
+              }}
+              disabled={closeTableMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="button-confirm-close"
+            >
+              {closeTableMutation.isPending ? "Fechando..." : "Confirmar Fechamento"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

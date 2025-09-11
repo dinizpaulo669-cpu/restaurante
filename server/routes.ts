@@ -11,7 +11,7 @@ import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema } from "@shared/schema";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema } from "@shared/schema";
-import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
 
 // Configure multer for file uploads
 const multerStorage = multer.diskStorage({
@@ -1178,6 +1178,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching table orders:", error);
       res.status(500).json({ message: "Failed to fetch table orders" });
+    }
+  });
+
+  // Endpoint para fechar conta da mesa
+  app.post("/api/dev/tables/:tableId/close", async (req, res) => {
+    try {
+      const { tableId } = req.params;
+      const { splitBill, numberOfPeople } = req.body;
+      
+      // Buscar todos os pedidos ativos da mesa
+      const tableOrders = await db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.tableId, tableId),
+            or(
+              eq(orders.status, 'pending'),
+              eq(orders.status, 'preparing'),
+              eq(orders.status, 'ready')
+            )
+          )
+        );
+
+      if (tableOrders.length === 0) {
+        return res.status(400).json({ error: "Não há pedidos ativos para esta mesa" });
+      }
+
+      // Atualizar status de todos os pedidos para 'delivered'
+      for (const order of tableOrders) {
+        await db
+          .update(orders)
+          .set({ 
+            status: 'delivered',
+            deliveredAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(orders.id, order.id));
+      }
+
+      // Log da operação de fechamento
+      console.log(`Mesa ${tableId} fechada - ${tableOrders.length} pedidos finalizados`, {
+        splitBill,
+        numberOfPeople,
+        orderIds: tableOrders.map(o => o.id)
+      });
+
+      res.json({ 
+        message: "Conta fechada com sucesso",
+        ordersFinalized: tableOrders.length,
+        splitBill,
+        numberOfPeople
+      });
+    } catch (error) {
+      console.error("Erro ao fechar conta da mesa:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Endpoint para histórico de pedidos com paginação e filtros
+  app.get("/api/dev/orders/history", async (req, res) => {
+    try {
+      const { dateFrom, dateTo, orderType, tableId, page = 1, pageSize = 10 } = req.query;
+      
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .limit(1);
+      
+      if (!restaurant) {
+        return res.status(404).json({ error: "Restaurante não encontrado" });
+      }
+
+      // Construir query base para pedidos finalizados
+      let query = db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.restaurantId, restaurant.id),
+            or(
+              eq(orders.status, 'delivered'),
+              eq(orders.status, 'cancelled')
+            )
+          )
+        );
+
+      // Aplicar filtros
+      let conditions = [
+        eq(orders.restaurantId, restaurant.id),
+        or(
+          eq(orders.status, 'delivered'),
+          eq(orders.status, 'cancelled')
+        )
+      ];
+
+      if (dateFrom) {
+        conditions.push(gte(orders.createdAt, new Date(dateFrom as string)));
+      }
+      
+      if (dateTo) {
+        const endDate = new Date(dateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(orders.createdAt, endDate));
+      }
+      
+      if (orderType && orderType !== 'all') {
+        if (orderType === 'delivery') {
+          conditions.push(or(eq(orders.orderType, 'delivery'), isNull(orders.orderType)));
+        } else {
+          conditions.push(eq(orders.orderType, orderType as string));
+        }
+      }
+      
+      if (tableId && tableId !== 'all') {
+        conditions.push(eq(orders.tableId, tableId as string));
+      }
+
+      // Buscar pedidos com filtros
+      const historicalOrders = await db
+        .select()
+        .from(orders)
+        .where(and(...conditions))
+        .orderBy(desc(orders.createdAt))
+        .limit(parseInt(pageSize as string))
+        .offset((parseInt(page as string) - 1) * parseInt(pageSize as string));
+
+      // Buscar itens dos pedidos
+      const ordersWithItems = await Promise.all(
+        historicalOrders.map(async (order) => {
+          const items = await db
+            .select({
+              id: orderItems.id,
+              productId: orderItems.productId,
+              productName: products.name,
+              quantity: orderItems.quantity,
+              price: orderItems.unitPrice,
+              totalPrice: orderItems.totalPrice,
+              specialInstructions: orderItems.specialInstructions
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .where(eq(orderItems.orderId, order.id));
+          
+          return {
+            ...order,
+            items
+          };
+        })
+      );
+
+      // Contar total para paginação
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(and(...conditions));
+
+      res.json({
+        orders: ordersWithItems,
+        pagination: {
+          page: parseInt(page as string),
+          pageSize: parseInt(pageSize as string),
+          total: count,
+          totalPages: Math.ceil(count / parseInt(pageSize as string))
+        }
+      });
+    } catch (error) {
+      console.error("Erro ao buscar histórico de pedidos:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
 
