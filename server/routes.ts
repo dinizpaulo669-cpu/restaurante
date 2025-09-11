@@ -3187,9 +3187,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const amount = parseFloat(plan.price) * billingPeriodMonths;
 
+      // Get user details
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      let asaasCustomerId = user.stripeCustomerId; // Reutilizando campo para Asaas
+
+      // Create Asaas customer if not exists
+      if (!asaasCustomerId) {
+        const customerData = {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          phone: user.phone || userRestaurant.phone,
+          cpfCnpj: "11144477735", // CPF de desenvolvimento - em produção seria do usuário real
+        };
+
+        const customerResponse = await fetch(`${process.env.ASAAS_BASE_URL}/customers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': process.env.ASAAS_API_TOKEN || '',
+          },
+          body: JSON.stringify(customerData),
+        });
+
+        if (!customerResponse.ok) {
+          const error = await customerResponse.text();
+          console.error('Asaas customer creation error:', error);
+          return res.status(500).json({ error: "Erro ao criar cliente na API de pagamento" });
+        }
+
+        const customerResult = await customerResponse.json();
+        asaasCustomerId = customerResult.id;
+
+        // Save customer ID in database
+        await db
+          .update(users)
+          .set({ stripeCustomerId: asaasCustomerId })
+          .where(eq(users.id, userId));
+      }
+
       // Create Asaas payment
       const asaasPayment = {
-        customer: userId,
+        customer: asaasCustomerId,
         billingType: "PIX",
         dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
         value: amount,
@@ -3238,6 +3285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: amount.toString(),
           description: `Plano ${plan.name} - ${billingPeriodMonths} mês(es)`,
           asaasPaymentId: paymentData.id,
+          asaasCustomerId: asaasCustomerId,
           qrCodePayload: qrCodeData.payload,
           qrCodeImage: qrCodeData.encodedImage,
           status: 'pending',
