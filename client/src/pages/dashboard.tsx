@@ -17,6 +17,7 @@ import { AdditionalForm } from "@/components/additional-form";
 import { AdditionalList } from "@/components/additional-list";
 import { OrderCard } from "@/components/order-card";
 import { PlanoSelector } from "@/components/PlanoSelector";
+import { PaymentHistory } from "@/components/PaymentHistory";
 import { 
   Home, 
   Package, 
@@ -2978,6 +2979,17 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <PlanoSelector restaurantId={restaurant?.id} />
+            </CardContent>
+          </Card>
+
+          {/* Histórico de Pagamentos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Pagamentos</CardTitle>
+              <p className="text-muted-foreground">Acompanhe seus pagamentos e renovações</p>
+            </CardHeader>
+            <CardContent>
+              <PaymentHistory restaurantId={restaurant?.id} />
             </CardContent>
           </Card>
         </div>

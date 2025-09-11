@@ -10,7 +10,7 @@ import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema } from "@shared/schema";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -3352,6 +3352,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching plans:", error);
       res.status(500).json({ error: "Erro ao buscar planos" });
+    }
+  });
+
+  // Get payment history for restaurant
+  app.get("/api/payment-history/:restaurantId", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+
+      const { restaurantId } = req.params;
+
+      // Buscar histórico de pagamentos
+      const paymentHistoryRecords = await db
+        .select({
+          id: paymentHistory.id,
+          amount: paymentHistory.amount,
+          method: paymentHistory.method,
+          status: paymentHistory.status,
+          paidAt: paymentHistory.paidAt,
+          planStartDate: paymentHistory.planStartDate,
+          planEndDate: paymentHistory.planEndDate,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            description: subscriptionPlans.description
+          }
+        })
+        .from(paymentHistory)
+        .leftJoin(subscriptionPlans, eq(paymentHistory.planId, subscriptionPlans.id))
+        .where(
+          and(
+            eq(paymentHistory.restaurantId, restaurantId),
+            eq(paymentHistory.userId, userId)
+          )
+        )
+        .orderBy(desc(paymentHistory.paidAt));
+
+      // Buscar pagamentos PIX pendentes
+      const pendingPixPayments = await db
+        .select({
+          id: pixPayments.id,
+          amount: pixPayments.amount,
+          status: pixPayments.status,
+          createdAt: pixPayments.createdAt,
+          expirationDate: pixPayments.expirationDate,
+          billingPeriodMonths: pixPayments.billingPeriodMonths,
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            description: subscriptionPlans.description
+          }
+        })
+        .from(pixPayments)
+        .leftJoin(subscriptionPlans, eq(pixPayments.planId, subscriptionPlans.id))
+        .where(
+          and(
+            eq(pixPayments.restaurantId, restaurantId),
+            eq(pixPayments.userId, userId),
+            eq(pixPayments.status, 'pending')
+          )
+        )
+        .orderBy(desc(pixPayments.createdAt));
+
+      res.json({
+        paymentHistory: paymentHistoryRecords,
+        pendingPayments: pendingPixPayments
+      });
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ error: "Failed to fetch payment history" });
     }
   });
 
