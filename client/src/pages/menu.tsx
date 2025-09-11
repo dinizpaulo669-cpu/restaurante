@@ -366,88 +366,130 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header do Restaurante */}
-      <div className="bg-card shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          {/* Botão de Voltar ao Início */}
-          <div className="mb-4">
+      {/* Header do Restaurante - Design Profissional */}
+      <div className="bg-gradient-to-br from-primary/8 via-primary/4 to-background shadow-lg border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Navigation Bar */}
+          <div className="flex items-center justify-between py-4">
             <Button 
-              variant="outline" 
+              variant="ghost" 
+              size="sm"
               onClick={() => {
-                // Se usuário está autenticado como cliente, voltar para painel do cliente
                 if (isAuthenticated) {
                   setLocation('/customer-panel');
                 } else {
                   setLocation('/');
                 }
               }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover:bg-primary/10 transition-all duration-200"
               data-testid="button-back-home"
             >
-              <Home className="w-4 h-4" />
-              {isAuthenticated ? 'Voltar ao Painel' : 'Voltar ao Início'}
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline font-medium">
+                {isAuthenticated ? 'Voltar ao Painel' : 'Voltar ao Início'}
+              </span>
             </Button>
-          </div>
-          
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-primary mb-2">{(restaurant as any)?.name}</h1>
-              <p className="text-muted-foreground mb-4">{(restaurant as any)?.description}</p>
-              
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{(restaurant as any)?.address}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
-                  <span>{(restaurant as any)?.phone}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{(restaurant as any)?.openingTime} - {(restaurant as any)?.closingTime}</span>
-                </div>
-                {!isTableOrder && (
-                  <div className="flex items-center gap-1">
-                    <Truck className="w-4 h-4" />
-                    <span>Taxa de entrega: R$ {(restaurant as any)?.deliveryFee}</span>
-                  </div>
-                )}
-                {isTableOrder && (
-                  <div className="flex items-center gap-1">
-                    <Home className="w-4 h-4" />
-                    <span>Pedido para consumir no local - Mesa {tableInfo?.number || 'N/A'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{(restaurant as any)?.rating}</span>
-                </div>
-                <Badge variant="secondary">{(restaurant as any)?.category}</Badge>
-              </div>
-            </div>
 
             {/* Botão do Carrinho */}
-            <div className="relative">
-              <Button 
-                onClick={() => setShowCart(!showCart)}
-                className="relative"
-                data-testid="button-cart"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Carrinho
-                {getTotalItems() > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs"
-                  >
-                    {getTotalItems()}
+            <Button 
+              onClick={() => setShowCart(!showCart)}
+              className="relative bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-300"
+              data-testid="button-cart"
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline font-medium">Carrinho</span>
+              {getTotalItems() > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 w-6 h-6 p-0 flex items-center justify-center text-xs font-bold animate-pulse"
+                >
+                  {getTotalItems()}
+                </Badge>
+              )}
+            </Button>
+          </div>
+
+          {/* Restaurant Header */}
+          <div className="pb-8 pt-4">
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+              {/* Main Restaurant Info */}
+              <div className="xl:col-span-3 space-y-6">
+                <div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary mb-4 leading-tight">
+                    {(restaurant as any)?.name}
+                  </h1>
+                  <p className="text-muted-foreground text-lg sm:text-xl leading-relaxed max-w-3xl">
+                    {(restaurant as any)?.description}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 px-4 py-2 rounded-full border border-yellow-200">
+                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-bold text-yellow-700 text-lg">{(restaurant as any)?.rating}</span>
+                    <span className="text-yellow-600 text-sm">avaliação</span>
+                  </div>
+                  <Badge variant="secondary" className="px-4 py-2 text-sm font-semibold">
+                    {(restaurant as any)?.category}
                   </Badge>
-                )}
-              </Button>
+                  {isTableOrder && (
+                    <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-green-300 text-green-700 bg-green-50">
+                      Mesa {tableInfo?.number || 'N/A'}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact & Info Card */}
+              <div className="xl:col-span-2">
+                <Card className="bg-white/70 backdrop-blur-sm border-primary/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-primary text-lg flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Informações de Contato
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 block">{(restaurant as any)?.address}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <Phone className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-semibold text-blue-900">{(restaurant as any)?.phone}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                      <Clock className="w-5 h-5 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-900">
+                        {(restaurant as any)?.openingTime} - {(restaurant as any)?.closingTime}
+                      </span>
+                    </div>
+
+                    {!isTableOrder && (
+                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <Truck className="w-5 h-5 text-green-600" />
+                        <div>
+                          <span className="text-sm font-semibold text-green-700 block">Taxa de Entrega</span>
+                          <span className="text-lg font-bold text-green-800">R$ {(restaurant as any)?.deliveryFee}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isTableOrder && (
+                      <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <Home className="w-5 h-5 text-amber-600" />
+                        <span className="text-sm font-semibold text-amber-700">
+                          Pedido para consumir no local
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
@@ -456,123 +498,195 @@ export default function Menu() {
       {/* Seção de Cupons em Destaque */}
       <CouponsSection restaurantId={restaurantId} />
 
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-          {/* Menu Principal */}
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-6">Cardápio</h2>
-            
-            {productsLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : (products as any[]).length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <h3 className="text-xl font-semibold mb-2">Nenhum produto disponível</h3>
-                  <p className="text-muted-foreground">
-                    Este restaurante ainda não cadastrou produtos no cardápio.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6">
-                {(categories as any[]).map((category: any) => {
-                  const categoryProducts = (products as any[]).filter((product: any) => product.categoryId === category.id);
-                  if (categoryProducts.length === 0) return null;
-
-                  return (
-                    <div key={category.id}>
-                      <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                        {categoryProducts.map((product: any) => (
-                          <Card key={product.id} className="overflow-hidden">
-                            {product.imageUrl && (
-                              <div className="aspect-video bg-muted">
-                                <img 
-                                  src={product.imageUrl} 
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            )}
-                            <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{product.name}</h4>
-                              {product.description && (
-                                <p className="text-sm text-muted-foreground mb-3">{product.description}</p>
-                              )}
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold text-green-600">
-                                  R$ {parseFloat(product.price).toFixed(2)}
-                                </span>
-                                <Button 
-                                  size="sm"
-                                  onClick={() => addToCart(product)}
-                                  data-testid={`button-add-${product.id}`}
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Adicionar
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Produtos sem categoria */}
-                {(() => {
-                  const uncategorizedProducts = (products as any[]).filter((product: any) => !product.categoryId);
-                  if (uncategorizedProducts.length === 0) return null;
-
-                  return (
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Outros Produtos</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {uncategorizedProducts.map((product: any) => (
-                          <Card key={product.id} className="overflow-hidden">
-                            {product.imageUrl && (
-                              <div className="aspect-video bg-muted">
-                                <img 
-                                  src={product.imageUrl} 
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            )}
-                            <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{product.name}</h4>
-                              {product.description && (
-                                <p className="text-sm text-muted-foreground mb-3">{product.description}</p>
-                              )}
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold text-green-600">
-                                  R$ {parseFloat(product.price).toFixed(2)}
-                                </span>
-                                <Button 
-                                  size="sm"
-                                  onClick={() => addToCart(product)}
-                                  data-testid={`button-add-${product.id}`}
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Adicionar
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+      {/* Menu Principal - Layout Profissional */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div className="mb-12">
+          <h2 className="text-4xl sm:text-5xl font-bold text-primary mb-4 text-center lg:text-left">
+            Cardápio
+          </h2>
+          <p className="text-lg text-muted-foreground text-center lg:text-left max-w-2xl">
+            Descubra nossos pratos especiais e sabores únicos preparados com ingredientes frescos e muito carinho.
+          </p>
+        </div>
+        
+        {productsLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-muted-foreground">Carregando delícias...</p>
+            </div>
           </div>
+        ) : (products as any[]).length === 0 ? (
+          <Card className="max-w-md mx-auto">
+            <CardContent className="p-12 text-center">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Tag className="w-10 h-10 text-primary" />
+              </div>
+              <h3 className="text-2xl font-semibold mb-3">Cardápio em Preparação</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Este restaurante está preparando seu cardápio especial. Em breve, você poderá saborear pratos incríveis!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-16">
+            {(categories as any[]).map((category: any) => {
+              const categoryProducts = (products as any[]).filter((product: any) => product.categoryId === category.id);
+              if (categoryProducts.length === 0) return null;
 
-          {/* Sidebar do Carrinho */}
-          {showCart && (
+              return (
+                <div key={category.id} className="scroll-mt-24" id={`category-${category.id}`}>
+                  {/* Category Header */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-2">
+                      <h3 className="text-3xl sm:text-4xl font-bold text-primary">{category.name}</h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+                    </div>
+                    {category.description && (
+                      <p className="text-muted-foreground text-lg">{category.description}</p>
+                    )}
+                  </div>
+
+                  {/* Products Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                    {categoryProducts.map((product: any) => (
+                      <Card key={product.id} className="group overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:-translate-y-2 bg-gradient-to-br from-white via-white to-primary/[0.02]">
+                        {/* Product Image */}
+                        <div className="relative overflow-hidden">
+                          {product.imageUrl ? (
+                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10">
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                              <Tag className="w-16 h-16 text-primary/60" />
+                            </div>
+                          )}
+                          {/* Price Badge */}
+                          <div className="absolute top-4 right-4">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg border border-green-100">
+                              <span className="text-lg font-bold text-green-600">
+                                R$ {parseFloat(product.price).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Product Content */}
+                        <CardContent className="p-6 space-y-4">
+                          <div>
+                            <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">
+                              {product.name}
+                            </h4>
+                            {product.description && (
+                              <p className="text-muted-foreground leading-relaxed line-clamp-3">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Add to Cart Button */}
+                          <Button 
+                            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105"
+                            onClick={() => addToCart(product)}
+                            data-testid={`button-add-${product.id}`}
+                          >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Adicionar ao Carrinho
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Produtos sem categoria */}
+            {(() => {
+              const uncategorizedProducts = (products as any[]).filter((product: any) => !product.categoryId);
+              if (uncategorizedProducts.length === 0) return null;
+
+              return (
+                <div className="scroll-mt-24">
+                  {/* Category Header */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-2">
+                      <h3 className="text-3xl sm:text-4xl font-bold text-primary">Outros Produtos</h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+                    </div>
+                  </div>
+
+                  {/* Products Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                    {uncategorizedProducts.map((product: any) => (
+                      <Card key={product.id} className="group overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:-translate-y-2 bg-gradient-to-br from-white via-white to-primary/[0.02]">
+                        {/* Product Image */}
+                        <div className="relative overflow-hidden">
+                          {product.imageUrl ? (
+                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10">
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                              <Tag className="w-16 h-16 text-primary/60" />
+                            </div>
+                          )}
+                          {/* Price Badge */}
+                          <div className="absolute top-4 right-4">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg border border-green-100">
+                              <span className="text-lg font-bold text-green-600">
+                                R$ {parseFloat(product.price).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Product Content */}
+                        <CardContent className="p-6 space-y-4">
+                          <div>
+                            <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">
+                              {product.name}
+                            </h4>
+                            {product.description && (
+                              <p className="text-muted-foreground leading-relaxed line-clamp-3">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Add to Cart Button */}
+                          <Button 
+                            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105"
+                            onClick={() => addToCart(product)}
+                            data-testid={`button-add-${product.id}`}
+                          >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Adicionar ao Carrinho
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar do Carrinho */}
+      {showCart && (
+        <div className="fixed inset-0 z-50 lg:z-auto lg:w-80 lg:relative lg:inset-auto">
+          <div className="lg:sticky lg:top-6 h-full lg:h-auto">
             <div className="lg:w-80 w-full lg:relative fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto">
               <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
                 <CardHeader>
@@ -663,12 +777,12 @@ export default function Menu() {
                 </CardContent>
               </Card>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal de Checkout */}
-      {showCheckout && (
+        {showCheckout && (
         <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
           <div className="w-full max-w-md my-4 sm:my-8">
             <Card className="w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
@@ -851,34 +965,14 @@ export default function Menu() {
                 )}
               </div>
 
-              <div className="border-t pt-4 space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>R$ {getTotalPrice().toFixed(2)}</span>
+              {/* Resumo do Pedido */}
+              <div className="bg-gray-50 border rounded-lg p-4">
+                <h4 className="font-semibold mb-2">Resumo do Pedido</h4>
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>{getTotalItems()} {getTotalItems() === 1 ? 'item' : 'itens'}</span>
+                  <span>{isTableOrder ? 'Mesa ' + (tableInfo?.number || 'N/A') : 'Delivery'}</span>
                 </div>
-                
-                {!isTableOrder && (
-                  <div className="flex justify-between">
-                    <span>Taxa de entrega:</span>
-                    <span>R$ {getDeliveryFee().toFixed(2)}</span>
-                  </div>
-                )}
-                
-                {isTableOrder && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Consumo no local:</span>
-                    <span>Sem taxa de entrega</span>
-                  </div>
-                )}
-                
-                {appliedCoupon && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Desconto ({appliedCoupon.code}):</span>
-                    <span>-R$ {getCouponDiscount().toFixed(2)}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between font-bold text-lg">
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total:</span>
                   <span>R$ {getFinalTotal().toFixed(2)}</span>
                 </div>

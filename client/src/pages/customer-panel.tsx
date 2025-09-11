@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { usePWA } from "@/hooks/use-pwa";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,7 +144,9 @@ import {
   Eye,
   Filter,
   Table,
-  X
+  X,
+  Calendar,
+  Download
 } from "lucide-react";
 
 const categories = [
@@ -167,6 +170,7 @@ export default function CustomerPanel() {
   // Todos os hooks SEMPRE declarados no início
   const [, setLocation] = useLocation();
   const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { canInstall, installPWA, isInstalled } = usePWA();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -634,34 +638,64 @@ export default function CustomerPanel() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-        <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
-            {customerStats?.totalOrders || 0}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Pedidos</div>
-        </Card>
-        <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
-            {customerStats?.favoritesCount || 0}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Favoritos</div>
-        </Card>
-        <Card className="text-center p-3 sm:p-4">
-          <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
-            ★ {customerStats?.averageRating?.toFixed(1) || '4.8'}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground">Avaliação</div>
-        </Card>
-        {!isMobile && (
-          <Card className="text-center p-3 sm:p-4">
-            <div className="text-primary text-xl sm:text-2xl lg:text-3xl font-bold">
-              R$ {customerStats?.totalSpent?.toFixed(2) || '0,00'}
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
+                  {customerStats?.totalOrders || 0}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">Pedidos Realizados</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {customerStats?.totalOrders > 0 ? 'Continue pedindo!' : 'Faça seu primeiro pedido'}
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <ShoppingBag className="h-6 w-6 text-primary" />
+              </div>
             </div>
-            <div className="text-xs sm:text-sm text-muted-foreground">Total Gasto</div>
-          </Card>
-        )}
+          </CardContent>
+        </Card>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">
+                  {customerStats?.favoritesCount || 0}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">Restaurantes Favoritos</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {customerStats?.favoritesCount > 0 ? 'Seus preferidos' : 'Adicione favoritos'}
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                <Heart className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500 sm:col-span-2 lg:col-span-1">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
+                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground">Bem-vindo de volta!</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Descubra novos sabores hoje
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                <Calendar className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Featured Restaurants */}
@@ -1030,20 +1064,51 @@ export default function CustomerPanel() {
           </div>
         </div>
 
-        <div className="flex space-x-4 mt-6">
-          <Button onClick={openEditModal} className="flex-1">
-            Editar Perfil
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              localStorage.removeItem('currentUser');
-              setLocation('/');
-            }}
-            className="flex-1"
-          >
-            Sair
-          </Button>
+        <div className="space-y-3 mt-6">
+          <div className="flex space-x-4">
+            <Button onClick={openEditModal} className="flex-1">
+              Editar Perfil
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                localStorage.removeItem('currentUser');
+                setLocation('/');
+              }}
+              className="flex-1"
+            >
+              Sair
+            </Button>
+          </div>
+
+          {/* Botão de Instalação PWA */}
+          {canInstall && !isInstalled && (
+            <Button 
+              onClick={async () => {
+                const success = await installPWA();
+                if (success) {
+                  toast({
+                    title: "App Instalado!",
+                    description: "Agora você pode acessar o RestaurantePro diretamente da sua tela inicial.",
+                  });
+                }
+              }}
+              variant="secondary"
+              className="w-full bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/20 text-primary font-semibold"
+              data-testid="button-install-pwa"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Instalar App
+            </Button>
+          )}
+          
+          {/* Indicador de App Instalado */}
+          {isInstalled && (
+            <div className="flex items-center justify-center py-2 px-4 bg-green-50 text-green-700 rounded-lg border border-green-200">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              <span className="text-sm font-medium">App instalado com sucesso!</span>
+            </div>
+          )}
         </div>
       </Card>
 
