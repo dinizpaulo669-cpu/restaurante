@@ -2950,10 +2950,10 @@ export default function Dashboard() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="font-medium">Plano: {userInfo?.subscriptionPlan || 'Trial'}</p>
+                  <p className="font-medium">Plano: {user?.subscriptionPlan || 'Trial'}</p>
                   <p className="text-sm text-muted-foreground">
-                    {userInfo?.isTrialActive 
-                      ? `Trial ativo até ${userInfo?.trialEndsAt ? new Date(userInfo.trialEndsAt).toLocaleDateString('pt-BR') : 'N/A'}`
+                    {user?.isTrialActive 
+                      ? `Trial ativo até ${user?.trialEndsAt ? new Date(user.trialEndsAt).toLocaleDateString('pt-BR') : 'N/A'}`
                       : 'Plano pago ativo'
                     }
                   </p>
@@ -2961,9 +2961,9 @@ export default function Dashboard() {
                 <div>
                   <p className="font-medium">Status: 
                     <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                      userInfo?.isTrialActive ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                      user?.isTrialActive ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                     }`}>
-                      {userInfo?.isTrialActive ? 'Trial' : 'Ativo'}
+                      {user?.isTrialActive ? 'Trial' : 'Ativo'}
                     </span>
                   </p>
                 </div>

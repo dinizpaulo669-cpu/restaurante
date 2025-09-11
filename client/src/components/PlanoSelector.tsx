@@ -47,10 +47,11 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
   // Mutation para criar pagamento PIX
   const createPixPaymentMutation = useMutation({
     mutationFn: async ({ planId, billingPeriodMonths }: { planId: string, billingPeriodMonths: number }) => {
-      return await apiRequest("POST", "/api/pix/create-payment", {
+      const response = await apiRequest("POST", "/api/pix/create-payment", {
         planId,
         billingPeriodMonths,
-      }) as PixPaymentResponse;
+      });
+      return response as PixPaymentResponse;
     },
     onSuccess: (data) => {
       setPaymentData(data);
