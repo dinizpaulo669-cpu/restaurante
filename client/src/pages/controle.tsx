@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { 
   Card, 
   CardContent, 
@@ -8,17 +10,11 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   TrendingUp,
   Package,
   ShoppingCart,
   DollarSign,
-  Users,
-  Calendar,
-  Eye,
-  EyeOff,
   BarChart3,
   PieChart,
   ArrowUp,
@@ -27,20 +23,29 @@ import {
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Bar, BarChart, Cell, PieChart as RechartsPieChart, Pie } from "recharts";
 
 export default function ControlePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginData, setLoginData] = useState({ 
-    username: '', 
-    password: '' 
-  });
-  const [showPassword, setShowPassword] = useState(false);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, navigate] = useLocation();
   const [selectedPeriod, setSelectedPeriod] = useState('7d'); // 7d, 30d, 3m, 1y
 
-  // Mock login - em produção seria uma API real
-  const handleLogin = () => {
-    if (loginData.username === 'admin' && loginData.password === 'admin123') {
-      setIsAuthenticated(true);
-    } else {
-      alert('Credenciais inválidas. Use admin/admin123');
+  // Auto-redirect para login se não autenticado
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  // Função de logout adequada
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo se der erro, redireciona para login
+      navigate('/login');
     }
   };
 
@@ -100,70 +105,26 @@ export default function ControlePage() {
   const totalRevenue = restaurantStats?.totalRevenue || 0;
   const averageTicket = restaurantStats?.averageTicket || 0;
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-gray-600">Carregando painel de controle...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-800">
-              RestaurantePro
-            </CardTitle>
-            <CardDescription>
-              Painel de Controle Administrativo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="username">Usuário</Label>
-              <Input
-                id="username"
-                value={loginData.username}
-                onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                placeholder="Digite seu usuário"
-                data-testid="input-username"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={loginData.password}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Digite sua senha"
-                  data-testid="input-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  data-testid="button-toggle-password"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <Button 
-              onClick={handleLogin} 
-              className="w-full"
-              disabled={!loginData.username || !loginData.password}
-              data-testid="button-login"
-            >
-              Entrar
-            </Button>
-            
-            <div className="text-center text-sm text-muted-foreground mt-4 p-3 bg-blue-50 rounded-lg">
-              <p><strong>Credenciais de teste:</strong></p>
-              <p>Usuário: admin</p>
-              <p>Senha: admin123</p>
-            </div>
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-gray-600">Redirecionando para o login...</p>
           </CardContent>
         </Card>
       </div>
@@ -194,7 +155,7 @@ export default function ControlePage() {
               </select>
               <Button 
                 variant="outline" 
-                onClick={() => setIsAuthenticated(false)}
+                onClick={handleLogout}
                 data-testid="button-logout"
               >
                 Sair
