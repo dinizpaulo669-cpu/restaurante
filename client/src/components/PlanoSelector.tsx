@@ -25,7 +25,7 @@ interface PixPaymentResponse {
   paymentId: string;
   qrCodePayload: string;
   qrCodeImage: string;
-  amount: number;
+  amount: string; // Mudando para string já que vem do servidor como string
   expirationDate: string;
   asaasPaymentId: string;
 }
@@ -54,6 +54,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
       return response as PixPaymentResponse;
     },
     onSuccess: (data) => {
+      console.log("PIX payment data received:", data);
       setPaymentData(data);
       setShowPaymentModal(true);
       toast({
@@ -272,7 +273,7 @@ export function PlanoSelector({ restaurantId }: { restaurantId?: string }) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Valor:</span>
-                  <span className="font-bold">R$ {parseFloat(paymentData.amount || 0).toFixed(2)}</span>
+                  <span className="font-bold">R$ {parseFloat(paymentData.amount || "0").toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Vencimento:</span>
