@@ -2129,11 +2129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
       const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       
-      // Buscar o restaurante do usuário autenticado
+      // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(restaurants.createdAt)
         .limit(1);
         
       if (!restaurant) {
@@ -2176,7 +2177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(products)
         .where(eq(products.restaurantId, restaurant.id));
 
-      // Produto mais vendido - usando order_items
+      // Produto mais vendido - usando order_items (apenas pedidos entregues)
       const topProductsData = await db
         .select({
           productId: orderItems.productId,
@@ -2187,12 +2188,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
         .leftJoin(orders, eq(orderItems.orderId, orders.id))
-        .where(eq(orders.restaurantId, restaurant.id))
+        .where(and(
+          eq(orders.restaurantId, restaurant.id),
+          eq(orders.status, 'delivered')
+        ))
         .groupBy(orderItems.productId, products.name)
         .orderBy(sql`sum(${orderItems.quantity}) DESC`)
         .limit(5);
 
-      // Vendas por categoria
+      // Vendas por categoria (apenas pedidos entregues)
       const categoryStats = await db
         .select({
           category: categories.name,
@@ -2205,6 +2209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(orders, eq(orderItems.orderId, orders.id))
         .where(and(
           eq(orders.restaurantId, restaurant.id),
+          eq(orders.status, 'delivered'),
           sql`${categories.name} IS NOT NULL`
         ))
         .groupBy(categories.name)
@@ -2261,11 +2266,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
       const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       
-      // Buscar o restaurante do usuário autenticado
+      // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db
         .select()
         .from(restaurants)
         .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(restaurants.createdAt)
         .limit(1);
         
       if (!restaurant) {
