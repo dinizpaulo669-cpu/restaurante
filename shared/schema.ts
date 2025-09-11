@@ -504,6 +504,7 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   maxRestaurants: integer("max_restaurants").default(1),
   maxProducts: integer("max_products").default(50),
   maxOrders: integer("max_orders").default(100), // Por mês
+  trialDays: integer("trial_days").default(0), // Dias de teste gratuito
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

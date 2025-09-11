@@ -91,6 +91,7 @@ interface SubscriptionPlan {
   maxRestaurants: number;
   maxProducts: number;
   maxOrders: number;
+  trialDays: number;
   isActive: boolean;
   sortOrder: number;
 }
@@ -544,6 +545,7 @@ export default function AdminDashboard() {
                       <p>• {plan.maxRestaurants} restaurante(s)</p>
                       <p>• {plan.maxProducts} produtos</p>
                       <p>• {plan.maxOrders} pedidos/mês</p>
+                      <p>• {plan.trialDays} dias de teste grátis</p>
                     </div>
                     <div className="flex space-x-2 pt-4">
                       <Button 

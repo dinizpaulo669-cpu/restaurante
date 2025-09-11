@@ -19,6 +19,7 @@ interface SubscriptionPlan {
   maxRestaurants: number;
   maxProducts: number;
   maxOrders: number;
+  trialDays: number;
   isActive: boolean;
   sortOrder: number;
 }
@@ -40,6 +41,7 @@ export default function PlanModal({ plan, isOpen, onClose }: PlanModalProps) {
     maxRestaurants: 1,
     maxProducts: 50,
     maxOrders: 100,
+    trialDays: 7,
     isActive: true,
     sortOrder: 0,
   });
@@ -56,6 +58,7 @@ export default function PlanModal({ plan, isOpen, onClose }: PlanModalProps) {
         maxRestaurants: 1,
         maxProducts: 50,
         maxOrders: 100,
+        trialDays: 7,
         isActive: true,
         sortOrder: 0,
       });
@@ -230,6 +233,21 @@ export default function PlanModal({ plan, isOpen, onClose }: PlanModalProps) {
                 min="1"
                 required
                 data-testid="input-max-orders"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="trialDays">Dias de Teste Grátis</Label>
+              <Input
+                id="trialDays"
+                type="number"
+                value={formData.trialDays}
+                onChange={(e) => handleChange("trialDays", parseInt(e.target.value) || 0)}
+                min="0"
+                placeholder="7"
+                data-testid="input-trial-days"
               />
             </div>
           </div>
