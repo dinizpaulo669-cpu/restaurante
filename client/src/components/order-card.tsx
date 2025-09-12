@@ -59,7 +59,7 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
 
   // Enviar mensagem
   const sendMessageMutation = useMutation({
-    mutationFn: (message: string) => apiRequest("POST", `/api/orders/${order.id}/messages`, { message }),
+    mutationFn: (message: string) => apiRequest("POST", `/api/orders/${order.id}/messages`, { message, senderType: "restaurant" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${order.id}/messages`] });
       setNewMessage("");

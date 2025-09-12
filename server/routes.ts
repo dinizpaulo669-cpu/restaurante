@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders/:orderId/messages", async (req, res) => {
     try {
       const { orderId } = req.params;
-      const { message } = req.body;
+      const { message, senderType = "customer" } = req.body;
       
       let userId = "dev-user-internal";
       if ((req.session as any)?.user?.id) {
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values({
           orderId,
           senderId: userId,
-          senderType: "customer",
+          senderType,
           message
         })
         .returning();
