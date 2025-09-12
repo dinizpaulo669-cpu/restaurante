@@ -2102,8 +2102,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { restaurantId } = req.params;
       const { code, orderValue } = req.body;
       
+      // Debug logs apenas em desenvolvimento
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🎫 Validating coupon: ${code} for restaurant: ${restaurantId} with order value: ${orderValue}`);
+      }
+      
       if (!code || !orderValue) {
         return res.status(400).json({ message: "Código do cupom e valor do pedido são obrigatórios" });
+      }
+
+      // Debug: buscar todos os cupons do restaurante primeiro (apenas em dev)
+      if (process.env.NODE_ENV !== 'production') {
+        const allCoupons = await db
+          .select({
+            id: coupons.id,
+            code: coupons.code,
+            restaurantId: coupons.restaurantId,
+            isActive: coupons.isActive,
+            validFrom: coupons.validFrom,
+            validUntil: coupons.validUntil
+          })
+          .from(coupons)
+          .where(eq(coupons.restaurantId, restaurantId));
+        
+        console.log(`🔍 Found ${allCoupons.length} coupons for restaurant ${restaurantId}:`, allCoupons);
       }
 
       const [coupon] = await db
@@ -2115,6 +2137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(coupons.isActive, true)
         ))
         .limit(1);
+
+      // Debug logs apenas em desenvolvimento
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🎯 Coupon search result for code ${code.toUpperCase()}:`, coupon);
+      }
 
       if (!coupon) {
         return res.status(400).json({ 

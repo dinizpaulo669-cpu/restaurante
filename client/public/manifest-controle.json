@@ -1,0 +1,71 @@
+{
+  "name": "RestaurantePro - Controle",
+  "short_name": "RestaurantePro",
+  "description": "Sistema completo de gestão de restaurantes - Painel de controle para gerenciar pedidos, produtos e relatórios",
+  "start_url": "/controle",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0ea5e9",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "pt-BR",
+  "categories": ["business", "productivity", "food"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pedidos Ativos",
+      "short_name": "Pedidos",
+      "description": "Gerenciar pedidos em andamento",
+      "url": "/controle?tab=orders",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard", 
+      "description": "Ver estatísticas e relatórios",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Produtos",
+      "short_name": "Produtos", 
+      "description": "Gerenciar cardápio e produtos",
+      "url": "/controle?tab=products",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

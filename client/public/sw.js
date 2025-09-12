@@ -1,11 +1,13 @@
 // Service Worker para RestaurantePro PWA
-const CACHE_NAME = 'restaurantepro-v1.1.0';
-const STATIC_CACHE_NAME = 'restaurantepro-static-v1.1.0';
+const CACHE_NAME = 'restaurantepro-v1.2.0';
+const STATIC_CACHE_NAME = 'restaurantepro-static-v1.2.0';
 
 // Arquivos para cache (apenas arquivos que existem)
 const STATIC_ASSETS = [
   '/',
   '/customer-panel',
+  '/controle',
+  '/dashboard',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -145,6 +147,14 @@ self.addEventListener('fetch', (event) => {
         }
         // Página offline genérica
         if (request.mode === 'navigate') {
+          // Redirect para página apropriada baseada no path
+          if (url.pathname.includes('controle') || url.pathname.includes('dashboard')) {
+            return caches.match('/controle').then((response) => {
+              return response || caches.match('/customer-panel').then((fallback) => {
+                return fallback || new Response('Offline - RestaurantePro');
+              });
+            });
+          }
           return caches.match('/customer-panel').then((response) => {
             return response || new Response('Offline - RestaurantePro');
           });
@@ -224,8 +234,13 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   if (event.action === 'explore') {
+    // Determinar URL apropriada baseada no contexto
+    const isControlContext = event.notification.data?.context === 'control' ||
+                            event.notification.tag?.includes('control');
+    const targetUrl = isControlContext ? '/controle' : '/customer-panel';
+    
     event.waitUntil(
-      clients.openWindow('/customer-panel')
+      clients.openWindow(targetUrl)
     );
   }
 });
