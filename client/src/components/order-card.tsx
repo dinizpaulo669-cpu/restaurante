@@ -246,9 +246,13 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
             </Select>
             
             {/* Botão de mensagens */}
-            <Dialog>
+            <Dialog onOpenChange={(open) => {
+              if (open && unreadCount > 0) {
+                handleOpenChat();
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline" onClick={handleOpenChat}>
+                <Button size="sm" variant="outline">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Chat
                   {unreadCount > 0 && (
