@@ -141,7 +141,7 @@ export default function AdminDashboard() {
   const { data: paymentsData, refetch: refetchPayments } = useQuery({
     queryKey: ["/api/admin/payments"],
     enabled: !!adminUser && activeTab === "pagamentos",
-  });
+  }) as { data?: { payments: any[] }, refetch: () => void };
 
   // Listar restaurantes
   const { data: restaurantsData } = useQuery({
@@ -210,7 +210,12 @@ export default function AdminDashboard() {
     mutationFn: (paymentId: string) => 
       apiRequest("POST", `/api/admin/payments/${paymentId}/confirm`, {}),
     onSuccess: () => {
-      refetchPayments();
+      // Invalidar múltiplos caches que podem ter sido afetados pela confirmação
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/restaurants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard"] });
+      
       toast({
         title: "Pagamento confirmado",
         description: "O pagamento foi confirmado e o plano foi ativado",

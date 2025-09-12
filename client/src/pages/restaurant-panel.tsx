@@ -65,9 +65,56 @@ export default function RestaurantPanel() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
-              <Badge variant="secondary" data-testid="restaurant-badge">
-                {restaurant.plan}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" data-testid="restaurant-badge">
+                  {restaurant.plan}
+                </Badge>
+                {/* Status do plano com dias restantes */}
+                {(() => {
+                  // Usar a mesma lógica do getTrialStatus do admin dashboard
+                  if (!restaurant.isTrialActive) {
+                    return (
+                      <Badge variant="destructive" data-testid="trial-expired-badge">
+                        Trial expirado
+                      </Badge>
+                    );
+                  }
+                  
+                  if (!restaurant.trialEndsAt) {
+                    return (
+                      <Badge variant="default" data-testid="trial-active-badge">
+                        Trial ativo
+                      </Badge>
+                    );
+                  }
+                  
+                  const endDate = new Date(restaurant.trialEndsAt);
+                  const now = new Date();
+                  const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+                  
+                  if (daysLeft <= 0) {
+                    return (
+                      <Badge variant="destructive" data-testid="trial-expired-badge">
+                        Trial expirado
+                      </Badge>
+                    );
+                  }
+                  
+                  if (daysLeft <= 3) {
+                    return (
+                      <Badge variant="secondary" data-testid="trial-warning-badge">
+                        {daysLeft} dias restantes
+                      </Badge>
+                    );
+                  }
+                  
+                  return (
+                    <Badge variant="default" data-testid="trial-status-badge">
+                      {daysLeft} dias restantes
+                    </Badge>
+                  );
+                })()}
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
