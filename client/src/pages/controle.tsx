@@ -141,18 +141,18 @@ export default function ControlePage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:py-6 space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Painel de Controle
               </h1>
-              <p className="text-gray-600">Dashboard administrativo completo</p>
+              <p className="text-sm sm:text-base text-gray-600">Dashboard administrativo completo</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
               <select 
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full sm:w-auto"
               >
                 <option value="7d">Últimos 7 dias</option>
                 <option value="30d">Últimos 30 dias</option>
@@ -163,6 +163,7 @@ export default function ControlePage() {
                 variant="outline" 
                 onClick={handleLogout}
                 data-testid="button-logout"
+                className="w-full sm:w-auto"
               >
                 Sair
               </Button>
@@ -171,15 +172,15 @@ export default function ControlePage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Métricas principais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Receita Total</p>
-                  <p className="text-3xl font-bold text-green-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-green-600">
                     R$ {totalRevenue.toFixed(2)}
                   </p>
                   <p className="text-sm text-green-600 flex items-center mt-1">
@@ -199,7 +200,7 @@ export default function ControlePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
-                  <p className="text-3xl font-bold text-blue-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                     {restaurantStats?.totalOrders || orders.length}
                   </p>
                   <p className="text-sm text-blue-600 flex items-center mt-1">
@@ -219,7 +220,7 @@ export default function ControlePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Ticket Médio</p>
-                  <p className="text-3xl font-bold text-purple-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-600">
                     R$ {averageTicket.toFixed(2)}
                   </p>
                   <p className="text-sm text-red-600 flex items-center mt-1">
@@ -239,7 +240,7 @@ export default function ControlePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Produtos Ativos</p>
-                  <p className="text-3xl font-bold text-orange-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-orange-600">
                     {products.length}
                   </p>
                   <p className="text-sm text-orange-600 flex items-center mt-1">
@@ -261,14 +262,14 @@ export default function ControlePage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Relatório de Lucro</h2>
             <p className="text-gray-600">Análise detalhada da rentabilidade baseada nos preços de venda e custo dos produtos</p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
             {/* Lucro Total */}
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Lucro Total</p>
-                    <p className="text-3xl font-bold text-green-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-green-600">
                       R$ {(profitReport?.totalProfit?.totalProfit || 0).toFixed(2)}
                     </p>
                     <p className="text-sm text-green-600 flex items-center mt-1">
@@ -289,7 +290,7 @@ export default function ControlePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Margem de Lucro</p>
-                    <p className="text-3xl font-bold text-blue-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                       {(profitReport?.totalProfit?.profitMargin || 0).toFixed(1)}%
                     </p>
                     <p className="text-sm text-blue-600 flex items-center mt-1">
@@ -310,7 +311,7 @@ export default function ControlePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Custo Total</p>
-                    <p className="text-3xl font-bold text-red-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-red-600">
                       R$ {(profitReport?.totalProfit?.totalCost || 0).toFixed(2)}
                     </p>
                     <p className="text-sm text-red-600 flex items-center mt-1">
@@ -331,7 +332,7 @@ export default function ControlePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">ROI</p>
-                    <p className="text-3xl font-bold text-purple-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-600">
                       {profitReport?.totalProfit?.totalCost > 0 
                         ? ((profitReport?.totalProfit?.totalProfit || 0) / (profitReport?.totalProfit?.totalCost || 1) * 100).toFixed(1)
                         : 0}%
@@ -350,7 +351,7 @@ export default function ControlePage() {
           </div>
 
           {/* Gráfico de Lucro por Período */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -362,7 +363,7 @@ export default function ControlePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={profitReport?.profitByDay || []}>
                     <XAxis dataKey="date" />
                     <YAxis />
@@ -435,7 +436,7 @@ export default function ControlePage() {
         </div>
 
         {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Vendas ao longo do tempo */}
           <Card className="lg:col-span-2">
             <CardHeader>
@@ -448,7 +449,7 @@ export default function ControlePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={salesData}>
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -477,7 +478,7 @@ export default function ControlePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <RechartsPieChart>
                   <Pie
                     data={categoryData}

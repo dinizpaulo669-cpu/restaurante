@@ -538,12 +538,18 @@ export default function CustomerPanel() {
               variant="outline"
               size="sm"
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative bg-white text-gray-800 border-gray-300"
+              className={`relative bg-white border-gray-300 transition-colors ${
+                unreadCount > 0 
+                  ? 'text-primary border-primary shadow-sm' 
+                  : 'text-gray-800'
+              }`}
               data-testid="button-notifications"
             >
-              <Bell className="h-4 w-4" />
+              <Bell className={`h-5 w-5 ${
+                unreadCount > 0 ? 'animate-pulse' : ''
+              }`} />
               {unreadCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                <Badge variant="destructive" className="absolute -top-2 -right-2 h-6 w-6 p-0 flex items-center justify-center text-xs animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </Badge>
               )}
@@ -575,27 +581,43 @@ export default function CustomerPanel() {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
-                            notification.read ? 'bg-muted/50' : 'bg-primary/5 border border-primary/20'
+                          className={`p-4 rounded-lg mb-2 cursor-pointer transition-all hover:shadow-sm ${
+                            notification.read ? 'bg-muted/50' : 'bg-primary/10 border border-primary/30 shadow-sm'
                           }`}
                           onClick={() => markNotificationAsRead(notification.id)}
                           data-testid={`notification-${notification.id}`}
                         >
-                          <div className="flex justify-between items-start mb-1">
-                            <h4 className="font-medium text-sm">{notification.title}</h4>
-                            {!notification.read && (
-                              <div className="w-2 h-2 bg-primary rounded-full" />
-                            )}
+                          <div className="flex items-start space-x-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                              notification.type === 'new_message' 
+                                ? 'bg-blue-100 text-blue-600' 
+                                : 'bg-green-100 text-green-600'
+                            }`}>
+                              {notification.type === 'new_message' ? (
+                                <MessageSquare className="w-4 h-4" />
+                              ) : (
+                                <Package className="w-4 h-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
+                                {!notification.read && (
+                                  <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                              <p className="text-xs text-muted-foreground flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {notification.timestamp.toLocaleString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {notification.timestamp.toLocaleString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
                         </div>
                       ))}
                     </div>

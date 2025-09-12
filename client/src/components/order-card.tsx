@@ -46,6 +46,17 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
   // Contar mensagens não lidas do cliente
   const unreadCount = Array.isArray(messages) ? messages.filter((msg: any) => msg.senderType === "customer" && !msg.isRead).length : 0;
   
+  // Marcar mensagens como lidas
+  const markMessagesAsReadMutation = useMutation({
+    mutationFn: () => apiRequest("PUT", `/api/orders/${order.id}/messages/mark-read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${order.id}/messages`] });
+    },
+    onError: () => {
+      console.log("Erro ao marcar mensagens como lidas");
+    }
+  });
+
   // Enviar mensagem
   const sendMessageMutation = useMutation({
     mutationFn: (message: string) => apiRequest("POST", `/api/orders/${order.id}/messages`, { message }),
@@ -65,6 +76,13 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
       });
     }
   });
+
+  // Função para abrir chat e marcar mensagens como lidas
+  const handleOpenChat = () => {
+    if (unreadCount > 0) {
+      markMessagesAsReadMutation.mutate();
+    }
+  };
 
   const handleSendMessage = () => {
     if (newMessage.trim()) {
@@ -230,7 +248,7 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
             {/* Botão de mensagens */}
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={handleOpenChat}>
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Chat
                   {unreadCount > 0 && (
@@ -265,10 +283,10 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
                             }`}
                           >
                             <div
-                              className={`max-w-xs p-3 rounded-lg ${
+                              className={`max-w-xs p-3 rounded-lg shadow-sm ${
                                 message.senderType === "restaurant"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-blue-100 text-blue-800 border border-blue-200"
+                                  ? "bg-primary text-primary-foreground border border-primary/20"
+                                  : "bg-muted text-foreground border border-border"
                               }`}
                             >
                               <p className="text-sm">{message.message}</p>

@@ -386,6 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           senderId: orderMessages.senderId,
           senderType: orderMessages.senderType,
           message: orderMessages.message,
+          isRead: orderMessages.isRead,
           createdAt: orderMessages.createdAt,
           sender: {
             id: users.id,
@@ -431,6 +432,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Mark messages as read
+  app.put("/api/orders/:orderId/messages/mark-read", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      // Marcar como lidas apenas mensagens de clientes (para o restaurante visualizar)
+      const updatedMessages = await db
+        .update(orderMessages)
+        .set({ isRead: true })
+        .where(and(
+          eq(orderMessages.orderId, orderId),
+          eq(orderMessages.senderType, "customer")
+        ))
+        .returning();
+
+      res.json({ success: true, updatedCount: updatedMessages.length });
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+      res.status(500).json({ message: "Failed to mark messages as read" });
     }
   });
 
