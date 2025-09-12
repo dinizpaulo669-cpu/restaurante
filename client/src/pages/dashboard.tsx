@@ -3278,13 +3278,14 @@ export default function Dashboard() {
       
       {/* Modal de edição de pedidos */}
     <Dialog open={showOrderEditForm} onOpenChange={setShowOrderEditForm}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Editar Pedido #{editingOrder?.orderNumber}</DialogTitle>
         </DialogHeader>
         
         {editingOrder && (
-          <div className="space-y-4">
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="customerName">Nome do Cliente</Label>
@@ -3428,7 +3429,8 @@ export default function Dashboard() {
                 />
               </div>
             </div>
-          </div>
+            </div>
+          </ScrollArea>
         )}
         
         <DialogFooter>

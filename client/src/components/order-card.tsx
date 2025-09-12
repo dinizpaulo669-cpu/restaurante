@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Printer, MessageSquare, Send, User, Phone, MapPin, Table, Truck, Edit3 } from "lucide-react";
+import { Printer, MessageSquare, Send, User, Phone, MapPin, Table, Truck, Edit3, Eye } from "lucide-react";
 import type { Order } from "@shared/schema";
 
 interface OrderCardProps {
@@ -34,12 +34,19 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
+  const [showViewModal, setShowViewModal] = useState(false);
   
   const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending;
   
   // Buscar mensagens do pedido
   const { data: messages = [] } = useQuery<any[]>({
     queryKey: [`/api/orders/${order.id}/messages`],
+    enabled: !!order.id,
+  });
+
+  // Buscar itens do pedido para impressão
+  const { data: orderItems = [] } = useQuery<any[]>({
+    queryKey: [`/api/orders/${order.id}/items`],
     enabled: !!order.id,
   });
   
@@ -93,33 +100,62 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
   const handlePrint = () => {
     console.log('Imprimir pedido:', order.id);
     
+    // Gerar lista de produtos
+    const productsHtml = orderItems.length > 0 ? orderItems.map((item: any) => `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #666;">
+        <div style="flex: 1;">
+          <div style="font-weight: bold;">${item.product?.name || 'Produto'}</div>
+          ${item.specialInstructions ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">Obs: ${item.specialInstructions}</div>` : ''}
+        </div>
+        <div style="text-align: right; margin-left: 10px;">
+          <div>${item.quantity}x R$ ${parseFloat(item.unitPrice || 0).toFixed(2)}</div>
+          <div style="font-weight: bold;">R$ ${parseFloat(item.totalPrice || 0).toFixed(2)}</div>
+        </div>
+      </div>
+    `).join('') : '<div style="text-align: center; color: #666; font-style: italic;">Nenhum produto encontrado</div>';
+    
     // Criar conteúdo para impressão
     const printContent = `
-      <div style="font-family: monospace; width: 300px; margin: 0 auto;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
-          <h2>PEDIDO #${order.orderNumber}</h2>
-          <p>${new Date().toLocaleString('pt-BR')}</p>
+      <div style="font-family: monospace; width: 350px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 20px;">PEDIDO #${order.orderNumber}</h2>
+          <p style="margin: 5px 0; font-size: 12px;">${new Date(order.createdAt || new Date()).toLocaleString('pt-BR')}</p>
         </div>
         
-        <div style="margin-bottom: 15px;">
-          <strong>Cliente:</strong> ${order.customerName}<br>
-          ${order.customerPhone ? `<strong>Telefone:</strong> ${order.customerPhone}<br>` : ''}
-          ${order.customerAddress ? `<strong>Endereço:</strong> ${order.customerAddress}<br>` : ''}
-          <strong>Tipo:</strong> ${order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}<br>
-          <strong>Status:</strong> ${statusInfo.label}
+        <div style="margin-bottom: 20px;">
+          <div style="margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customerName}</div>
+          ${order.customerPhone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${order.customerPhone}</div>` : ''}
+          ${order.customerAddress ? `<div style="margin-bottom: 8px;"><strong>Endereço:</strong> ${order.customerAddress}</div>` : ''}
+          <div style="margin-bottom: 8px;"><strong>Tipo:</strong> ${order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}</div>
         </div>
         
-        ${order.notes ? `<div style="margin-bottom: 15px;"><strong>Observações:</strong> ${order.notes}</div>` : ''}
+        <div style="margin-bottom: 20px;">
+          <h3 style="margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid #333;">PRODUTOS:</h3>
+          ${productsHtml}
+        </div>
         
-        <div style="border-top: 1px solid #000; padding-top: 10px;">
-          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+        ${order.notes ? `<div style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border: 1px dashed #999;"><strong>Observações:</strong><br>${order.notes}</div>` : ''}
+        
+        <div style="border-top: 2px solid #000; padding-top: 15px; margin-top: 20px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+            <span>Subtotal:</span>
+            <span>R$ ${parseFloat(order.subtotal || order.total || 0).toFixed(2)}</span>
+          </div>
+          ${order.deliveryFee && parseFloat(order.deliveryFee || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+              <span>Taxa de Entrega:</span>
+              <span>R$ ${parseFloat(order.deliveryFee).toFixed(2)}</span>
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-top: 1px solid #333; padding-top: 8px;">
             <span>TOTAL:</span>
-            <span>R$ ${order.total}</span>
+            <span>R$ ${parseFloat(order.total || 0).toFixed(2)}</span>
           </div>
         </div>
         
-        <div style="text-align: center; margin-top: 20px; font-size: 12px;">
-          <p>Obrigado pela preferência!</p>
+        <div style="text-align: center; margin-top: 25px; font-size: 12px; color: #666;">
+          <p style="margin: 0;">Obrigado pela preferência!</p>
+          <p style="margin: 5px 0 0 0;">RestaurantePro System</p>
         </div>
       </div>
     `;
@@ -340,15 +376,28 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
             )}
           </div>
           
-          <Button 
-            onClick={handlePrint}
-            variant="outline" 
-            size="sm"
-            data-testid={`button-print-${order.id}`}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
+          <div className="flex space-x-2">
+            {/* Botão visualizar */}
+            <Button 
+              onClick={() => setShowViewModal(true)}
+              variant="outline" 
+              size="sm"
+              data-testid={`button-view-${order.id}`}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Visualizar
+            </Button>
+            
+            <Button 
+              onClick={handlePrint}
+              variant="outline" 
+              size="sm"
+              data-testid={`button-print-${order.id}`}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </Button>
+          </div>
         </div>
 
         {order.estimatedDeliveryTime && (
@@ -361,6 +410,109 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
           </div>
         )}
       </CardContent>
+      
+      {/* Modal de visualização do pedido */}
+      <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Pedido #{order.orderNumber}</DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="space-y-6">
+              {/* Informações do cliente */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Informações do Cliente</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Nome:</strong> {order.customerName}</div>
+                  <div><strong>Tipo:</strong> {order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}</div>
+                  {order.customerPhone && <div><strong>Telefone:</strong> {order.customerPhone}</div>}
+                  <div><strong>Status:</strong> <Badge className={statusInfo.color}>{statusInfo.label}</Badge></div>
+                  {order.customerAddress && (
+                    <div className="col-span-2"><strong>Endereço:</strong> {order.customerAddress}</div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Produtos do pedido */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Produtos do Pedido</h3>
+                {orderItems.length > 0 ? (
+                  <div className="space-y-3">
+                    {orderItems.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between items-start p-3 bg-muted rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium">{item.product?.name || 'Produto'}</div>
+                          {item.specialInstructions && (
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Observações: {item.specialInstructions}
+                            </div>
+                          )}
+                          <div className="text-sm text-muted-foreground">
+                            {item.quantity}x R$ {parseFloat(item.unitPrice || 0).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">R$ {parseFloat(item.totalPrice || 0).toFixed(2)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
+                )}
+              </div>
+              
+              {/* Valores */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Valores</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>R$ {parseFloat(order.subtotal || order.total || 0).toFixed(2)}</span>
+                  </div>
+                  {order.deliveryFee && parseFloat(order.deliveryFee || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Taxa de Entrega:</span>
+                      <span>R$ {parseFloat(order.deliveryFee).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Total:</span>
+                    <span>R$ {parseFloat(order.total || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Observações */}
+              {order.notes && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Observações</h3>
+                  <div className="p-3 bg-muted rounded-lg text-sm">
+                    {order.notes}
+                  </div>
+                </div>
+              )}
+              
+              {/* Informações adicionais */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Informações do Pedido</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Data:</strong> {new Date(order.createdAt || new Date()).toLocaleString('pt-BR')}</div>
+                  {order.estimatedDeliveryTime && (
+                    <div><strong>Previsão:</strong> {new Date(order.estimatedDeliveryTime).toLocaleTimeString('pt-BR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}</div>
+                  )}
+                  {order.paymentMethod && <div><strong>Pagamento:</strong> {order.paymentMethod}</div>}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

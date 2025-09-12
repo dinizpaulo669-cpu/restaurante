@@ -435,6 +435,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get order items
+  app.get("/api/orders/:orderId/items", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      
+      // Simple auth check for development
+      if (!(req.session as any)?.user?.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const items = await db
+        .select({
+          id: orderItems.id,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          totalPrice: orderItems.totalPrice,
+          specialInstructions: orderItems.specialInstructions,
+          product: {
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            imageUrl: products.imageUrl
+          }
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, orderId));
+      
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching order items:", error);
+      res.status(500).json({ message: "Failed to fetch order items" });
+    }
+  });
+
   // Mark messages as read
   app.put("/api/orders/:orderId/messages/mark-read", async (req, res) => {
     try {
