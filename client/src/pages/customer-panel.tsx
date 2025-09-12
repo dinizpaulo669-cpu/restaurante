@@ -270,15 +270,6 @@ export default function CustomerPanel() {
     enabled: true,
   });
 
-  const { data: customerStats } = useQuery<{
-    totalOrders: number;
-    favoritesCount: number;
-    totalSpent: number;
-    averageRating: number;
-  }>({
-    queryKey: ["/api/customer/stats"],
-    enabled: true,
-  });
 
   const { data: customerOrders = [] } = useQuery<any[]>({
     queryKey: ["/api/customer/orders"],
@@ -363,7 +354,7 @@ export default function CustomerPanel() {
     mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "POST"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/customer/stats"] });
+
       toast({ title: "Restaurante adicionado aos favoritos!" });
     },
     onError: () => {
@@ -375,7 +366,7 @@ export default function CustomerPanel() {
     mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/customer/stats"] });
+
       toast({ title: "Restaurante removido dos favoritos" });
     },
     onError: () => {
@@ -513,11 +504,11 @@ export default function CustomerPanel() {
   const renderHomeContent = () => (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary to-accent text-white rounded-xl p-4 sm:p-6 lg:p-8">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2" data-testid="welcome-title">
+      <div className="bg-gradient-to-r from-primary to-accent text-white rounded-xl p-6 sm:p-6 lg:p-8">
+        <h1 className="text-2xl sm:text-2xl lg:text-3xl font-bold mb-3" data-testid="welcome-title">
           Olá, {user.firstName || user.name?.split(' ')[0] || 'Cliente'}! 👋
         </h1>
-        <p className="text-white/90 mb-4 text-sm sm:text-base" data-testid="welcome-subtitle">
+        <p className="text-white/90 mb-5 text-base sm:text-base" data-testid="welcome-subtitle">
           O que você gostaria de comer hoje?
         </p>
         <div className="flex justify-between items-start mb-4">
@@ -618,89 +609,49 @@ export default function CustomerPanel() {
 
       {/* Categories */}
       <div>
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4" data-testid="categories-title">Categorias</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4">
+        <h2 className="text-xl sm:text-xl lg:text-2xl font-bold mb-5" data-testid="categories-title">Categorias</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4 lg:gap-4">
           {categories.map(({ icon: Icon, name, value, color }) => (
             <button
               key={value}
               onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
-              className={`p-3 sm:p-4 rounded-xl text-center transition-all hover:scale-105 ${
+              className={`p-4 sm:p-4 rounded-xl text-center transition-all hover:scale-105 ${
                 selectedCategory === value ? "bg-primary/10 border-2 border-primary" : "bg-card border border-border"
               }`}
               data-testid={`category-${value}`}
             >
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full ${color} flex items-center justify-center mx-auto mb-2`}>
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7" />
+              <div className={`w-12 h-12 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full ${color} flex items-center justify-center mx-auto mb-3`}>
+                <Icon className="h-6 w-6 sm:h-6 sm:w-6 lg:h-7 lg:w-7" />
               </div>
-              <span className="text-xs sm:text-sm font-medium">{name}</span>
+              <span className="text-sm sm:text-sm font-medium">{name}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
-                  {customerStats?.totalOrders || 0}
-                </div>
-                <div className="text-sm font-medium text-muted-foreground">Pedidos Realizados</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {customerStats?.totalOrders > 0 ? 'Continue pedindo!' : 'Faça seu primeiro pedido'}
-                </div>
+      {/* Welcome Card */}
+      <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
+                {new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}
               </div>
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <ShoppingBag className="h-6 w-6 text-primary" />
+              <div className="text-sm font-medium text-muted-foreground">Bem-vindo de volta!</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Descubra novos sabores hoje
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">
-                  {customerStats?.favoritesCount || 0}
-                </div>
-                <div className="text-sm font-medium text-muted-foreground">Restaurantes Favoritos</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {customerStats?.favoritesCount > 0 ? 'Seus preferidos' : 'Adicione favoritos'}
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
-                <Heart className="h-6 w-6 text-orange-600" />
-              </div>
+            <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+              <Calendar className="h-6 w-6 text-green-600" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500 sm:col-span-2 lg:col-span-1">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
-                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}
-                </div>
-                <div className="text-sm font-medium text-muted-foreground">Bem-vindo de volta!</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Descubra novos sabores hoje
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                <Calendar className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Featured Restaurants */}
       <div>
-        <h2 className="text-xl font-bold mb-4" data-testid="restaurants-title">Restaurantes em destaque</h2>
+        <h2 className="text-xl font-bold mb-5" data-testid="restaurants-title">Restaurantes em destaque</h2>
         {isLoading ? (
           <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
             {[...Array(isMobile ? 3 : 6)].map((_, i) => (
@@ -726,28 +677,28 @@ export default function CustomerPanel() {
             {restaurants.slice(0, isMobile ? 3 : 6).map((restaurant: any) => (
               <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                 <div className="flex space-x-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Pizza className="h-8 w-8 text-primary" />
+                  <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Pizza className="h-10 w-10 text-primary" />
                   </div>
                   <div 
                     className="flex-1 min-w-0"
                     onClick={() => setLocation(`/restaurant/${restaurant.id}`)}
                   >
-                    <h3 className="font-semibold text-base lg:text-lg group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-lg lg:text-lg group-hover:text-primary transition-colors">
                       {restaurant.name}
                     </h3>
-                    <p className="text-muted-foreground text-sm mb-1">{restaurant.category || 'Restaurante'}</p>
+                    <p className="text-muted-foreground text-base mb-2">{restaurant.category || 'Restaurante'}</p>
                     <div className="flex items-center space-x-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        <Star className="w-3 h-3 mr-1" />
+                      <Badge variant="secondary" className="text-sm py-1">
+                        <Star className="w-4 h-4 mr-1" />
                         {restaurant.rating || '4.5'}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        <Clock className="w-3 h-3 mr-1" />
+                      <Badge variant="outline" className="text-sm py-1">
+                        <Clock className="w-4 h-4 mr-1" />
                         {restaurant.deliveryTime || '25-35'} min
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        <Truck className="w-3 h-3 mr-1" />
+                      <Badge variant="outline" className="text-sm py-1">
+                        <Truck className="w-4 h-4 mr-1" />
                         R$ {restaurant.deliveryFee || '5,99'}
                       </Badge>
                     </div>
@@ -862,8 +813,8 @@ export default function CustomerPanel() {
             {restaurants.map((restaurant: any) => (
               <Card key={restaurant.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group">
                 <div className="flex space-x-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Pizza className="h-8 w-8 text-primary" />
+                  <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Pizza className="h-10 w-10 text-primary" />
                   </div>
                   <div 
                     className="flex-1 min-w-0"
@@ -1203,26 +1154,26 @@ export default function CustomerPanel() {
       ) : (
         /* Mobile Layout */
         <div className="flex flex-col min-h-screen">
-          <div className="flex-1 p-4 pb-20">
+          <div className="flex-1 p-5 pb-24">
             {renderContent()}
           </div>
           
           {/* Bottom Navigation */}
-          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-            <div className="flex justify-around items-center py-2">
+          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg">
+            <div className="flex justify-around items-center py-3">
               {bottomNavItems.map(({ icon: Icon, label, value }) => (
                 <button
                   key={value}
                   onClick={() => setActiveTab(value)}
-                  className={`flex flex-col items-center space-y-1 py-2 px-4 transition-colors ${
+                  className={`flex flex-col items-center space-y-2 py-3 px-3 min-h-[60px] transition-colors ${
                     activeTab === value
                       ? "text-primary"
                       : "text-muted-foreground"
                   }`}
                   data-testid={`nav-${value}`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-xs">{label}</span>
+                  <Icon className="h-6 w-6" />
+                  <span className="text-sm font-medium">{label}</span>
                 </button>
               ))}
             </div>
