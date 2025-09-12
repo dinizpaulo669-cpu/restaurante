@@ -3236,6 +3236,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === ADMIN PAYMENT ROUTES ===
+  
+  // Listar todos os pagamentos (admin)
+  app.get('/api/admin/payments', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const payments = await db
+        .select({
+          payment: pixPayments,
+          restaurant: {
+            id: restaurants.id,
+            name: restaurants.name
+          },
+          user: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email
+          },
+          plan: {
+            id: subscriptionPlans.id,
+            name: subscriptionPlans.name,
+            price: subscriptionPlans.price
+          }
+        })
+        .from(pixPayments)
+        .leftJoin(restaurants, eq(pixPayments.restaurantId, restaurants.id))
+        .leftJoin(users, eq(pixPayments.userId, users.id))
+        .leftJoin(subscriptionPlans, eq(pixPayments.planId, subscriptionPlans.id))
+        .orderBy(desc(pixPayments.createdAt));
+
+      res.json({ payments });
+    } catch (error) {
+      console.error("Admin payments error:", error);
+      res.status(500).json({ message: "Failed to get payments" });
+    }
+  });
+
+  // Confirmar pagamento manualmente (admin)
+  app.post('/api/admin/payments/:id/confirm', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const paymentId = req.params.id;
+
+      // Buscar o pagamento
+      const [payment] = await db
+        .select()
+        .from(pixPayments)
+        .where(eq(pixPayments.id, paymentId))
+        .limit(1);
+
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      if (payment.status === 'paid') {
+        return res.status(400).json({ message: "Payment already confirmed" });
+      }
+
+      // Buscar informações do plano
+      const [plan] = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, payment.planId))
+        .limit(1);
+
+      if (!plan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      // Atualizar status do pagamento
+      await db
+        .update(pixPayments)
+        .set({
+          status: 'paid',
+          paidAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(pixPayments.id, paymentId));
+
+      // Calcular datas do plano
+      const now = new Date();
+      const planEndDate = new Date(now);
+      planEndDate.setMonth(planEndDate.getMonth() + (payment.billingPeriodMonths || 1));
+
+      // Criar histórico de pagamento
+      await db.insert(paymentHistory).values({
+        restaurantId: payment.restaurantId,
+        userId: payment.userId,
+        planId: payment.planId,
+        pixPaymentId: payment.id,
+        amount: payment.amount,
+        method: 'pix',
+        status: 'paid',
+        paidAt: new Date(),
+        planStartDate: now,
+        planEndDate: planEndDate
+      });
+
+      // Atualizar usuário com o plano
+      await db
+        .update(users)
+        .set({
+          subscriptionPlan: plan.name.toLowerCase(),
+          isTrialActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, payment.userId));
+
+      res.json({ 
+        message: "Payment confirmed successfully",
+        payment: { ...payment, status: 'paid', paidAt: new Date() }
+      });
+    } catch (error) {
+      console.error("Confirm payment error:", error);
+      res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
   // === PIX PAYMENT ROUTES ===
   
   // Create PIX payment for plan upgrade

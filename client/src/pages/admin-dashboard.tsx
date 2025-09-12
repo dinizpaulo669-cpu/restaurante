@@ -28,7 +28,8 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
-  Cog
+  Cog,
+  CreditCard
 } from "lucide-react";
 
 import PlanModal from "@/components/admin/PlanModal";
@@ -136,6 +137,12 @@ export default function AdminDashboard() {
     enabled: !!adminUser,
   });
 
+  // Buscar pagamentos PIX
+  const { data: paymentsData, refetch: refetchPayments } = useQuery({
+    queryKey: ["/api/admin/payments"],
+    enabled: !!adminUser && activeTab === "pagamentos",
+  });
+
   // Listar restaurantes
   const { data: restaurantsData } = useQuery({
     queryKey: ["/api/admin/restaurants", searchTerm],
@@ -197,6 +204,26 @@ export default function AdminDashboard() {
     setSelectedFeature(undefined);
     setFeatureModalOpen(true);
   };
+
+  // Mutation para confirmar pagamento manualmente
+  const confirmPaymentMutation = useMutation({
+    mutationFn: (paymentId: string) => 
+      apiRequest("POST", `/api/admin/payments/${paymentId}/confirm`, {}),
+    onSuccess: () => {
+      refetchPayments();
+      toast({
+        title: "Pagamento confirmado",
+        description: "O pagamento foi confirmado e o plano foi ativado",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao confirmar pagamento",
+        description: error.message || "Não foi possível confirmar o pagamento",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Delete mutations
   const deletePlanMutation = useMutation({
@@ -304,7 +331,7 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <TrendingUp className="h-4 w-4 mr-2" />
               Dashboard
@@ -324,6 +351,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="features" data-testid="tab-features">
               <Settings className="h-4 w-4 mr-2" />
               Funcionalidades
+            </TabsTrigger>
+            <TabsTrigger value="pagamentos" data-testid="tab-pagamentos">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Pagamentos
             </TabsTrigger>
           </TabsList>
 
@@ -746,6 +777,142 @@ export default function AdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Pagamentos */}
+          <TabsContent value="pagamentos" className="space-y-6 mt-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Gerenciamento de Pagamentos</h2>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Pagamentos PIX Pendentes e Concluídos</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie confirmações de pagamento e ativação de planos
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Restaurante</TableHead>
+                      <TableHead>Plano</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data Criação</TableHead>
+                      <TableHead>Data Pagamento</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentsData?.payments?.map((payment: any) => {
+                      const statusColor = payment.status === 'paid' ? 'default' : 
+                                         payment.status === 'pending' ? 'secondary' : 
+                                         payment.status === 'expired' ? 'destructive' : 'outline';
+                      const statusLabel = payment.status === 'paid' ? 'Pago' : 
+                                         payment.status === 'pending' ? 'Pendente' : 
+                                         payment.status === 'expired' ? 'Expirado' : 
+                                         payment.status === 'cancelled' ? 'Cancelado' : payment.status;
+                      
+                      return (
+                        <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {payment.restaurant?.name || 'N/A'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Proprietário: {payment.user?.firstName} {payment.user?.lastName}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {payment.plan?.name || 'N/A'}
+                            </Badge>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              R$ {parseFloat(payment.plan?.price || 0).toFixed(2)}/mês
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold">
+                              R$ {parseFloat(payment.amount || 0).toFixed(2)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {payment.billingPeriodMonths} mês{payment.billingPeriodMonths > 1 ? 'es' : ''}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusColor as any}>
+                              {statusLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {new Date(payment.createdAt).toLocaleDateString('pt-BR')}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(payment.createdAt).toLocaleTimeString('pt-BR')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {payment.paidAt ? (
+                              <div>
+                                <div className="text-sm">
+                                  {new Date(payment.paidAt).toLocaleDateString('pt-BR')}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(payment.paidAt).toLocaleTimeString('pt-BR')}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              {payment.status === 'pending' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => confirmPaymentMutation.mutate(payment.id)}
+                                  disabled={confirmPaymentMutation.isPending}
+                                  data-testid={`button-confirm-payment-${payment.id}`}
+                                >
+                                  {confirmPaymentMutation.isPending ? (
+                                    <div className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full" />
+                                  ) : (
+                                    <CheckCircle className="h-3 w-3" />
+                                  )}
+                                  {confirmPaymentMutation.isPending ? "..." : "Confirmar"}
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" data-testid={`button-view-payment-${payment.id}`}>
+                                <Edit className="h-3 w-3" />
+                                Detalhes
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {(!paymentsData?.payments || paymentsData.payments.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6">
+                          <div className="text-muted-foreground">
+                            Nenhum pagamento encontrado
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
