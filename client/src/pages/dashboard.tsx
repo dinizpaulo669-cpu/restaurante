@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 export default function Dashboard() {
@@ -3088,7 +3089,7 @@ export default function Dashboard() {
                   <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
                 </div>
               ) : (() => {
-                const historicalOrders = historyData?.orders || [];
+                const historicalOrders = (historyData && typeof historyData === 'object' && 'orders' in historyData) ? (historyData.orders as any[]) : [];
 
                 if (historicalOrders.length === 0) {
                   return (
@@ -3104,7 +3105,7 @@ export default function Dashboard() {
 
                 return (
                   <div className="space-y-4">
-                    {historicalOrders.map((order: any) => (
+                    {(historicalOrders as any[]).map((order: any) => (
                       <Card key={order.id} className="p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -3144,9 +3145,90 @@ export default function Dashboard() {
                           </div>
                           
                           <div className="text-right">
-                            <div className="text-lg font-bold text-green-600">
+                            <div className="text-lg font-bold text-green-600 mb-3">
                               R$ {parseFloat(order.total).toFixed(2)}
                             </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Criar função de impressão similar à do OrderCard
+                                const printContent = `
+                                  <div style="font-family: monospace; width: 350px; margin: 0 auto; padding: 20px;">
+                                    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+                                      <h2 style="margin: 0; font-size: 20px;">PEDIDO #${order.orderNumber}</h2>
+                                      <p style="margin: 5px 0; font-size: 12px;">${new Date(order.createdAt || new Date()).toLocaleString('pt-BR')}</p>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 20px;">
+                                      <div style="margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customerName}</div>
+                                      ${order.customerPhone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${order.customerPhone}</div>` : ''}
+                                      ${order.customerAddress ? `<div style="margin-bottom: 8px;"><strong>Endereço:</strong> ${order.customerAddress}</div>` : ''}
+                                      <div style="margin-bottom: 8px;"><strong>Tipo:</strong> ${order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}</div>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 20px;">
+                                      <h3 style="margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid #333;">PRODUTOS:</h3>
+                                      ${(order.items || []).map((item: any) => `
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #666;">
+                                          <div style="flex: 1;">
+                                            <div style="font-weight: bold;">${item.productName || 'Produto'}</div>
+                                            ${item.specialInstructions ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">Obs: ${item.specialInstructions}</div>` : ''}
+                                          </div>
+                                          <div style="text-align: right; margin-left: 10px;">
+                                            <div>${item.quantity}x R$ ${parseFloat(item.price || 0).toFixed(2)}</div>
+                                            <div style="font-weight: bold;">R$ ${(item.quantity * parseFloat(item.price || 0)).toFixed(2)}</div>
+                                          </div>
+                                        </div>
+                                      `).join('')}
+                                    </div>
+                                    
+                                    ${order.notes ? `<div style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border: 1px dashed #999;"><strong>Observações:</strong><br>${order.notes}</div>` : ''}
+                                    
+                                    <div style="border-top: 2px solid #000; padding-top: 15px; margin-top: 20px;">
+                                      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+                                        <span>Subtotal:</span>
+                                        <span>R$ ${parseFloat(order.total || 0).toFixed(2)}</span>
+                                      </div>
+                                      ${order.deliveryFee ? `<div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;"><span>Taxa de entrega:</span><span>R$ ${parseFloat(order.deliveryFee).toFixed(2)}</span></div>` : ''}
+                                      <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid #333; padding-top: 8px;">
+                                        <span>TOTAL:</span>
+                                        <span>R$ ${(parseFloat(order.total || 0) + parseFloat(order.deliveryFee || 0)).toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #333; font-size: 12px;">
+                                      Obrigado pela preferência!<br>
+                                      RestaurantePro - Sistema de Gestão
+                                    </div>
+                                  </div>
+                                `;
+                                
+                                const printWindow = window.open('', '_blank');
+                                if (printWindow) {
+                                  printWindow.document.write(`
+                                    <html>
+                                      <head>
+                                        <title>Pedido #${order.orderNumber}</title>
+                                        <style>
+                                          @media print {
+                                            body { margin: 0; }
+                                            @page { margin: 10mm; }
+                                          }
+                                        </style>
+                                      </head>
+                                      <body>${printContent}</body>
+                                    </html>
+                                  `);
+                                  printWindow.document.close();
+                                  printWindow.print();
+                                }
+                              }}
+                              data-testid={`button-print-history-${order.id}`}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Imprimir
+                            </Button>
                           </div>
                         </div>
                       </Card>
