@@ -3152,6 +3152,13 @@ export default function Dashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
+                                // Função para escapar HTML e prevenir XSS
+                                const escapeHtml = (text: string) => {
+                                  const div = document.createElement('div');
+                                  div.textContent = text;
+                                  return div.innerHTML;
+                                };
+                                
                                 // Criar função de impressão similar à do OrderCard
                                 const printContent = `
                                   <div style="font-family: monospace; width: 350px; margin: 0 auto; padding: 20px;">
@@ -3161,9 +3168,9 @@ export default function Dashboard() {
                                     </div>
                                     
                                     <div style="margin-bottom: 20px;">
-                                      <div style="margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customerName}</div>
-                                      ${order.customerPhone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${order.customerPhone}</div>` : ''}
-                                      ${order.customerAddress ? `<div style="margin-bottom: 8px;"><strong>Endereço:</strong> ${order.customerAddress}</div>` : ''}
+                                      <div style="margin-bottom: 8px;"><strong>Cliente:</strong> ${escapeHtml(order.customerName || '')}</div>
+                                      ${order.customerPhone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${escapeHtml(order.customerPhone)}</div>` : ''}
+                                      ${order.customerAddress ? `<div style="margin-bottom: 8px;"><strong>Endereço:</strong> ${escapeHtml(order.customerAddress)}</div>` : ''}
                                       <div style="margin-bottom: 8px;"><strong>Tipo:</strong> ${order.orderType === "delivery" ? "Entrega" : order.orderType === "table" ? "Mesa" : "Retirada"}</div>
                                     </div>
                                     
@@ -3172,8 +3179,8 @@ export default function Dashboard() {
                                       ${(order.items || []).map((item: any) => `
                                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #666;">
                                           <div style="flex: 1;">
-                                            <div style="font-weight: bold;">${item.productName || 'Produto'}</div>
-                                            ${item.specialInstructions ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">Obs: ${item.specialInstructions}</div>` : ''}
+                                            <div style="font-weight: bold;">${escapeHtml(item.productName || 'Produto')}</div>
+                                            ${item.specialInstructions ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">Obs: ${escapeHtml(item.specialInstructions)}</div>` : ''}
                                           </div>
                                           <div style="text-align: right; margin-left: 10px;">
                                             <div>${item.quantity}x R$ ${parseFloat(item.price || 0).toFixed(2)}</div>
@@ -3183,7 +3190,7 @@ export default function Dashboard() {
                                       `).join('')}
                                     </div>
                                     
-                                    ${order.notes ? `<div style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border: 1px dashed #999;"><strong>Observações:</strong><br>${order.notes}</div>` : ''}
+                                    ${order.notes ? `<div style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border: 1px dashed #999;"><strong>Observações:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
                                     
                                     <div style="border-top: 2px solid #000; padding-top: 15px; margin-top: 20px;">
                                       <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
