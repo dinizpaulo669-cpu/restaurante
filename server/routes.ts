@@ -1923,13 +1923,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoints para cupons
-  app.get("/api/dev/coupons", async (req, res) => {
+  app.get("/api/dev/coupons", isDevAuthenticated, async (req: any, res) => {
     try {
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
+      
+      // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
@@ -1949,13 +1953,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/coupons", async (req, res) => {
+  app.post("/api/dev/coupons", isDevAuthenticated, async (req: any, res) => {
     try {
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
+      
+      // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
@@ -1976,15 +1984,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Atualizar cupom
-  app.put("/api/dev/coupons/:id", async (req, res) => {
+  app.put("/api/dev/coupons/:id", isDevAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
+      
+      // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
@@ -2024,15 +2036,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deletar cupom
-  app.delete("/api/dev/coupons/:id", async (req, res) => {
+  app.delete("/api/dev/coupons/:id", isDevAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       
-      // Buscar o restaurante do usuário de desenvolvimento
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
+      
+      // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, "dev-user-123"))
+        .where(eq(restaurants.ownerId, actualOwnerId))
         .limit(1);
         
       if (!restaurant) {
@@ -2206,13 +2222,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint para estatísticas do restaurante
   app.get("/api/restaurant/stats", isDevAuthenticated, async (req: any, res) => {
     try {
-      let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      }
-      
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
       
       // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db
@@ -2343,13 +2355,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint para relatório de lucro do restaurante
   app.get("/api/restaurant/profit-report", isDevAuthenticated, async (req: any, res) => {
     try {
-      let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      }
-      
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Usar sempre o ID do usuário autenticado, sem hardcode
+      let userId = req.user?.claims?.sub || "dev-user-internal";
+      const actualOwnerId = userId;
       
       // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db

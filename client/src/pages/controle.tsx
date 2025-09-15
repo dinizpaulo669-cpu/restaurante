@@ -72,28 +72,14 @@ export default function ControlePage() {
     enabled: isAuthenticated
   });
 
-  // Usar dados reais das estatísticas ou fallback para dados mockados
-  const salesData = restaurantStats?.salesByDay || [
-    { date: '01/01', vendas: 1200, pedidos: 24 },
-    { date: '02/01', vendas: 1500, pedidos: 28 },
-    { date: '03/01', vendas: 1100, pedidos: 22 },
-    { date: '04/01', vendas: 1800, pedidos: 32 },
-    { date: '05/01', vendas: 2100, pedidos: 38 },
-    { date: '06/01', vendas: 1900, pedidos: 35 },
-    { date: '07/01', vendas: 2300, pedidos: 41 },
-  ];
+  // Usar apenas dados reais das estatísticas
+  const salesData = restaurantStats?.salesByDay || [];
 
   const topProducts = restaurantStats?.topProducts?.map((product: any) => ({
     name: product.productName || 'Produto',
     vendas: Number(product.totalSold || 0),
     receita: Number(product.totalRevenue || 0)
-  })) || [
-    { name: 'X-Burger', vendas: 120, receita: 1800 },
-    { name: 'Pizza Margherita', vendas: 95, receita: 1520 },
-    { name: 'Refrigerante', vendas: 200, receita: 800 },
-    { name: 'Batata Frita', vendas: 80, receita: 640 },
-    { name: 'Hambúrguer Bacon', vendas: 65, receita: 1300 },
-  ];
+  })) || [];
 
   const categoryData = restaurantStats?.categoryStats?.map((category: any, index: number) => {
     const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
@@ -102,12 +88,7 @@ export default function ControlePage() {
       value: Number(category.count || 0),
       color: colors[index % colors.length]
     };
-  }) || [
-    { name: 'Lanches', value: 45, color: '#ff6384' },
-    { name: 'Pizzas', value: 30, color: '#36a2eb' },
-    { name: 'Bebidas', value: 15, color: '#ffce56' },
-    { name: 'Acompanhamentos', value: 10, color: '#4bc0c0' },
-  ];
+  }) || [];
 
   const totalRevenue = restaurantStats?.totalRevenue || 0;
   const averageTicket = restaurantStats?.averageTicket || 0;
@@ -367,40 +348,50 @@ export default function ControlePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={profitReport?.profitByDay || []}>
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value: any, name: string) => [
-                        `R$ ${Number(value).toFixed(2)}`, 
-                        name === 'totalProfit' ? 'Lucro' : 
-                        name === 'totalRevenue' ? 'Receita' : 'Custo'
-                      ]}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="totalProfit" 
-                      stroke="#22c55e" 
-                      strokeWidth={2}
-                      name="Lucro"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="totalRevenue" 
-                      stroke="#3b82f6" 
-                      strokeWidth={1}
-                      name="Receita"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="totalCost" 
-                      stroke="#ef4444" 
-                      strokeWidth={1}
-                      name="Custo"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {(profitReport?.profitByDay && profitReport.profitByDay.length > 0) ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={profitReport.profitByDay}>
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value: any, name: string) => [
+                          `R$ ${Number(value).toFixed(2)}`, 
+                          name === 'totalProfit' ? 'Lucro' : 
+                          name === 'totalRevenue' ? 'Receita' : 'Custo'
+                        ]}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="totalProfit" 
+                        stroke="#22c55e" 
+                        strokeWidth={2}
+                        name="Lucro"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="totalRevenue" 
+                        stroke="#3b82f6" 
+                        strokeWidth={1}
+                        name="Receita"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="totalCost" 
+                        stroke="#ef4444" 
+                        strokeWidth={1}
+                        name="Custo"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">Nenhum dado de lucro ainda</p>
+                      <p className="text-sm">Dados aparecerão conforme você realizar vendas</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -414,25 +405,34 @@ export default function ControlePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(profitReport?.profitByProduct || []).slice(0, 5).map((product: any, index: number) => (
-                    <div key={product.productId} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg" data-testid={`profit-product-${index}`}>
-                      <div className="flex items-center space-x-4">
-                        <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-600 font-semibold">#{index + 1}</span>
+                  {(profitReport?.profitByProduct && profitReport.profitByProduct.length > 0) ? (
+                    profitReport.profitByProduct.slice(0, 5).map((product: any, index: number) => (
+                      <div key={product.productId} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg" data-testid={`profit-product-${index}`}>
+                        <div className="flex items-center space-x-4">
+                          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 font-semibold">#{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{product.productName}</p>
+                            <p className="text-sm text-gray-600">
+                              {product.totalQuantitySold} vendas • Margem: {product.profitMargin.toFixed(1)}%
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{product.productName}</p>
-                          <p className="text-sm text-gray-600">
-                            {product.totalQuantitySold} vendas • Margem: {product.profitMargin.toFixed(1)}%
-                          </p>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">R$ {product.totalProfit.toFixed(2)}</p>
+                          <p className="text-sm text-gray-600">lucro total</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">R$ {product.totalProfit.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">lucro total</p>
+                    ))
+                  ) : (
+                    <div className="h-32 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <Package className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">Nenhum produto vendido ainda</p>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -453,20 +453,30 @@ export default function ControlePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={salesData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="vendas" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    name="Receita (R$)"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {(salesData && salesData.length > 0) ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={salesData}>
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line 
+                      type="monotone" 
+                      dataKey="vendas" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      name="Receita (R$)"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium">Nenhuma venda ainda</p>
+                    <p className="text-sm">Dados aparecerão conforme você realizar vendas</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -482,25 +492,35 @@ export default function ControlePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <RechartsPieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-              </ResponsiveContainer>
+              {(categoryData && categoryData.length > 0) ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <PieChart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium">Nenhuma venda por categoria</p>
+                    <p className="text-sm">Dados aparecerão conforme você realizar vendas</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -515,23 +535,32 @@ export default function ControlePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topProducts.map((product: any, index: number) => (
-                <div key={product.name} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold">#{index + 1}</span>
+              {(topProducts && topProducts.length > 0) ? (
+                topProducts.map((product: any, index: number) => (
+                  <div key={product.name} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold">#{index + 1}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-gray-600">{product.vendas} vendas</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-600">{product.vendas} vendas</p>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">R$ {product.receita.toFixed(2)}</p>
+                      <p className="text-sm text-gray-600">receita total</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-green-600">R$ {product.receita.toFixed(2)}</p>
-                    <p className="text-sm text-gray-600">receita total</p>
+                ))
+              ) : (
+                <div className="h-32 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <Package className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">Nenhum produto vendido ainda</p>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
