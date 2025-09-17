@@ -2717,7 +2717,7 @@ export default function Dashboard() {
       );
     }
 
-    if (activeSection === "comandas") {
+    if (activeSection === "orders") {
       // Separar pedidos por tipo (excluindo pedidos entregues)
       const deliveryOrders = (orders as any[]).filter((order: any) => 
         (order.orderType === 'delivery' || !order.orderType) && order.status !== 'delivered'
