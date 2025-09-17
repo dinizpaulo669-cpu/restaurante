@@ -3739,14 +3739,16 @@ export default function Dashboard() {
           activeOrders.forEach((order: any) => {
             totalAmount += parseFloat(order.total || 0);
             order.items?.forEach((item: any) => {
-              const key = `${item.productId}-${item.price}`;
+              const price = parseFloat(item.unitPrice || item.price || 0);
+              const key = `${item.productId || item.product?.id}-${price}`;
               if (consolidatedItems[key]) {
                 consolidatedItems[key].quantity += item.quantity;
-                consolidatedItems[key].subtotal += item.quantity * parseFloat(item.price);
+                consolidatedItems[key].subtotal += item.quantity * price;
               } else {
                 consolidatedItems[key] = {
                   ...item,
-                  subtotal: item.quantity * parseFloat(item.price)
+                  price: price,
+                  subtotal: item.quantity * price
                 };
               }
             });
@@ -3787,9 +3789,9 @@ export default function Dashboard() {
                       itemsList.map((item: any, index) => (
                         <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                           <div className="flex-1">
-                            <span className="font-medium">{item.productName}</span>
+                            <span className="font-medium">{item.product?.name || 'Produto sem nome'}</span>
                             <div className="text-sm text-muted-foreground">
-                              {item.quantity}x R$ {parseFloat(item.price).toFixed(2)}
+                              {item.quantity}x R$ {parseFloat(item.unitPrice || item.price || 0).toFixed(2)}
                             </div>
                           </div>
                           <div className="text-lg font-semibold">
