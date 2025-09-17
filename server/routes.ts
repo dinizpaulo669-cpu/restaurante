@@ -1243,10 +1243,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/dev/tables/:tableId/close", async (req, res) => {
     try {
       const { tableId } = req.params;
-      const { splitBill, numberOfPeople } = req.body;
+      const { splitBill, numberOfPeople, closeByUser, selectedUser } = req.body;
       
       // Buscar todos os pedidos ativos da mesa
-      const tableOrders = await db
+      let tableOrders = await db
         .select()
         .from(orders)
         .where(
@@ -1264,7 +1264,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Não há pedidos ativos para esta mesa" });
       }
 
-      // Atualizar status de todos os pedidos para 'delivered'
+      // Filtrar pedidos por usuário se fechamento individual estiver selecionado
+      if (closeByUser && selectedUser) {
+        tableOrders = tableOrders.filter(order => order.customerName === selectedUser);
+        
+        if (tableOrders.length === 0) {
+          return res.status(400).json({ error: `Não há pedidos ativos para o usuário ${selectedUser} nesta mesa` });
+        }
+      }
+
+      // Atualizar status dos pedidos selecionados para 'delivered'
       for (const order of tableOrders) {
         await db
           .update(orders)
@@ -1277,17 +1286,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log da operação de fechamento
-      console.log(`Mesa ${tableId} fechada - ${tableOrders.length} pedidos finalizados`, {
+      const logMessage = closeByUser && selectedUser 
+        ? `Mesa ${tableId} - Conta do usuário ${selectedUser} fechada - ${tableOrders.length} pedidos finalizados`
+        : `Mesa ${tableId} fechada - ${tableOrders.length} pedidos finalizados`;
+        
+      console.log(logMessage, {
         splitBill,
         numberOfPeople,
+        closeByUser,
+        selectedUser,
         orderIds: tableOrders.map(o => o.id)
       });
 
       res.json({ 
-        message: "Conta fechada com sucesso",
+        message: closeByUser && selectedUser 
+          ? `Conta do usuário ${selectedUser} fechada com sucesso`
+          : "Conta fechada com sucesso",
         ordersFinalized: tableOrders.length,
         splitBill,
-        numberOfPeople
+        numberOfPeople,
+        closeByUser,
+        selectedUser
       });
     } catch (error) {
       console.error("Erro ao fechar conta da mesa:", error);

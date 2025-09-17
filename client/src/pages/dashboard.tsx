@@ -76,6 +76,10 @@ export default function Dashboard() {
   const [splitBill, setSplitBill] = useState(false);
   const [numberOfPeople, setNumberOfPeople] = useState(1);
   
+  // Estados para fechamento por usuário individual
+  const [closeByUser, setCloseByUser] = useState(false);
+  const [selectedUserForClose, setSelectedUserForClose] = useState<string>("");
+  
   // Estados para histórico de pedidos
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -482,18 +486,26 @@ export default function Dashboard() {
 
   // Mutation para fechar conta da mesa
   const closeTableMutation = useMutation({
-    mutationFn: ({ tableId, splitBill, numberOfPeople }: { tableId: string, splitBill: boolean, numberOfPeople: number }) => 
-      apiRequest("POST", `/api/dev/tables/${tableId}/close`, { splitBill, numberOfPeople }),
-    onSuccess: () => {
+    mutationFn: ({ tableId, splitBill, numberOfPeople, closeByUser, selectedUser }: { 
+      tableId: string, 
+      splitBill: boolean, 
+      numberOfPeople: number,
+      closeByUser?: boolean,
+      selectedUser?: string
+    }) => 
+      apiRequest("POST", `/api/dev/tables/${tableId}/close`, { splitBill, numberOfPeople, closeByUser, selectedUser }),
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dev/tables"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dev/orders/history"] });
       setShowCloseTableModal(false);
       setSplitBill(false);
       setNumberOfPeople(1);
+      setCloseByUser(false);
+      setSelectedUserForClose("");
       toast({
         title: "Conta fechada",
-        description: "A conta da mesa foi fechada com sucesso! Mesa liberada."
+        description: data?.message || "A conta da mesa foi fechada com sucesso! Mesa liberada."
       });
     },
     onError: (error: any) => {
@@ -3732,11 +3744,19 @@ export default function Dashboard() {
             order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
           );
           
-          // Agrupar todos os produtos dos pedidos ativos
+          // Obter lista de usuários únicos dos pedidos ativos
+          const uniqueUsers = [...new Set(activeOrders.map((order: any) => order.customerName))].filter(Boolean);
+          
+          // Filtrar pedidos por usuário se fechamento individual estiver selecionado
+          const ordersToProcess = closeByUser && selectedUserForClose 
+            ? activeOrders.filter((order: any) => order.customerName === selectedUserForClose)
+            : activeOrders;
+          
+          // Agrupar todos os produtos dos pedidos a serem processados
           const consolidatedItems: any = {};
           let totalAmount = 0;
           
-          activeOrders.forEach((order: any) => {
+          ordersToProcess.forEach((order: any) => {
             totalAmount += parseFloat(order.total || 0);
             order.items?.forEach((item: any) => {
               const price = parseFloat(item.unitPrice || item.price || 0);
@@ -3759,7 +3779,73 @@ export default function Dashboard() {
           
           return (
             <div className="space-y-6">
-              {/* Resumo da mesa */}
+              {/* Opções de Fechamento */}
+              <Card className="bg-amber-50 border-amber-200">
+                <CardHeader>
+                  <CardTitle className="text-lg">Opções de Fechamento</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="closeFullTable"
+                        name="closeType"
+                        checked={!closeByUser}
+                        onChange={() => {
+                          setCloseByUser(false);
+                          setSelectedUserForClose("");
+                        }}
+                        className="rounded"
+                        data-testid="radio-close-full-table"
+                      />
+                      <Label htmlFor="closeFullTable" className="font-medium">
+                        Fechar conta da mesa completa ({activeOrders.length} pedidos)
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="closeByUser"
+                        name="closeType"
+                        checked={closeByUser}
+                        onChange={() => setCloseByUser(true)}
+                        className="rounded"
+                        data-testid="radio-close-by-user"
+                      />
+                      <Label htmlFor="closeByUser" className="font-medium">
+                        Fechar conta por usuário individual
+                      </Label>
+                    </div>
+                    
+                    {closeByUser && (
+                      <div className="ml-6 space-y-2">
+                        <Label htmlFor="userSelect" className="text-sm">Selecione o usuário:</Label>
+                        <select
+                          id="userSelect"
+                          value={selectedUserForClose}
+                          onChange={(e) => setSelectedUserForClose(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md"
+                          data-testid="select-user-for-close"
+                        >
+                          <option value="">-- Escolha um usuário --</option>
+                          {uniqueUsers.map((userName: string) => {
+                            const userOrderCount = activeOrders.filter(order => order.customerName === userName).length;
+                            return (
+                              <option key={userName} value={userName}>
+                                {userName} ({userOrderCount} {userOrderCount === 1 ? 'pedido' : 'pedidos'})
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resumo da mesa/usuário */}
               <Card className="bg-blue-50 border-blue-200">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-3 gap-4 text-sm">
@@ -3767,12 +3853,23 @@ export default function Dashboard() {
                       <span className="font-medium">Mesa:</span> {selectedTableForClose.number}
                     </div>
                     <div>
-                      <span className="font-medium">Pedidos Ativos:</span> {activeOrders.length}
+                      <span className="font-medium">
+                        {closeByUser && selectedUserForClose ? 'Pedidos do Usuário:' : 'Pedidos Ativos:'}
+                      </span> {ordersToProcess.length}
                     </div>
                     <div>
-                      <span className="font-medium">Total Geral:</span> R$ {totalAmount.toFixed(2)}
+                      <span className="font-medium">
+                        {closeByUser && selectedUserForClose ? 'Total do Usuário:' : 'Total Geral:'}
+                      </span> R$ {totalAmount.toFixed(2)}
                     </div>
                   </div>
+                  {closeByUser && selectedUserForClose && (
+                    <div className="mt-2 text-center">
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                        Fechando conta de: {selectedUserForClose}
+                      </Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -3870,23 +3967,41 @@ export default function Dashboard() {
                 setShowCloseTableModal(false);
                 setSplitBill(false);
                 setNumberOfPeople(1);
+                setCloseByUser(false);
+                setSelectedUserForClose("");
               }}
             >
               Cancelar
             </Button>
             <Button 
               onClick={() => {
+                // Validar se fechamento por usuário está selecionado mas nenhum usuário foi escolhido
+                if (closeByUser && !selectedUserForClose) {
+                  toast({
+                    title: "Usuário não selecionado",
+                    description: "Por favor, selecione um usuário para fechamento individual.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
                 closeTableMutation.mutate({
                   tableId: selectedTableForClose.id,
                   splitBill,
-                  numberOfPeople: splitBill ? numberOfPeople : 1
+                  numberOfPeople: splitBill ? numberOfPeople : 1,
+                  closeByUser,
+                  selectedUser: selectedUserForClose
                 });
               }}
               disabled={closeTableMutation.isPending}
               className="bg-green-600 hover:bg-green-700"
               data-testid="button-confirm-close"
             >
-              {closeTableMutation.isPending ? "Fechando..." : "Confirmar Fechamento"}
+              {closeTableMutation.isPending ? "Fechando..." : 
+                closeByUser && selectedUserForClose ? 
+                  `Fechar Conta de ${selectedUserForClose}` : 
+                  "Fechar Conta da Mesa"
+              }
             </Button>
           </div>
         </DialogFooter>
