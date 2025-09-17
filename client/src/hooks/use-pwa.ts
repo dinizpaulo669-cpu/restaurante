@@ -171,6 +171,31 @@ export function usePWA() {
     }
   };
 
+  const clearCache = async () => {
+    try {
+      // Limpar todos os caches
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+      
+      // Limpar service worker
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        await registration.unregister();
+        console.log('PWA: Service Worker unregistered and cache cleared');
+      }
+      
+      // Forçar reload da página
+      window.location.reload();
+      
+      return true;
+    } catch (error) {
+      console.error('PWA: Failed to clear cache:', error);
+      return false;
+    }
+  };
+
   return {
     isSupported,
     isInstallable,
@@ -178,6 +203,7 @@ export function usePWA() {
     installPWA,
     updateServiceWorker,
     getCacheInfo,
+    clearCache,
     canInstall: isSupported && isInstallable && !isInstalled
   };
 }
