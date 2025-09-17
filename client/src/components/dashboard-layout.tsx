@@ -11,9 +11,9 @@ interface DashboardLayoutProps {
 }
 
 const navigationItems = [
+  { id: "orders", label: "Comandas", icon: Receipt },
   { id: "overview", label: "Dashboard", icon: BarChart3 },
   { id: "products", label: "Produtos", icon: Utensils },
-  { id: "orders", label: "Comandas", icon: Receipt },
   { id: "config", label: "Configurações", icon: Settings },
 ];
 
