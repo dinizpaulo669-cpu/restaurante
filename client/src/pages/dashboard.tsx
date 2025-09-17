@@ -733,7 +733,7 @@ export default function Dashboard() {
   }
 
   const menuItems = [
-    { id: "home", label: "Home", icon: Home, hasSubmenu: false },
+    { id: "dashboard", label: "Dashboard", icon: Home, hasSubmenu: false },
     { 
       id: "produtos", 
       label: "Produtos", 
@@ -794,7 +794,7 @@ export default function Dashboard() {
   };
 
   const renderContent = () => {
-    if (activeSection === "home") {
+    if (activeSection === "dashboard") {
       return (
         <div className="space-y-6">
           {/* Informações do restaurante */}
@@ -2248,7 +2248,7 @@ export default function Dashboard() {
                         </p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {["home", "produtos", "vendas", "mesas", "horarios", "configuracoes"].map((permission) => (
+                          {["dashboard", "produtos", "vendas", "mesas", "horarios", "configuracoes"].map((permission) => (
                             <label key={permission} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
                               <input
                                 type="checkbox"
@@ -2269,7 +2269,7 @@ export default function Dashboard() {
                                 className="rounded"
                                 data-testid={`checkbox-permission-${permission}`}
                               />
-                              <span className="capitalize">{permission === "home" ? "Dashboard" : permission}</span>
+                              <span className="capitalize">{permission}</span>
                             </label>
                           ))}
                         </div>
@@ -3372,7 +3372,7 @@ export default function Dashboard() {
       <div className="flex-1">
         <header className="bg-card shadow-sm border-b p-4">
           <h2 className="text-xl font-semibold capitalize">
-            {activeSection === "home" ? restaurant?.name : activeSection}
+            {activeSection === "dashboard" ? restaurant?.name : activeSection}
           </h2>
         </header>
 
