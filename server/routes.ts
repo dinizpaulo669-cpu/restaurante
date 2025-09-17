@@ -1597,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotas para upload de logo e banner
-  app.post("/api/dev/restaurants/logo", upload.single('logo'), async (req: any, res) => {
+  app.post("/api/dev/restaurants/logo", isDevAuthenticated, upload.single('logo'), async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
@@ -1638,7 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/restaurants/banner", upload.single('banner'), async (req: any, res) => {
+  app.post("/api/dev/restaurants/banner", isDevAuthenticated, upload.single('banner'), async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";

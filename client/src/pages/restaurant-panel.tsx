@@ -61,13 +61,10 @@ export default function RestaurantPanel() {
       
       return response.json();
     },
-    onSuccess: () => {
-      // Refresh current user data
-      const currentUser = localStorage.getItem('currentUser');
-      if (currentUser) {
-        const user = JSON.parse(currentUser);
-        setRestaurant({ ...user, logoUrl: null }); // Will refresh from server
-      }
+    onSuccess: (updatedRestaurant) => {
+      // Atualizar o estado local e localStorage com os novos dados do servidor
+      setRestaurant(updatedRestaurant);
+      localStorage.setItem('currentUser', JSON.stringify(updatedRestaurant));
       toast({
         title: "Logo atualizado!",
         description: "O logo foi enviado e atualizado com sucesso.",
@@ -98,13 +95,10 @@ export default function RestaurantPanel() {
       
       return response.json();
     },
-    onSuccess: () => {
-      // Refresh current user data
-      const currentUser = localStorage.getItem('currentUser');
-      if (currentUser) {
-        const user = JSON.parse(currentUser);
-        setRestaurant({ ...user, bannerUrl: null }); // Will refresh from server
-      }
+    onSuccess: (updatedRestaurant) => {
+      // Atualizar o estado local e localStorage com os novos dados do servidor
+      setRestaurant(updatedRestaurant);
+      localStorage.setItem('currentUser', JSON.stringify(updatedRestaurant));
       toast({
         title: "Banner atualizado!",
         description: "O banner foi enviado e atualizado com sucesso.",
