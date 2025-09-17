@@ -1596,6 +1596,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rotas para upload de logo e banner
+  app.post("/api/dev/restaurants/logo", upload.single('logo'), async (req: any, res) => {
+    try {
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const logoUrl = `/uploads/restaurant/${req.file.filename}`;
+      const [updatedRestaurant] = await db
+        .update(restaurants)
+        .set({ logoUrl })
+        .where(eq(restaurants.id, restaurant.id))
+        .returning();
+        
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading dev logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
+  app.post("/api/dev/restaurants/banner", upload.single('banner'), async (req: any, res) => {
+    try {
+      // Obter ID do usuário (dev ou real)
+      let userId = "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        userId = (req.session as any).user.id;
+      }
+      
+      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
+      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      
+      // Buscar o restaurante mais recente do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const bannerUrl = `/uploads/restaurant/${req.file.filename}`;
+      const [updatedRestaurant] = await db
+        .update(restaurants)
+        .set({ bannerUrl })
+        .where(eq(restaurants.id, restaurant.id))
+        .returning();
+        
+      res.json(updatedRestaurant);
+    } catch (error) {
+      console.error("Error uploading dev banner:", error);
+      res.status(500).json({ message: "Failed to upload banner" });
+    }
+  });
+
   app.post("/api/dev/categories", async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)

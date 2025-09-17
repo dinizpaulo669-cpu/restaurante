@@ -139,17 +139,17 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
         <div style="border-top: 2px solid #000; padding-top: 15px; margin-top: 20px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
             <span>Subtotal:</span>
-            <span>R$ ${parseFloat(order.subtotal || order.total || 0).toFixed(2)}</span>
+            <span>R$ ${parseFloat(String(order.subtotal || order.total || 0)).toFixed(2)}</span>
           </div>
-          ${order.deliveryFee && parseFloat(order.deliveryFee || 0) > 0 ? `
+          ${order.deliveryFee && parseFloat(String(order.deliveryFee || 0)) > 0 ? `
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
               <span>Taxa de Entrega:</span>
-              <span>R$ ${parseFloat(order.deliveryFee).toFixed(2)}</span>
+              <span>R$ ${parseFloat(String(order.deliveryFee)).toFixed(2)}</span>
             </div>
           ` : ''}
           <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; border-top: 1px solid #333; padding-top: 8px;">
             <span>TOTAL:</span>
-            <span>R$ ${parseFloat(order.total || 0).toFixed(2)}</span>
+            <span>R$ ${parseFloat(String(order.total || 0)).toFixed(2)}</span>
           </div>
         </div>
         
@@ -449,11 +449,11 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
                             </div>
                           )}
                           <div className="text-sm text-muted-foreground">
-                            {item.quantity}x R$ {parseFloat(item.unitPrice || 0).toFixed(2)}
+                            {item.quantity}x R$ {parseFloat(String(item.unitPrice || 0)).toFixed(2)}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold">R$ {parseFloat(item.totalPrice || 0).toFixed(2)}</div>
+                          <div className="font-semibold">R$ {parseFloat(String(item.totalPrice || 0)).toFixed(2)}</div>
                         </div>
                       </div>
                     ))}
@@ -469,18 +469,18 @@ export function OrderCard({ order, onStatusUpdate, onPrint, onEdit, isUpdatingSt
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>R$ {parseFloat(order.subtotal || order.total || 0).toFixed(2)}</span>
+                    <span>R$ {parseFloat(String(order.subtotal || order.total || 0)).toFixed(2)}</span>
                   </div>
-                  {order.deliveryFee && parseFloat(order.deliveryFee || 0) > 0 && (
+                  {order.deliveryFee && parseFloat(String(order.deliveryFee || 0)) > 0 && (
                     <div className="flex justify-between">
                       <span>Taxa de Entrega:</span>
-                      <span>R$ {parseFloat(order.deliveryFee).toFixed(2)}</span>
+                      <span>R$ {parseFloat(String(order.deliveryFee)).toFixed(2)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total:</span>
-                    <span>R$ {parseFloat(order.total || 0).toFixed(2)}</span>
+                    <span>R$ {parseFloat(String(order.total || 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

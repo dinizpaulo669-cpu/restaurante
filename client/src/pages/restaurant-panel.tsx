@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   UtensilsCrossed, 
   User, 
@@ -16,12 +17,15 @@ import {
   Package, 
   ShoppingBag, 
   TrendingUp,
-  Plus
+  Plus,
+  Upload,
+  Image
 } from "lucide-react";
 
 export default function RestaurantPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [restaurant, setRestaurant] = useState<any>(null);
 
   useEffect(() => {
@@ -39,6 +43,131 @@ export default function RestaurantPanel() {
     
     setRestaurant(user);
   }, [setLocation]);
+
+  // Mutações para upload de logo e banner
+  const uploadLogoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      const response = await fetch('/api/dev/restaurants/logo', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload do logo');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Refresh current user data
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        const user = JSON.parse(currentUser);
+        setRestaurant({ ...user, logoUrl: null }); // Will refresh from server
+      }
+      toast({
+        title: "Logo atualizado!",
+        description: "O logo foi enviado e atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível fazer upload do logo. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const uploadBannerMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('banner', file);
+      
+      const response = await fetch('/api/dev/restaurants/banner', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload do banner');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Refresh current user data
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        const user = JSON.parse(currentUser);
+        setRestaurant({ ...user, bannerUrl: null }); // Will refresh from server
+      }
+      toast({
+        title: "Banner atualizado!",
+        description: "O banner foi enviado e atualizado com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível fazer upload do banner. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Formato inválido",
+          description: "Por favor, selecione uma imagem válida.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      uploadLogoMutation.mutate(file);
+    }
+  };
+
+  const handleBannerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Formato inválido",
+          description: "Por favor, selecione uma imagem válida.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      uploadBannerMutation.mutate(file);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -271,20 +400,135 @@ export default function RestaurantPanel() {
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6 mt-6">
-              <h2 className="text-2xl font-bold">Pedidos</h2>
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhum pedido ainda</h3>
-                  <p className="text-muted-foreground">
-                    Os pedidos dos clientes aparecerão aqui
-                  </p>
-                </CardContent>
-              </Card>
+              <h2 className="text-2xl font-bold">Comandas</h2>
+              
+              {/* Sub-abas por status de pedido com cores */}
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="grid w-full grid-cols-7">
+                  <TabsTrigger value="all" className="bg-slate-100 text-slate-800 data-[state=active]:bg-slate-200" data-testid="tab-all-orders">
+                    Todos
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" className="bg-yellow-100 text-yellow-800 data-[state=active]:bg-yellow-200" data-testid="tab-pending-orders">
+                    Pendentes
+                  </TabsTrigger>
+                  <TabsTrigger value="preparing" className="bg-orange-100 text-orange-800 data-[state=active]:bg-orange-200" data-testid="tab-preparing-orders">
+                    Preparando
+                  </TabsTrigger>
+                  <TabsTrigger value="ready" className="bg-blue-100 text-blue-800 data-[state=active]:bg-blue-200" data-testid="tab-ready-orders">
+                    Prontos
+                  </TabsTrigger>
+                  <TabsTrigger value="out_for_delivery" className="bg-purple-100 text-purple-800 data-[state=active]:bg-purple-200" data-testid="tab-delivery-orders">
+                    A caminho
+                  </TabsTrigger>
+                  <TabsTrigger value="delivered" className="bg-green-100 text-green-800 data-[state=active]:bg-green-200" data-testid="tab-delivered-orders">
+                    Entregues
+                  </TabsTrigger>
+                  <TabsTrigger value="cancelled" className="bg-red-100 text-red-800 data-[state=active]:bg-red-200" data-testid="tab-cancelled-orders">
+                    Cancelados
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="all" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido ainda</h3>
+                      <p className="text-muted-foreground">
+                        Os pedidos dos clientes aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="pending" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido pendente</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos aguardando confirmação aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="preparing" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <UtensilsCrossed className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido em preparo</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos sendo preparados aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="ready" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Package className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido pronto</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos prontos para entrega/retirada aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="out_for_delivery" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShoppingBag className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido a caminho</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos em processo de entrega aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="delivered" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido entregue hoje</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos entregues aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="cancelled" className="mt-6">
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShoppingBag className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Nenhum pedido cancelado</h3>
+                      <p className="text-muted-foreground">
+                        Pedidos cancelados aparecerão aqui
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-6 mt-6">
               <h2 className="text-2xl font-bold">Configurações do Restaurante</h2>
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -338,6 +582,135 @@ export default function RestaurantPanel() {
                       <p className="text-sm" data-testid="restaurant-description">{restaurant.description}</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Seção de Logo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Image className="h-5 w-5 mr-2" />
+                    Logo do Restaurante
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Enviar Logo</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Escolha uma imagem do seu dispositivo para usar como logo (máximo 5MB).
+                      </p>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Selecionar Arquivo de Imagem
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            disabled={uploadLogoMutation.isPending}
+                            className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                            data-testid="input-logo-file"
+                          />
+                        </div>
+                        
+                        {uploadLogoMutation.isPending && (
+                          <div className="text-sm text-muted-foreground">
+                            Fazendo upload do logo...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
+                      
+                      <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                        {restaurant?.logoUrl ? (
+                          <img 
+                            src={`${restaurant.logoUrl}?t=${Date.now()}`}
+                            alt="Logo do restaurante" 
+                            className="max-w-full max-h-48 object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center text-muted-foreground">
+                            <Image className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>Nenhum logo enviado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Seção de Banner */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Upload className="h-5 w-5 mr-2" />
+                    Banner do Restaurante
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Enviar Banner</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Escolha uma imagem do seu dispositivo para usar como banner (máximo 5MB).
+                        O banner será usado como imagem de fundo na parte superior do seu cardápio.
+                      </p>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Selecionar Arquivo de Imagem
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleBannerUpload}
+                            disabled={uploadBannerMutation.isPending}
+                            className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                            data-testid="input-banner-file"
+                          />
+                        </div>
+                        
+                        {uploadBannerMutation.isPending && (
+                          <div className="text-sm text-muted-foreground">
+                            Fazendo upload do banner...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
+                      
+                      <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                        {restaurant?.bannerUrl ? (
+                          <img 
+                            src={`${restaurant.bannerUrl}?t=${Date.now()}`}
+                            alt="Banner do restaurante" 
+                            className="max-w-full max-h-48 object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center text-muted-foreground">
+                            <Upload className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>Nenhum banner enviado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
