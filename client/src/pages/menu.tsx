@@ -902,68 +902,70 @@ export default function Menu() {
                 />
               </div>
 
-              {/* Seção de Cupom */}
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <Tag className="w-4 h-4" />
-                  Cupom de Desconto
-                </h3>
-                
-                {!appliedCoupon ? (
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <Input
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="Digite o código do cupom"
-                        className="flex-1"
-                        data-testid="input-coupon-code"
-                      />
-                      <Button 
-                        onClick={applyCoupon}
-                        disabled={couponLoading || !couponCode.trim()}
-                        size="sm"
-                        data-testid="button-apply-coupon"
-                      >
-                        {couponLoading ? "..." : "Aplicar"}
-                      </Button>
-                    </div>
-                    
-                    {couponError && (
-                      <p className="text-sm text-red-600" data-testid="text-coupon-error">
-                        {couponError}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-green-100 text-green-800">
-                          {appliedCoupon.code}
-                        </Badge>
-                        <span className="text-sm text-green-700">
-                          {appliedCoupon.discountType === 'percentage' 
-                            ? `${appliedCoupon.discountValue}% OFF`
-                            : `R$ ${parseFloat(appliedCoupon.discountValue).toFixed(2)} OFF`
-                          }
-                        </span>
+              {/* Seção de Cupom - Ocultar para pedidos de mesa */}
+              {!isTableOrder && (
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    Cupom de Desconto
+                  </h3>
+                  
+                  {!appliedCoupon ? (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="Digite o código do cupom"
+                          className="flex-1"
+                          data-testid="input-coupon-code"
+                        />
+                        <Button 
+                          onClick={applyCoupon}
+                          disabled={couponLoading || !couponCode.trim()}
+                          size="sm"
+                          data-testid="button-apply-coupon"
+                        >
+                          {couponLoading ? "..." : "Aplicar"}
+                        </Button>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={removeCoupon}
-                        data-testid="button-remove-coupon"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
+                      
+                      {couponError && (
+                        <p className="text-sm text-red-600" data-testid="text-coupon-error">
+                          {couponError}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-xs text-green-600">
-                      {appliedCoupon.description}
-                    </p>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800">
+                            {appliedCoupon.code}
+                          </Badge>
+                          <span className="text-sm text-green-700">
+                            {appliedCoupon.discountType === 'percentage' 
+                              ? `${appliedCoupon.discountValue}% OFF`
+                              : `R$ ${parseFloat(appliedCoupon.discountValue).toFixed(2)} OFF`
+                            }
+                          </span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={removeCoupon}
+                          data-testid="button-remove-coupon"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-green-600">
+                        {appliedCoupon.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Resumo do Pedido */}
               <div className="bg-gray-50 border rounded-lg p-4">
