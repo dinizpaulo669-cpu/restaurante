@@ -172,9 +172,9 @@ export default function RestaurantPanel() {
       {/* Main Content */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs defaultValue="orders" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview" data-testid="tab-overview">Visão Geral</TabsTrigger>
+              <TabsTrigger value="overview" data-testid="tab-overview">Dashboard</TabsTrigger>
               <TabsTrigger value="products" data-testid="tab-products">Produtos</TabsTrigger>
               <TabsTrigger value="orders" data-testid="tab-orders">Pedidos</TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings">Configurações</TabsTrigger>
