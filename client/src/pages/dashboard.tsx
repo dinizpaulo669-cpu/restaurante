@@ -50,7 +50,7 @@ export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeSection, setActiveSection] = useState("orders");
+  const [activeSection, setActiveSection] = useState("comandas");
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -2717,7 +2717,7 @@ export default function Dashboard() {
       );
     }
 
-    if (activeSection === "orders") {
+    if (activeSection === "comandas") {
       // Separar pedidos por tipo (excluindo pedidos entregues)
       const deliveryOrders = (orders as any[]).filter((order: any) => 
         (order.orderType === 'delivery' || !order.orderType) && order.status !== 'delivered'
