@@ -3786,22 +3786,42 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="closeFullTable"
-                        name="closeType"
-                        checked={!closeByUser}
-                        onChange={() => {
-                          setCloseByUser(false);
-                          setSelectedUserForClose("");
-                        }}
-                        className="rounded"
-                        data-testid="radio-close-full-table"
-                      />
-                      <Label htmlFor="closeFullTable" className="font-medium">
-                        Fechar conta da mesa completa ({activeOrders.length} pedidos)
-                      </Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="closeFullTable"
+                          name="closeType"
+                          checked={!closeByUser}
+                          onChange={() => {
+                            setCloseByUser(false);
+                            setSelectedUserForClose("");
+                          }}
+                          className="rounded"
+                          data-testid="radio-close-full-table"
+                        />
+                        <Label htmlFor="closeFullTable" className="font-medium">
+                          Fechar conta da mesa completa ({activeOrders.length} pedidos)
+                        </Label>
+                      </div>
+                      {!closeByUser && (
+                        <div className="ml-6 text-sm text-muted-foreground bg-blue-50 p-3 rounded border border-blue-200">
+                          <p className="font-medium text-blue-700 mb-1">ℹ️ Todos os pedidos da mesa serão fechados:</p>
+                          <ul className="list-disc list-inside space-y-1">
+                            {uniqueUsers.map((user, index) => {
+                              const userOrdersCount = activeOrders.filter(order => order.customerName === user).length;
+                              return (
+                                <li key={index} className="text-blue-600">
+                                  <strong>{user}</strong> - {userOrdersCount} pedido{userOrdersCount !== 1 ? 's' : ''}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          <p className="mt-2 text-xs text-blue-600">
+                            Total: {activeOrders.length} pedidos de {uniqueUsers.length} usuário{uniqueUsers.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex items-center space-x-2">
