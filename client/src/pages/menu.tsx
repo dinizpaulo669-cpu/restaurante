@@ -124,6 +124,13 @@ export default function Menu() {
     refetchInterval: 30000, // Backup polling a cada 30 segundos (principalmente WebSocket)
   });
 
+  // Buscar mensagens do chat do pedido selecionado
+  const { data: chatMessages = [], isLoading: chatLoading } = useQuery({
+    queryKey: [`/api/orders/${selectedOrderForChat}/messages`],
+    enabled: !!selectedOrderForChat,
+    refetchInterval: 10000, // Backup polling para mensagens
+  });
+
   // WebSocket para atualizações em tempo real
   const { sendMessage: sendWSMessage, connectionStatus } = useWebSocket({
     orderId: selectedOrderForChat || undefined,
@@ -1071,12 +1078,15 @@ export default function Menu() {
         )}
       </div>
 
-      {/* Sidebar do Carrinho */}
+      {/* Sidebar do Carrinho com Chat e Lista de Produtos */}
       {showCart && (
-        <div className="fixed inset-0 z-50 lg:z-auto lg:w-80 lg:relative lg:inset-auto">
+        <div className="fixed inset-0 z-50 lg:z-auto lg:w-full lg:max-w-6xl lg:relative lg:inset-auto">
           <div className="lg:sticky lg:top-6 h-full lg:h-auto">
-            <div className="lg:w-80 w-full lg:relative fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto">
-              <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
+            <div className="w-full lg:relative fixed lg:static inset-0 lg:inset-auto z-50 lg:z-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full lg:h-auto">
+                
+                {/* Seção do Carrinho */}
+                <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Carrinho</span>
@@ -1163,7 +1173,175 @@ export default function Menu() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+                </Card>
+                
+                {/* Seção do Chat */}
+                <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      Chat com Vendedor
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col h-full">
+                    {/* Área de Mensagens */}
+                    <div className="flex-1 space-y-3 mb-4 max-h-96 overflow-y-auto">
+                      {selectedOrderForChat ? (
+                        chatLoading ? (
+                          <div className="text-center py-8">
+                            <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">Carregando mensagens...</p>
+                          </div>
+                        ) : chatMessages.length === 0 ? (
+                          <div className="text-center py-8">
+                            <MessageCircle className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-sm text-muted-foreground">
+                              Nenhuma mensagem ainda. Inicie a conversa sobre este pedido!
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {(chatMessages as any[]).map((message: any) => (
+                              <div
+                                key={message.id}
+                                className={`flex ${message.senderType === 'customer' ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div
+                                  className={`max-w-[80%] p-3 rounded-lg ${
+                                    message.senderType === 'customer'
+                                      ? 'bg-blue-500 text-white'
+                                      : 'bg-gray-200 text-gray-800'
+                                  }`}
+                                >
+                                  <p className="text-sm">{message.message}</p>
+                                  <span className="text-xs opacity-75">
+                                    {new Date(message.createdAt).toLocaleTimeString('pt-BR', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                          </>
+                        )
+                      ) : (
+                        <div className="text-center py-8">
+                          <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm text-muted-foreground">Selecione um pedido para iniciar o chat</p>
+                          <p className="text-xs text-muted-foreground mt-1">Clique no ícone de chat em um pedido</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Campo de Envio de Mensagem */}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder={selectedOrderForChat ? "Digite sua mensagem..." : "Selecione um pedido primeiro"}
+                        className="flex-1"
+                        disabled={!selectedOrderForChat}
+                        data-testid="input-chat-message"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSendMessage}
+                        disabled={!newMessage.trim() || !selectedOrderForChat || sendMessageMutation.isPending}
+                        data-testid="button-send-message"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Seção da Lista de Produtos dos Pedidos */}
+                <Card className="sticky top-6 lg:max-h-[calc(100vh-3rem)] overflow-y-auto min-h-screen lg:min-h-0">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="w-4 h-4" />
+                      Seus Pedidos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {isTableOrder && tableOrders.length > 0 ? (
+                      <div className="space-y-4">
+                        {(tableOrders as any[]).map((order: any) => (
+                          <div key={order.id} className="border rounded-lg p-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="text-sm font-medium">Pedido #{order.orderNumber}</span>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(order.createdAt).toLocaleTimeString('pt-BR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  className={`text-xs ${
+                                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    order.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
+                                    order.status === 'ready' ? 'bg-blue-100 text-blue-800' :
+                                    order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
+                                  {order.status === 'pending' ? 'Pendente' :
+                                   order.status === 'preparing' ? 'Preparando' :
+                                   order.status === 'ready' ? 'Pronto' :
+                                   order.status === 'delivered' ? 'Entregue' : order.status}
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedOrderForChat(order.id);
+                                  }}
+                                  data-testid={`button-chat-order-${order.id}`}
+                                >
+                                  <MessageCircle className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Produtos:</p>
+                              {order.items?.map((item: any) => (
+                                <div key={item.id} className="text-xs flex justify-between">
+                                  <span>{item.quantity}x {item.product?.name}</span>
+                                  <span className="font-medium">R$ {parseFloat(item.totalPrice || "0").toFixed(2)}</span>
+                                </div>
+                              ))}
+                              <div className="border-t pt-1 mt-2">
+                                <div className="text-xs flex justify-between font-medium">
+                                  <span>Total:</span>
+                                  <span>R$ {parseFloat(order.totalPrice || "0").toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm text-muted-foreground">Nenhum pedido ainda</p>
+                        <p className="text-xs text-muted-foreground mt-1">Seus pedidos aparecerão aqui</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+              </div>
             </div>
           </div>
         </div>
