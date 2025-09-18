@@ -94,6 +94,7 @@ export default function Dashboard() {
   const [stockSearchTerm, setStockSearchTerm] = useState("");
   const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
   const [stockAdjustmentLoading, setStockAdjustmentLoading] = useState<string | null>(null);
+  const [stockQuantityInputs, setStockQuantityInputs] = useState<{[key: string]: number}>({});
   
   // Estados para horários de funcionamento
   const [openingHours, setOpeningHours] = useState({
@@ -549,6 +550,59 @@ export default function Dashboard() {
         }
       }
     );
+  };
+
+  // Função para ajustar estoque com quantidade customizada
+  const handleCustomStockAdjustment = (productId: string, operation: 'add' | 'remove') => {
+    const quantity = stockQuantityInputs[productId] || 1;
+    
+    if (quantity <= 0) {
+      toast({
+        title: "Quantidade inválida",
+        description: "A quantidade deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar se está tentando remover mais do que tem em estoque
+    if (operation === 'remove') {
+      const product = (products as any[]).find(p => p.id === productId);
+      const currentStock = product?.stock || 0;
+      
+      if (quantity > currentStock) {
+        toast({
+          title: "Estoque insuficiente",
+          description: `Não é possível remover ${quantity} unidades. Estoque atual: ${currentStock}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    setStockAdjustmentLoading(productId);
+    
+    updateStockMutation.mutate(
+      { productId, quantity, operation },
+      {
+        onSettled: () => {
+          setStockAdjustmentLoading(null);
+        }
+      }
+    );
+  };
+
+  // Função para obter a quantidade do input (padrão 1)
+  const getStockInputQuantity = (productId: string) => {
+    return stockQuantityInputs[productId] || 1;
+  };
+
+  // Função para atualizar a quantidade do input
+  const setStockInputQuantity = (productId: string, quantity: number) => {
+    setStockQuantityInputs(prev => ({
+      ...prev,
+      [productId]: Math.max(1, quantity)
+    }));
   };
 
   // Mutation para fechar conta da mesa
@@ -1332,25 +1386,43 @@ export default function Dashboard() {
                           </Badge>
                           
                           {/* Controles de ajuste de estoque */}
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStockAdjustment(product.id, -1)}
-                              disabled={stockAdjustmentLoading === product.id}
-                              data-testid={`button-decrease-stock-${product.id}`}
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStockAdjustment(product.id, 1)}
-                              disabled={stockAdjustmentLoading === product.id}
-                              data-testid={`button-increase-stock-${product.id}`}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-muted-foreground">Qtd:</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="999"
+                                value={getStockInputQuantity(product.id)}
+                                onChange={(e) => setStockInputQuantity(product.id, parseInt(e.target.value) || 1)}
+                                className="w-16 px-2 py-1 text-xs border border-input rounded bg-background text-center"
+                                data-testid={`input-stock-quantity-${product.id}`}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCustomStockAdjustment(product.id, 'remove')}
+                                disabled={stockAdjustmentLoading === product.id}
+                                data-testid={`button-remove-stock-${product.id}`}
+                                className="text-xs px-2 py-1"
+                              >
+                                <Minus className="w-3 h-3 mr-1" />
+                                Remover
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCustomStockAdjustment(product.id, 'add')}
+                                disabled={stockAdjustmentLoading === product.id}
+                                data-testid={`button-add-stock-${product.id}`}
+                                className="text-xs px-2 py-1"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Adicionar
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
