@@ -82,6 +82,10 @@ export default function Dashboard() {
   const [closeByUser, setCloseByUser] = useState(false);
   const [selectedUserForClose, setSelectedUserForClose] = useState<string>("");
   
+  // Estados para gorjeta
+  const [tipEnabled, setTipEnabled] = useState(false);
+  const [tipPercentage, setTipPercentage] = useState(10);
+  
   // Estados para histórico de pedidos
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -605,6 +609,61 @@ export default function Dashboard() {
     }));
   };
 
+  // Função para imprimir conta
+  const handlePrintBill = (tableData: any, totalWithTip: number, tipAmount: number) => {
+    const printContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 300px; margin: 0 auto;">
+        <h2 style="text-align: center; margin-bottom: 20px;">CONTA - Mesa ${tableData.number}</h2>
+        ${tableData.name ? `<p style="text-align: center; margin: 5px 0;">${tableData.name}</p>` : ''}
+        <hr style="margin: 15px 0;" />
+        
+        <div style="margin-bottom: 15px;">
+          <strong>Resumo dos Produtos:</strong>
+        </div>
+        
+        ${tableData.items?.map((item: any) => `
+          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+            <span>${item.quantity}x ${item.product?.name || 'Produto'}</span>
+            <span>R$ ${item.subtotal?.toFixed(2) || '0.00'}</span>
+          </div>
+        `).join('') || ''}
+        
+        <hr style="margin: 15px 0;" />
+        
+        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+          <span>Subtotal:</span>
+          <span>R$ ${(totalWithTip - tipAmount).toFixed(2)}</span>
+        </div>
+        
+        ${tipAmount > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+            <span>Gorjeta (${tipPercentage}%):</span>
+            <span>R$ ${tipAmount.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        
+        <div style="display: flex; justify-content: space-between; margin: 10px 0; font-size: 18px; font-weight: bold; border-top: 1px solid #000; padding-top: 10px;">
+          <span>TOTAL:</span>
+          <span>R$ ${totalWithTip.toFixed(2)}</span>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; font-size: 12px;">
+          <p>Obrigado pela preferência!</p>
+          <p>${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+      </div>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
+
   // Mutation para fechar conta da mesa
   const closeTableMutation = useMutation({
     mutationFn: ({ tableId, splitBill, numberOfPeople, closeByUser, selectedUser }: { 
@@ -624,6 +683,8 @@ export default function Dashboard() {
       setNumberOfPeople(1);
       setCloseByUser(false);
       setSelectedUserForClose("");
+      setTipEnabled(false);
+      setTipPercentage(10);
       toast({
         title: "Conta fechada",
         description: data?.message || "A conta da mesa foi fechada com sucesso! Mesa liberada."
@@ -3969,7 +4030,7 @@ export default function Dashboard() {
           );
           
           // Obter lista de usuários únicos dos pedidos ativos
-          const uniqueUsers = [...new Set(activeOrders.map((order: any) => order.customerName))].filter(Boolean);
+          const uniqueUsers = Array.from(new Set(activeOrders.map((order: any) => order.customerName))).filter(Boolean);
           
           // Filtrar pedidos por usuário se fechamento individual estiver selecionado
           const ordersToProcess = closeByUser && selectedUserForClose 
@@ -3999,7 +4060,11 @@ export default function Dashboard() {
           });
           
           const itemsList = Object.values(consolidatedItems);
-          const amountPerPerson = splitBill ? totalAmount / numberOfPeople : totalAmount;
+          
+          // Calcular gorjeta
+          const tipAmount = tipEnabled ? (totalAmount * tipPercentage / 100) : 0;
+          const totalWithTip = totalAmount + tipAmount;
+          const amountPerPersonWithTip = splitBill ? totalWithTip / numberOfPeople : totalWithTip;
           
           return (
             <div className="space-y-6">
@@ -4177,25 +4242,79 @@ export default function Dashboard() {
                         data-testid="input-number-people"
                       />
                       <p className="text-sm text-muted-foreground">
-                        Valor por pessoa: R$ {amountPerPerson.toFixed(2)}
+                        Valor por pessoa: R$ {amountPerPersonWithTip.toFixed(2)}
                       </p>
                     </div>
                   )}
+                  
+                  {/* Opções de gorjeta */}
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="tipEnabled"
+                        checked={tipEnabled}
+                        onChange={(e) => setTipEnabled(e.target.checked)}
+                        className="rounded"
+                        data-testid="checkbox-tip-enabled"
+                      />
+                      <Label htmlFor="tipEnabled" className="font-medium">Adicionar gorjeta</Label>
+                    </div>
+                    
+                    {tipEnabled && (
+                      <div className="space-y-2 ml-6">
+                        <Label htmlFor="tipPercentage" className="text-sm">Porcentagem da gorjeta:</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            id="tipPercentage"
+                            type="number"
+                            min="0"
+                            max="30"
+                            step="0.5"
+                            value={tipPercentage}
+                            onChange={(e) => setTipPercentage(Math.max(0, Math.min(30, parseFloat(e.target.value) || 0)))}
+                            className="w-20"
+                            data-testid="input-tip-percentage"
+                          />
+                          <span className="text-sm">%</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Valor da gorjeta: R$ {(totalAmount * tipPercentage / 100).toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
               {/* Total final */}
               <Card className="bg-green-50 border-green-200">
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-center text-xl font-bold">
-                    <span>Total a Pagar:</span>
-                    <span className="text-green-700">
-                      {splitBill ? (
-                        <>R$ {amountPerPerson.toFixed(2)} (por pessoa)</>
-                      ) : (
-                        <>R$ {totalAmount.toFixed(2)}</>
-                      )}
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg">Subtotal:</span>
+                      <span className="text-lg">R$ {totalAmount.toFixed(2)}</span>
+                    </div>
+                    
+                    {tipEnabled && tipAmount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg">Gorjeta ({tipPercentage}%):</span>
+                        <span className="text-lg">R$ {tipAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <hr className="border-green-300" />
+                    
+                    <div className="flex justify-between items-center text-xl font-bold">
+                      <span>Total a Pagar:</span>
+                      <span className="text-green-700">
+                        {splitBill ? (
+                          <>R$ {amountPerPersonWithTip.toFixed(2)} (por pessoa)</>
+                        ) : (
+                          <>R$ {totalWithTip.toFixed(2)}</>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -4213,6 +4332,8 @@ export default function Dashboard() {
                 setNumberOfPeople(1);
                 setCloseByUser(false);
                 setSelectedUserForClose("");
+                setTipEnabled(false);
+                setTipPercentage(10);
               }}
             >
               Cancelar
@@ -4228,14 +4349,58 @@ export default function Dashboard() {
                   });
                   return;
                 }
+
+                // Recalcular valores para impressão
+                const tableOrders = (orders as any[]).filter((order: any) => order.tableId === selectedTableForClose.id);
+                const activeOrders = tableOrders.filter((order: any) => 
+                  order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
+                );
+                const ordersToProcess = closeByUser && selectedUserForClose 
+                  ? activeOrders.filter((order: any) => order.customerName === selectedUserForClose)
+                  : activeOrders;
                 
-                closeTableMutation.mutate({
-                  tableId: selectedTableForClose.id,
-                  splitBill,
-                  numberOfPeople: splitBill ? numberOfPeople : 1,
-                  closeByUser,
-                  selectedUser: selectedUserForClose
+                const consolidatedItems: any = {};
+                let totalAmount = 0;
+                
+                ordersToProcess.forEach((order: any) => {
+                  totalAmount += parseFloat(order.total || 0);
+                  order.items?.forEach((item: any) => {
+                    const price = parseFloat(item.unitPrice || item.price || 0);
+                    const key = `${item.productId || item.product?.id}-${price}`;
+                    if (consolidatedItems[key]) {
+                      consolidatedItems[key].quantity += item.quantity;
+                      consolidatedItems[key].subtotal += item.quantity * price;
+                    } else {
+                      consolidatedItems[key] = {
+                        ...item,
+                        price: price,
+                        subtotal: item.quantity * price
+                      };
+                    }
+                  });
                 });
+                
+                const itemsList = Object.values(consolidatedItems);
+                const tipAmount = tipEnabled ? (totalAmount * tipPercentage / 100) : 0;
+                const totalWithTip = totalAmount + tipAmount;
+                
+                // Chamar função de impressão antes de fechar a conta
+                handlePrintBill({
+                  number: selectedTableForClose.number,
+                  name: selectedTableForClose.name,
+                  items: itemsList
+                }, totalWithTip, tipAmount);
+                
+                // Aguardar um momento para a impressão e então fechar a conta
+                setTimeout(() => {
+                  closeTableMutation.mutate({
+                    tableId: selectedTableForClose.id,
+                    splitBill,
+                    numberOfPeople: splitBill ? numberOfPeople : 1,
+                    closeByUser,
+                    selectedUser: selectedUserForClose
+                  });
+                }, 1000); // Aguarda 1 segundo para a impressão iniciar
               }}
               disabled={closeTableMutation.isPending}
               className="bg-green-600 hover:bg-green-700"
