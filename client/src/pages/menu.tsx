@@ -96,6 +96,13 @@ export default function Menu() {
     enabled: !!tableQrCode,
   }) as { data: { id: string; number: string; name: string; qrCode: string } | undefined };
 
+  // Buscar áreas de atendimento do restaurante
+  const { data: serviceAreas = [] } = useQuery<any[]>({
+    queryKey: [`/api/service-areas/${restaurantId}`],
+    enabled: !!restaurantId && !isTableOrder,
+    retry: false,
+  });
+
   const addToCart = (product: any) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
@@ -144,8 +151,51 @@ export default function Menu() {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const extractNeighborhoodFromAddress = (address: string): string | null => {
+    if (!address) return null;
+    
+    // Tentar encontrar bairro em endereços típicos brasileiros
+    // Padrões comuns: "Rua X, 123, Bairro Y, Cidade" ou "Bairro X, Cidade"
+    const patterns = [
+      /,\s*([^,]+?)\s*,\s*[^,]+\s*-\s*[A-Z]{2}/, // Pattern: , Bairro, Cidade - Estado
+      /,\s*([^,]+?)\s*,/, // Pattern: , Bairro,
+      /^([^,]+?)\s*,/, // Pattern: Bairro,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = address.match(pattern);
+      if (match && match[1] && match[1].trim().length > 2) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  };
+
   const getDeliveryFee = () => {
-    return isTableOrder ? 0 : parseFloat((restaurant as any)?.deliveryFee || "0");
+    if (isTableOrder) return 0;
+    
+    // Para pedidos de entrega, tentar usar taxa específica por bairro
+    const customerAddress = (customerProfile as any)?.address || '';
+    
+    if (customerAddress && serviceAreas.length > 0) {
+      const neighborhood = extractNeighborhoodFromAddress(customerAddress);
+      
+      if (neighborhood) {
+        // Buscar área específica para o bairro (case insensitive)
+        const area = serviceAreas.find(area => 
+          area.isActive && 
+          area.neighborhood.toLowerCase() === neighborhood.toLowerCase()
+        );
+        
+        if (area) {
+          return parseFloat(area.deliveryFee || "0");
+        }
+      }
+    }
+    
+    // Se não encontrou área específica, usar taxa padrão do restaurante
+    return parseFloat((restaurant as any)?.deliveryFee || "0");
   };
 
   // Função para aplicar cupom
@@ -474,7 +524,21 @@ export default function Menu() {
                         <Truck className="w-5 h-5 text-green-600" />
                         <div>
                           <span className="text-sm font-semibold text-green-700 block">Taxa de Entrega</span>
-                          <span className="text-lg font-bold text-green-800">R$ {(restaurant as any)?.deliveryFee}</span>
+                          <span className="text-lg font-bold text-green-800">
+                            R$ {getDeliveryFee().toFixed(2)}
+                          </span>
+                          {serviceAreas.length > 0 && (customerProfile as any)?.address && (
+                            <span className="text-xs text-green-600 block mt-1">
+                              {(() => {
+                                const neighborhood = extractNeighborhoodFromAddress((customerProfile as any).address || '');
+                                const area = serviceAreas.find(area => 
+                                  area.isActive && 
+                                  area.neighborhood.toLowerCase() === neighborhood?.toLowerCase()
+                                );
+                                return area ? `Para ${neighborhood}` : 'Taxa padrão';
+                              })()}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -496,7 +560,7 @@ export default function Menu() {
       </div>
 
       {/* Seção de Cupons em Destaque */}
-      <CouponsSection restaurantId={restaurantId} />
+      {restaurantId && <CouponsSection restaurantId={restaurantId} />}
 
       {/* Menu Principal - Layout Profissional */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
