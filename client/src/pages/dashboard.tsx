@@ -831,13 +831,20 @@ export default function Dashboard() {
       
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+    onSuccess: (updatedRestaurant) => {
+      // Atualizar estado local com dados do servidor
+      setLogoUrl(updatedRestaurant.logoUrl || "");
       setLogoPreview(null); // Limpar preview após sucesso
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
       toast({
         title: "Logo atualizado!",
         description: "O logo foi enviado e atualizado com sucesso.",
       });
+      
+      // Limpar o input de arquivo
+      const logoInput = document.querySelector('input[data-testid="input-logo-file"]') as HTMLInputElement;
+      if (logoInput) logoInput.value = '';
     },
     onError: () => {
       toast({
@@ -864,13 +871,20 @@ export default function Dashboard() {
       
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+    onSuccess: (updatedRestaurant) => {
+      // Atualizar estado local com dados do servidor
+      setBannerUrl(updatedRestaurant.bannerUrl || "");
       setBannerPreview(null); // Limpar preview após sucesso
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
       toast({
         title: "Banner atualizado!",
         description: "O banner foi enviado e atualizado com sucesso.",
       });
+      
+      // Limpar o input de arquivo
+      const bannerInput = document.querySelector('input[data-testid="input-banner-file"]') as HTMLInputElement;
+      if (bannerInput) bannerInput.value = '';
     },
     onError: () => {
       toast({
