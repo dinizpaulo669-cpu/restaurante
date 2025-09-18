@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
@@ -210,6 +210,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(restaurant);
     } catch (error) {
       console.error("Error fetching user restaurant:", error);
+      res.status(500).json({ message: "Failed to fetch restaurant" });
+    }
+  });
+
+  // Dev alias for the above route - to match frontend expectations
+  app.get("/api/dev/my-restaurant", isDevAuthenticated, async (req: any, res) => {
+    try {
+      // Usar a mesma lógica de resolução de usuário das outras rotas dev
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
+      
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+        
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      
+      res.json(restaurant);
+    } catch (error) {
+      console.error("Error fetching dev restaurant:", error);
       res.status(500).json({ message: "Failed to fetch restaurant" });
     }
   });
@@ -3972,6 +3996,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching payment history:", error);
       res.status(500).json({ error: "Failed to fetch payment history" });
+    }
+  });
+
+  // Employee routes
+  app.get("/api/employees", isDevAuthenticated, async (req: any, res) => {
+    try {
+      // Usar a mesma lógica de resolução de usuário das outras rotas
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
+      
+      // Buscar o restaurante do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Buscar funcionários do restaurante
+      const employees = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+          permissions: users.permissions,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.restaurantId, restaurant.id),
+            eq(users.role, "employee")
+          )
+        )
+        .orderBy(desc(users.createdAt));
+
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
+  app.post("/api/employees", isDevAuthenticated, async (req: any, res) => {
+    try {
+      // Usar a mesma lógica de resolução de usuário das outras rotas
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
+      
+      // Buscar o restaurante do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Validar dados do funcionário
+      const { password, ...otherData } = req.body;
+      
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const employeeData = insertUserSchema.parse({
+        ...otherData,
+        password: hashedPassword,
+        role: "employee",
+        restaurantId: restaurant.id
+      });
+
+      // Criar funcionário
+      const [newEmployee] = await db
+        .insert(users)
+        .values(employeeData)
+        .returning({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+          permissions: users.permissions,
+          createdAt: users.createdAt,
+        });
+
+      res.status(201).json(newEmployee);
+    } catch (error) {
+      console.error("Error creating employee:", error);
+      res.status(500).json({ message: "Failed to create employee" });
     }
   });
 

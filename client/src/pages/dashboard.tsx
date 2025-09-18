@@ -260,6 +260,13 @@ export default function Dashboard() {
     retry: false,
   });
 
+  // Query para buscar funcionários
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery({
+    queryKey: ["/api/employees"],
+    enabled: isAuthenticated && !!restaurant && activeSection === "configuracoes" && configurationSubSection === "usuarios",
+    retry: false,
+  });
+
   // Query para buscar histórico de pedidos com paginação
   const { 
     data: historyData, 
@@ -2474,6 +2481,8 @@ export default function Dashboard() {
         }
 
         if (configurationSubSection === "usuarios") {
+          const availablePermissions = ['gerenciar-produtos', 'visualizar-pedidos', 'atender-clientes'];
+
           return (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
@@ -2590,32 +2599,29 @@ export default function Dashboard() {
                             }
                             
                             try {
-                              const response = await fetch("/api/employees", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  ...newUserData,
-                                  restaurantId: (restaurant as any)?.id
-                                })
+                              await apiRequest("POST", "/api/employees", {
+                                firstName: newUserData.name.split(' ')[0] || newUserData.name,
+                                lastName: newUserData.name.split(' ').slice(1).join(' ') || '',
+                                email: newUserData.email,
+                                password: newUserData.password,
+                                permissions: newUserData.permissions,
+                                restaurantId: (restaurant as any)?.id
                               });
                               
-                              if (response.ok) {
-                                toast({
-                                  title: "Sucesso",
-                                  description: "Funcionário criado com sucesso!",
-                                });
-                                setIsCreatingUser(false);
-                                setNewUserData({
-                                  name: "",
-                                  email: "",
-                                  password: "",
-                                  confirmPassword: "",
-                                  permissions: []
-                                });
-                                // Refetch dos funcionários aqui se necessário
-                              } else {
-                                throw new Error("Falha ao criar funcionário");
-                              }
+                              toast({
+                                title: "Sucesso",
+                                description: "Funcionário criado com sucesso!",
+                              });
+                              setIsCreatingUser(false);
+                              setNewUserData({
+                                name: "",
+                                email: "",
+                                password: "",
+                                confirmPassword: "",
+                                permissions: []
+                              });
+                              // Refetch dos funcionários
+                              queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
                             } catch (error) {
                               toast({
                                 title: "Erro",
@@ -2658,11 +2664,36 @@ export default function Dashboard() {
                       <Badge variant="outline">Owner</Badge>
                     </div>
                     
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Nenhum funcionário cadastrado ainda</p>
-                      <p className="text-sm">Clique em "Novo Usuário" para criar o primeiro funcionário</p>
-                    </div>
+                    {loadingEmployees ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>Carregando funcionários...</p>
+                      </div>
+                    ) : employees.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Nenhum funcionário cadastrado ainda</p>
+                        <p className="text-sm">Clique em "Novo Usuário" para criar o primeiro funcionário</p>
+                      </div>
+                    ) : (
+                      <>
+                        {employees.map((employee: any) => (
+                          <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg" data-testid={`employee-card-${employee.id}`}>
+                            <div>
+                              <h5 className="font-medium">{employee.firstName} {employee.lastName}</h5>
+                              <p className="text-sm text-muted-foreground">{employee.email}</p>
+                              <div className="flex gap-1 mt-1">
+                                {employee.permissions?.map((permission: string) => (
+                                  <Badge key={permission} variant="secondary" className="text-xs">
+                                    {permission}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <Badge variant="outline">Funcionário</Badge>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
