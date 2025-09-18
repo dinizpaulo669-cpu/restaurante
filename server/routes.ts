@@ -1729,6 +1729,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para salvar configurações de SEO
+  app.put("/api/dev/restaurants/seo", isDevAuthenticated, async (req: any, res) => {
+    try {
+      // Usar a mesma lógica de resolução de usuário das outras rotas
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
+      
+      // Buscar o restaurante mais recente do usuário
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const { seoCategories } = req.body;
+      
+      if (!Array.isArray(seoCategories)) {
+        return res.status(400).json({ message: "seoCategories must be an array" });
+      }
+
+      const [updatedRestaurant] = await db
+        .update(restaurants)
+        .set({ 
+          seoCategories,
+          updatedAt: new Date()
+        })
+        .where(eq(restaurants.id, restaurant.id))
+        .returning();
+        
+      res.json({
+        success: true,
+        message: "SEO categories updated successfully",
+        restaurant: updatedRestaurant
+      });
+    } catch (error) {
+      console.error("Error updating SEO categories:", error);
+      res.status(500).json({ message: "Failed to update SEO categories" });
+    }
+  });
+
   app.post("/api/dev/categories", async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)
@@ -3130,14 +3174,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         })
         .from(restaurants)
-        .leftJoin(users, eq(restaurants.ownerId, users.id))
-        .orderBy(desc(restaurants.createdAt))
-        .limit(limit)
-        .offset(offset);
+        .leftJoin(users, eq(restaurants.ownerId, users.id));
 
       if (whereConditions.length > 0) {
         query = query.where(and(...whereConditions));
       }
+
+      query = query
+        .orderBy(desc(restaurants.createdAt))
+        .limit(limit)
+        .offset(offset);
 
       const restaurantsData = await query;
 
@@ -3195,14 +3241,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let query = db
         .select()
-        .from(users)
-        .orderBy(desc(users.createdAt))
-        .limit(limit)
-        .offset(offset);
+        .from(users);
 
       if (conditions.length > 0) {
         query = query.where(and(...conditions));
       }
+
+      query = query
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
 
       const usersData = await query;
 

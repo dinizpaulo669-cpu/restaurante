@@ -857,6 +857,26 @@ export default function Dashboard() {
     },
   });
 
+  // Mutation para salvar configurações de SEO
+  const updateSeoConfigMutation = useMutation({
+    mutationFn: (seoCategories: string[]) => 
+      apiRequest("PUT", "/api/dev/restaurants/seo", { seoCategories }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      toast({
+        title: "Configurações de SEO salvas!",
+        description: "As categorias de SEO foram atualizadas com sucesso.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as configurações de SEO. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers para mesas
   const handleCreateTable = (formData: any) => {
     createTableMutation.mutate(formData);
@@ -2441,10 +2461,11 @@ export default function Dashboard() {
                   
                   <Button 
                     className="w-full mt-6"
-                    disabled={selectedSeoCategories.length === 0}
+                    disabled={selectedSeoCategories.length === 0 || updateSeoConfigMutation.isPending}
+                    onClick={() => updateSeoConfigMutation.mutate(selectedSeoCategories)}
                     data-testid="button-save-seo"
                   >
-                    Salvar Configurações de SEO
+                    {updateSeoConfigMutation.isPending ? "Salvando..." : "Salvar Configurações de SEO"}
                   </Button>
                 </CardContent>
               </Card>

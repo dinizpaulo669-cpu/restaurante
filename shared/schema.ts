@@ -73,6 +73,7 @@ export const restaurants = pgTable("restaurants", {
   notificationWhatsapp: varchar("notification_whatsapp"), // Número para envio de notificações
   seoTitle: varchar("seo_title"),
   seoDescription: text("seo_description"),
+  seoCategories: text("seo_categories").array(), // Categorias de SEO selecionadas
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
