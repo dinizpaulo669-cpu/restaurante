@@ -117,6 +117,10 @@ export default function Dashboard() {
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  
+  // Estados para preview de imagens
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   // Estados para configurações - movidos para o topo para evitar erro de hooks
   const [isEditingCompanyData, setIsEditingCompanyData] = useState(false);
@@ -829,6 +833,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      setLogoPreview(null); // Limpar preview após sucesso
       toast({
         title: "Logo atualizado!",
         description: "O logo foi enviado e atualizado com sucesso.",
@@ -861,6 +866,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      setBannerPreview(null); // Limpar preview após sucesso
       toast({
         title: "Banner atualizado!",
         description: "O banner foi enviado e atualizado com sucesso.",
@@ -894,6 +900,75 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Funções separadas para upload de logo e banner
+  const handleLogoFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validações
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Formato inválido",
+        description: "Por favor, selecione uma imagem válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Criar preview da imagem
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Fazer upload
+    uploadLogoMutation.mutate(file);
+  };
+
+  const handleBannerFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validações
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Formato inválido",
+        description: "Por favor, selecione uma imagem válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Criar preview da imagem
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBannerPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Fazer upload
+    uploadBannerMutation.mutate(file);
+  };
 
   // Handlers para mesas
   const handleCreateTable = (formData: any) => {
@@ -1984,31 +2059,6 @@ export default function Dashboard() {
 
     if (activeSection === "logo") {
 
-      const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-          if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({
-              title: "Arquivo muito grande",
-              description: "O arquivo deve ter no máximo 5MB.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          if (!file.type.startsWith('image/')) {
-            toast({
-              title: "Formato inválido",
-              description: "Por favor, selecione uma imagem válida.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          uploadLogoMutation.mutate(file);
-        }
-      };
-
       return (
         <div className="p-6">
           <div className="max-w-4xl mx-auto">
@@ -2033,7 +2083,7 @@ export default function Dashboard() {
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleFileUpload}
+                        onChange={handleLogoFileUpload}
                         disabled={uploadLogoMutation.isPending}
                         className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                         data-testid="input-logo-file"
@@ -2054,7 +2104,16 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
                   
                   <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
-                    {(restaurant as any)?.logoUrl ? (
+                    {logoPreview ? (
+                      <div className="text-center">
+                        <img 
+                          src={logoPreview}
+                          alt="Preview do logo" 
+                          className="max-w-full max-h-48 object-contain mb-2"
+                        />
+                        <p className="text-sm text-muted-foreground">Preview - aguarde upload...</p>
+                      </div>
+                    ) : (restaurant as any)?.logoUrl ? (
                       <img 
                         src={`${(restaurant as any).logoUrl}?t=${Date.now()}`}
                         alt="Logo do restaurante" 
@@ -2081,31 +2140,6 @@ export default function Dashboard() {
 
     if (activeSection === "banner") {
 
-      const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-          if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({
-              title: "Arquivo muito grande",
-              description: "O arquivo deve ter no máximo 5MB.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          if (!file.type.startsWith('image/')) {
-            toast({
-              title: "Formato inválido",
-              description: "Por favor, selecione uma imagem válida.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          uploadBannerMutation.mutate(file);
-        }
-      };
-
       return (
         <div className="p-6">
           <div className="max-w-4xl mx-auto">
@@ -2131,7 +2165,7 @@ export default function Dashboard() {
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleFileUpload}
+                        onChange={handleBannerFileUpload}
                         disabled={uploadBannerMutation.isPending}
                         className="w-full p-3 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                         data-testid="input-banner-file"
@@ -2152,7 +2186,18 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold mb-4">Pré-visualização</h3>
                   
                   <div className="border rounded-lg overflow-hidden bg-gray-50">
-                    {(restaurant as any)?.bannerUrl ? (
+                    {bannerPreview ? (
+                      <div className="relative h-48 w-full">
+                        <img 
+                          src={bannerPreview}
+                          alt="Preview do banner" 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                          Preview - aguarde upload...
+                        </div>
+                      </div>
+                    ) : (restaurant as any)?.bannerUrl ? (
                       <div className="relative h-48 w-full">
                         <img 
                           src={`${(restaurant as any).bannerUrl}?t=${Date.now()}`}
