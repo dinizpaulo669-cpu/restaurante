@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  Minus,
   Edit,
   Trash2,
   QrCode,
@@ -92,6 +93,7 @@ export default function Dashboard() {
   // Estados para consulta de estoque
   const [stockSearchTerm, setStockSearchTerm] = useState("");
   const [stockSortBy, setStockSortBy] = useState<"name" | "stock">("stock");
+  const [stockAdjustmentLoading, setStockAdjustmentLoading] = useState<string | null>(null);
   
   // Estados para horários de funcionamento
   const [openingHours, setOpeningHours] = useState({
@@ -532,6 +534,23 @@ export default function Dashboard() {
     }
   };
 
+  // Função para ajustar estoque
+  const handleStockAdjustment = (productId: string, adjustment: number) => {
+    setStockAdjustmentLoading(productId);
+    
+    const operation = adjustment > 0 ? 'add' : 'remove';
+    const quantity = Math.abs(adjustment);
+    
+    updateStockMutation.mutate(
+      { productId, quantity, operation },
+      {
+        onSettled: () => {
+          setStockAdjustmentLoading(null);
+        }
+      }
+    );
+  };
+
   // Mutation para fechar conta da mesa
   const closeTableMutation = useMutation({
     mutationFn: ({ tableId, splitBill, numberOfPeople, closeByUser, selectedUser }: { 
@@ -826,6 +845,11 @@ export default function Dashboard() {
     cancelados: (orders as any[]).filter((order: any) => order.status === 'cancelled').length,
   };
 
+  // Produtos com estoque baixo para alertas do dashboard
+  const dashboardLowStockProducts = (products as any[])?.filter(product => 
+    (product.stock || 0) < (product.minStock || 10)
+  ) || [];
+
   const handleMenuClick = (itemId: string) => {
     if (itemId === "controle") {
       // Redirecionar para página de controle
@@ -880,6 +904,48 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Alertas de estoque baixo no dashboard principal */}
+          {dashboardLowStockProducts.length > 0 && (
+            <Card className="bg-orange-50 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-orange-600 mr-2" />
+                    <h3 className="text-lg font-semibold text-orange-800">
+                      Alerta de Estoque Baixo
+                    </h3>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveSection("estoque")}
+                    className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                  >
+                    Ver Estoque
+                  </Button>
+                </div>
+                <p className="text-orange-700 mb-3">
+                  {dashboardLowStockProducts.length} produto(s) com estoque abaixo do mínimo:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                  {dashboardLowStockProducts.slice(0, 6).map(product => (
+                    <div key={product.id} className="flex justify-between items-center bg-white rounded-lg p-2 border border-orange-200">
+                      <span className="font-medium text-sm truncate mr-2">{product.name}</span>
+                      <Badge variant="destructive" className="text-xs">
+                        {product.stock || 0}/{product.minStock || 10}
+                      </Badge>
+                    </div>
+                  ))}
+                  {dashboardLowStockProducts.length > 6 && (
+                    <div className="col-span-full text-center text-orange-700 text-sm">
+                      +{dashboardLowStockProducts.length - 6} outros produtos
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Dashboard de pedidos */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1140,7 +1206,7 @@ export default function Dashboard() {
           }
         });
 
-      const lowStockProducts = filteredProducts.filter(product => (product.stock || 0) < 10);
+      const lowStockProducts = filteredProducts.filter(product => (product.stock || 0) < (product.minStock || 10));
 
       return (
         <div className="p-6">
@@ -1160,7 +1226,7 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <p className="text-orange-700 mb-3">
-                  {lowStockProducts.length} produto(s) com menos de 10 unidades em estoque:
+                  {lowStockProducts.length} produto(s) com estoque abaixo do mínimo:
                 </p>
                 <div className="space-y-2">
                   {lowStockProducts.map(product => (
@@ -1252,18 +1318,40 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-2">
                           <Package className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Estoque:</span>
                         </div>
-                        <div className="mt-1">
+                        <div className="space-y-2">
                           <Badge 
-                            variant={(product.stock || 0) < 10 ? "destructive" : "secondary"}
+                            variant={(product.stock || 0) < (product.minStock || 10) ? "destructive" : "secondary"}
                             className="text-base px-3 py-1"
                             data-testid={`stock-${product.id}`}
                           >
                             {product.stock || 0} unidades
                           </Badge>
+                          
+                          {/* Controles de ajuste de estoque */}
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStockAdjustment(product.id, -1)}
+                              disabled={stockAdjustmentLoading === product.id}
+                              data-testid={`button-decrease-stock-${product.id}`}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStockAdjustment(product.id, 1)}
+                              disabled={stockAdjustmentLoading === product.id}
+                              data-testid={`button-increase-stock-${product.id}`}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -10,6 +10,7 @@ import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema } from "@shared/schema";
+import { z } from "zod";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
 
@@ -1593,6 +1594,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating dev product:", error);
       res.status(500).json({ message: error instanceof Error ? error.message : "Failed to create product" });
+    }
+  });
+
+  // Endpoint para ajustar estoque de produto
+  app.post("/api/dev/products/:productId/stock", isDevAuthenticated, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      
+      // Validação com Zod
+      const stockAdjustmentSchema = z.object({
+        quantity: z.number().positive("Quantity must be positive"),
+        operation: z.enum(['add', 'remove'], { required_error: "Operation must be 'add' or 'remove'" })
+      });
+
+      const validatedData = stockAdjustmentSchema.parse(req.body);
+
+      // Buscar o produto atual
+      const [currentProduct] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, productId))
+        .limit(1);
+
+      if (!currentProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Calcular novo estoque
+      let newStock = currentProduct.stock || 0;
+      if (validatedData.operation === 'add') {
+        newStock += validatedData.quantity;
+      } else {
+        newStock -= validatedData.quantity;
+        if (newStock < 0) {
+          newStock = 0; // Não permitir estoque negativo
+        }
+      }
+
+      // Atualizar estoque
+      const [updatedProduct] = await db
+        .update(products)
+        .set({ stock: newStock })
+        .where(eq(products.id, productId))
+        .returning();
+
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating product stock:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to update stock" });
     }
   });
 
