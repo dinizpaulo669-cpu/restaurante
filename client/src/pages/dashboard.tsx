@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [showAdditionalForm, setShowAdditionalForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingAdditional, setEditingAdditional] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [productSubSection, setProductSubSection] = useState("produtos");
   const [configurationSubSection, setConfigurationSubSection] = useState("dados-empresa");
   
@@ -484,6 +485,53 @@ export default function Dashboard() {
     },
   });
 
+  // Mutations para produtos
+  const deleteProductMutation = useMutation({
+    mutationFn: (productId: string) => apiRequest("DELETE", `/api/dev/products/${productId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${(restaurant as any)?.id}/products`] });
+      toast({
+        title: "Produto excluído!",
+        description: "O produto foi excluído com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir produto.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateStockMutation = useMutation({
+    mutationFn: ({ productId, quantity, operation }: { productId: string, quantity: number, operation: 'add' | 'remove' }) => 
+      apiRequest("POST", `/api/dev/products/${productId}/stock`, { quantity, operation }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${(restaurant as any)?.id}/products`] });
+      toast({
+        title: "Estoque atualizado!",
+        description: "O estoque foi atualizado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error updating stock:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar estoque.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Função para deletar produto
+  const handleDeleteProduct = (productId: string) => {
+    if (confirm("Tem certeza que deseja excluir este produto?")) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
   // Mutation para fechar conta da mesa
   const closeTableMutation = useMutation({
     mutationFn: ({ tableId, splitBill, numberOfPeople, closeByUser, selectedUser }: { 
@@ -878,12 +926,19 @@ export default function Dashboard() {
       const renderProductSubContent = () => {
         // Gerenciar Produtos
         if (productSubSection === "produtos") {
-          if (showProductForm) {
+          if (showProductForm || editingProduct) {
             return (
               <ProductForm
                 restaurantId={(restaurant as any).id}
-                onSuccess={() => setShowProductForm(false)}
-                onCancel={() => setShowProductForm(false)}
+                product={editingProduct}
+                onSuccess={() => {
+                  setShowProductForm(false);
+                  setEditingProduct(null);
+                }}
+                onCancel={() => {
+                  setShowProductForm(false);
+                  setEditingProduct(null);
+                }}
               />
             );
           }
@@ -925,7 +980,12 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {(products as any[]).map((product: any) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard 
+                      key={product.id} 
+                      product={product}
+                      onEdit={(product) => setEditingProduct(product)}
+                      onDelete={(productId) => handleDeleteProduct(productId)}
+                    />
                   ))}
                 </div>
               )}

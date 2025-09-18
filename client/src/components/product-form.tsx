@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ const productFormSchema = z.object({
   price: z.string().min(1, "Valor de venda é obrigatório").refine((val) => !isNaN(Number(val)) && Number(val) > 0, "Valor deve ser maior que zero"),
   costPrice: z.string().optional().refine((val) => !val || (!isNaN(Number(val)) && Number(val) >= 0), "Valor de custo deve ser um número válido"),
   stock: z.string().default("0").refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Estoque deve ser um número válido"),
+  minStock: z.string().default("5").refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Estoque mínimo deve ser um número válido"),
   categoryId: z.string().optional(),
   isActive: z.boolean().default(true),
   availabilityType: z.enum(["local_only", "local_and_delivery"]).default("local_and_delivery"),
@@ -30,30 +31,41 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   restaurantId: string;
+  product?: any;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormProps) {
+export function ProductForm({ restaurantId, product, onSuccess, onCancel }: ProductFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  const isEditing = !!product;
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      price: "",
-      costPrice: "",
-      stock: "0",
-      categoryId: "",
-      isActive: true,
-      availabilityType: "local_and_delivery",
-      preparationTime: "15",
+      name: product?.name || "",
+      description: product?.description || "",
+      price: product?.price || "",
+      costPrice: product?.costPrice || "",
+      stock: product?.stock?.toString() || "0",
+      minStock: product?.minStock?.toString() || "5",
+      categoryId: product?.categoryId || "",
+      isActive: product?.isActive ?? true,
+      availabilityType: product?.availabilityType || "local_and_delivery",
+      preparationTime: product?.preparationTime?.toString() || "15",
     },
   });
+  
+  // Definir imagem preview se existir
+  useEffect(() => {
+    if (product?.imageUrl) {
+      setImagePreview(product.imageUrl);
+    }
+  }, [product?.imageUrl]);
 
   // Buscar categorias do restaurante
   const { data: categories = [] } = useQuery({
@@ -61,7 +73,7 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
     enabled: !!restaurantId,
   });
 
-  const createProductMutation = useMutation({
+  const productMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
       const formData = new FormData();
       
@@ -71,6 +83,7 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
       formData.append("price", data.price);
       if (data.costPrice) formData.append("costPrice", data.costPrice);
       formData.append("stock", data.stock);
+      formData.append("minStock", data.minStock);
       if (data.categoryId) formData.append("categoryId", data.categoryId);
       formData.append("isActive", String(data.isActive));
       formData.append("availabilityType", data.availabilityType);
@@ -81,20 +94,32 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
         formData.append("image", selectedImage);
       }
 
-      const response = await fetch('/api/dev/products', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao criar produto');
+      if (isEditing) {
+        const response = await fetch(`/api/dev/products/${product.id}`, {
+          method: 'PUT',
+          body: formData,
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao atualizar produto');
+        }
+        return response.json();
+      } else {
+        const response = await fetch('/api/dev/products', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao criar produto');
+        }
+        return response.json();
       }
-      return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Produto criado",
-        description: "Produto foi adicionado com sucesso!",
+        title: isEditing ? "Produto atualizado" : "Produto criado",
+        description: `Produto foi ${isEditing ? "atualizado" : "adicionado"} com sucesso!`,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${restaurantId}/products`] });
       form.reset();
@@ -104,7 +129,7 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao criar produto",
+        title: isEditing ? "Erro ao atualizar produto" : "Erro ao criar produto",
         description: error.message || "Ocorreu um erro inesperado",
         variant: "destructive",
       });
@@ -131,13 +156,13 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
   };
 
   const onSubmit = (data: ProductFormData) => {
-    createProductMutation.mutate(data);
+    productMutation.mutate(data);
   };
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Adicionar Novo Produto</CardTitle>
+        <CardTitle>{isEditing ? "Editar Produto" : "Adicionar Novo Produto"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -316,6 +341,25 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="minStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estoque Mínimo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="5"
+                        data-testid="input-min-stock"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Disponibilidade */}
@@ -398,10 +442,10 @@ export function ProductForm({ restaurantId, onSuccess, onCancel }: ProductFormPr
               )}
               <Button
                 type="submit"
-                disabled={createProductMutation.isPending}
+                disabled={productMutation.isPending}
                 data-testid="button-save"
               >
-                {createProductMutation.isPending ? "Salvando..." : "Salvar Produto"}
+                {productMutation.isPending ? "Salvando..." : isEditing ? "Atualizar Produto" : "Salvar Produto"}
               </Button>
             </div>
           </form>

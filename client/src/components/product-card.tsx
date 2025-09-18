@@ -6,9 +6,11 @@ import type { Product } from "@shared/schema";
 
 interface ProductCardProps {
   product: Product;
+  onEdit?: (product: Product) => void;
+  onDelete?: (productId: string) => void;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   return (
     <Card data-testid={`product-card-${product.id}`}>
       <CardContent className="p-4">
@@ -52,10 +54,21 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" data-testid={`button-edit-${product.id}`}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onEdit?.(product)}
+              data-testid={`button-edit-${product.id}`}
+            >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" data-testid={`button-delete-${product.id}`}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-destructive hover:text-destructive" 
+              onClick={() => onDelete?.(product.id)}
+              data-testid={`button-delete-${product.id}`}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

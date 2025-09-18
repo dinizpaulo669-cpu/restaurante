@@ -98,6 +98,7 @@ export const products = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
   stock: integer("stock").default(0),
+  minStock: integer("min_stock").default(5),
   imageUrl: varchar("image_url"),
   isActive: boolean("is_active").default(true),
   availabilityType: varchar("availability_type").notNull().default("local_and_delivery"), // "local_only" | "local_and_delivery"
