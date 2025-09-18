@@ -1014,57 +1014,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // === DEV RESTAURANT ===
-  app.get("/api/dev/my-restaurant", async (req: any, res) => {
-    try {
-      let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
-      
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
-      
-      // Buscar o restaurante mais recente do usuário
-      let [restaurant] = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
-        .orderBy(desc(restaurants.createdAt))
-        .limit(1);
-        
-      // Se não existir restaurante, criar um automaticamente
-      if (!restaurant) {
-        // Buscar dados do usuário para nome do restaurante
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, actualOwnerId))
-          .limit(1);
-        
-        const restaurantName = user ? `Restaurante ${user.firstName} ${user.lastName}` : "Meu Restaurante";
-        
-        [restaurant] = await db
-          .insert(restaurants)
-          .values({
-            name: restaurantName,
-            description: "Descrição do restaurante a ser configurada",
-            address: "Endereço a ser configurado",
-            phone: user?.phone || "Telefone a ser configurado",
-            category: "Diversos",
-            ownerId: actualOwnerId,
-            isActive: true,
-            deliveryFee: "5.00"
-          })
-          .returning();
-      }
-      
-      res.json(restaurant);
-    } catch (error) {
-      console.error("Error fetching/creating restaurant:", error);
-      res.status(500).json({ message: "Failed to fetch restaurant" });
-    }
-  });
 
   // Endpoint para atualizar número do WhatsApp
   app.put("/api/dev/restaurant/whatsapp", async (req: any, res) => {
@@ -1692,20 +1641,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rotas para upload de logo e banner
   app.post("/api/dev/restaurants/logo", isDevAuthenticated, upload.single('logo'), async (req: any, res) => {
     try {
-      // Obter ID do usuário (dev ou real)
-      let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
-      
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Usar a mesma lógica de resolução de usuário das outras rotas dev
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
 
@@ -1733,20 +1676,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/dev/restaurants/banner", isDevAuthenticated, upload.single('banner'), async (req: any, res) => {
     try {
-      // Obter ID do usuário (dev ou real)
-      let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
-      
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Usar a mesma lógica de resolução de usuário das outras rotas dev
+      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
 
