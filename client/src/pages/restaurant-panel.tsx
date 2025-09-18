@@ -62,13 +62,20 @@ export default function RestaurantPanel() {
       return response.json();
     },
     onSuccess: (updatedRestaurant) => {
-      // Atualizar o estado local e localStorage com os novos dados do servidor
-      setRestaurant(updatedRestaurant);
-      localStorage.setItem('currentUser', JSON.stringify(updatedRestaurant));
+      // Atualizar o estado local mesclando com dados existentes
+      setRestaurant((prev: any) => ({ ...prev, ...updatedRestaurant }));
+      // Mesclar com dados existentes do localStorage para preservar campos como 'type'
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      localStorage.setItem('currentUser', JSON.stringify({ ...currentUser, ...updatedRestaurant }));
+      // Invalidar cache do React Query para atualizações
+      queryClient.invalidateQueries({ queryKey: ['/api/dev/my-restaurant'] });
       toast({
         title: "Logo atualizado!",
         description: "O logo foi enviado e atualizado com sucesso.",
       });
+      // Limpar o input de arquivo
+      const logoInput = document.querySelector('input[data-testid="input-logo-file"]') as HTMLInputElement;
+      if (logoInput) logoInput.value = '';
     },
     onError: () => {
       toast({
@@ -76,6 +83,9 @@ export default function RestaurantPanel() {
         description: "Não foi possível fazer upload do logo. Tente novamente.",
         variant: "destructive",
       });
+      // Limpar o input de arquivo mesmo em caso de erro
+      const logoInput = document.querySelector('input[data-testid="input-logo-file"]') as HTMLInputElement;
+      if (logoInput) logoInput.value = '';
     },
   });
 
@@ -96,13 +106,20 @@ export default function RestaurantPanel() {
       return response.json();
     },
     onSuccess: (updatedRestaurant) => {
-      // Atualizar o estado local e localStorage com os novos dados do servidor
-      setRestaurant(updatedRestaurant);
-      localStorage.setItem('currentUser', JSON.stringify(updatedRestaurant));
+      // Atualizar o estado local mesclando com dados existentes
+      setRestaurant((prev: any) => ({ ...prev, ...updatedRestaurant }));
+      // Mesclar com dados existentes do localStorage para preservar campos como 'type'
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      localStorage.setItem('currentUser', JSON.stringify({ ...currentUser, ...updatedRestaurant }));
+      // Invalidar cache do React Query para atualizações
+      queryClient.invalidateQueries({ queryKey: ['/api/dev/my-restaurant'] });
       toast({
         title: "Banner atualizado!",
         description: "O banner foi enviado e atualizado com sucesso.",
       });
+      // Limpar o input de arquivo
+      const bannerInput = document.querySelector('input[data-testid="input-banner-file"]') as HTMLInputElement;
+      if (bannerInput) bannerInput.value = '';
     },
     onError: () => {
       toast({
@@ -110,6 +127,9 @@ export default function RestaurantPanel() {
         description: "Não foi possível fazer upload do banner. Tente novamente.",
         variant: "destructive",
       });
+      // Limpar o input de arquivo mesmo em caso de erro
+      const bannerInput = document.querySelector('input[data-testid="input-banner-file"]') as HTMLInputElement;
+      if (bannerInput) bannerInput.value = '';
     },
   });
 
