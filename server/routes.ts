@@ -436,11 +436,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders/:orderId/messages", async (req, res) => {
     try {
       const { orderId } = req.params;
-      const { message, senderType = "customer" } = req.body;
+      const { message, senderType = "customer", tableId, tableName } = req.body;
       
+      // Validar se o pedido existe e obter informações
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+        
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Para mensagens de mesa, usar identificação da mesa como senderId
       let userId = "dev-user-internal";
       if ((req.session as any)?.user?.id) {
         userId = (req.session as any).user.id;
+      } else if (tableId && senderType === "customer") {
+        // Verificar se o pedido realmente pertence à mesa para segurança
+        if (order.tableId === tableId) {
+          userId = `table-${tableId}`;
+        } else {
+          return res.status(403).json({ message: "Order does not belong to this table" });
+        }
       }
       
       const newMessage = await db

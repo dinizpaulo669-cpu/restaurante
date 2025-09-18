@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +22,11 @@ import {
   Home,
   ArrowLeft,
   Tag,
-  X
+  X,
+  MessageCircle,
+  Receipt,
+  Send,
+  CheckCircle2
 } from "lucide-react";
 import { CouponsSection } from "@/components/coupons-section";
 
@@ -66,6 +72,14 @@ export default function Menu() {
   const isTableOrder = !!tableQrCode;
   const [tableData, setTableData] = useState<any>(null);
 
+  // Estados para funcionalidade da mesa
+  const [showTableOrders, setShowTableOrders] = useState(false);
+  const [showTableChat, setShowTableChat] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedOrderForChat, setSelectedOrderForChat] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
   // Buscar dados do restaurante
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: [`/api/restaurants/${restaurantId}`],
@@ -101,6 +115,30 @@ export default function Menu() {
     queryKey: [`/api/service-areas/${restaurantId}`],
     enabled: !!restaurantId && !isTableOrder,
     retry: false,
+  });
+
+  // Buscar pedidos da mesa se for pedido de mesa
+  const { data: tableOrders = [], isLoading: tableOrdersLoading, refetch: refetchTableOrders } = useQuery({
+    queryKey: [`/api/tables/${tableInfo?.id}/orders`],
+    enabled: isTableOrder && !!tableInfo?.id,
+    refetchInterval: 30000, // Backup polling a cada 30 segundos (principalmente WebSocket)
+  });
+
+  // WebSocket para atualizações em tempo real
+  const { sendMessage: sendWSMessage, connectionStatus } = useWebSocket({
+    orderId: selectedOrderForChat || undefined,
+    userId: tableInfo?.id ? `table-${tableInfo.id}` : undefined,
+    userType: "customer",
+    onNewMessage: (message: any) => {
+      // Invalidar cache de mensagens quando receber nova mensagem
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${message.orderId}/messages`] });
+    },
+    onStatusUpdate: (update: any) => {
+      // Invalidar cache de pedidos da mesa quando status mudar
+      if (tableInfo?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/tables/${tableInfo.id}/orders`] });
+      }
+    }
   });
 
   const addToCart = (product: any) => {
@@ -271,6 +309,47 @@ export default function Menu() {
     const deliveryFee = getDeliveryFee();
     return Math.max(0, subtotal - discount + deliveryFee);
   };
+
+  // Mutation para enviar mensagem
+  const sendMessageMutation = useMutation({
+    mutationFn: ({ orderId, message }: { orderId: string; message: string }) => 
+      apiRequest("POST", `/api/orders/${orderId}/messages`, { 
+        message, 
+        senderType: "customer",
+        tableId: tableInfo?.id, // Incluir ID da mesa para identificação
+        tableName: `Mesa ${tableInfo?.number}` // Nome da mesa para contexto
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${selectedOrderForChat}/messages`] });
+      setNewMessage("");
+      toast({
+        title: "Mensagem enviada",
+        description: "Sua mensagem foi enviada ao restaurante"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Função para enviar mensagem
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedOrderForChat) return;
+    
+    sendMessageMutation.mutate({
+      orderId: selectedOrderForChat,
+      message: newMessage.trim()
+    });
+  };
+
+  // Auto scroll para mensagens
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const handleOrder = async () => {
     // Para pedidos de mesa, permitir sem autenticação completa
@@ -561,6 +640,251 @@ export default function Menu() {
 
       {/* Seção de Cupons em Destaque */}
       {restaurantId && <CouponsSection restaurantId={restaurantId} />}
+
+      {/* Seção de Pedidos e Chat da Mesa */}
+      {isTableOrder && tableInfo && (
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 text-center">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Mesa {tableInfo.number}
+              </h2>
+              <p className="text-gray-600">
+                Acompanhe seus pedidos e converse com o restaurante
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Card de Pedidos Ativos */}
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5" />
+                    Seus Pedidos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {tableOrdersLoading ? (
+                    <div className="p-6 text-center">
+                      <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Carregando pedidos...</p>
+                    </div>
+                  ) : tableOrders.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">Nenhum pedido ainda</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto">
+                      {(tableOrders as any[]).map((order: any) => (
+                        <div key={order.id} className="p-4 border-b last:border-b-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <span className="text-sm font-medium">Pedido #{order.orderNumber}</span>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(order.createdAt).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                className={`text-xs ${
+                                  order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  order.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
+                                  order.status === 'ready' ? 'bg-blue-100 text-blue-800' :
+                                  order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {order.status === 'pending' ? 'Pendente' :
+                                 order.status === 'preparing' ? 'Preparando' :
+                                 order.status === 'ready' ? 'Pronto' :
+                                 order.status === 'delivered' ? 'Entregue' : order.status}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedOrderForChat(order.id);
+                                  setShowTableChat(true);
+                                }}
+                                data-testid={`button-chat-${order.id}`}
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            {order.items?.map((item: any) => (
+                              <div key={item.id} className="text-xs text-muted-foreground flex justify-between">
+                                <span>{item.quantity}x {item.product?.name}</span>
+                                <span>R$ {parseFloat(item.totalPrice || "0").toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-2 pt-2 border-t text-sm font-medium">
+                            Total: R$ {parseFloat(order.total || "0").toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card de Chat Rápido */}
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white">
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Chat com o Restaurante
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {tableOrders.length === 0 ? (
+                    <div className="text-center py-6">
+                      <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        Faça seu primeiro pedido para iniciar uma conversa
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Selecione um pedido ao lado para conversar com o restaurante
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowTableChat(true)}
+                        disabled={tableOrders.length === 0}
+                        data-testid="button-open-chat"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Abrir Chat
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex justify-center gap-4">
+              <Button 
+                variant="outline"
+                onClick={() => setShowTableOrders(!showTableOrders)}
+                data-testid="button-toggle-orders"
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                {showTableOrders ? 'Ocultar' : 'Ver'} Histórico
+              </Button>
+              
+              <Button 
+                variant="secondary"
+                onClick={() => refetchTableOrders()}
+                data-testid="button-refresh-orders"
+              >
+                Atualizar Pedidos
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Chat */}
+      {showTableChat && selectedOrderForChat && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-lg max-h-[80vh] flex flex-col">
+            <CardHeader className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5" />
+                  Chat - Pedido #{(tableOrders as any[]).find(o => o.id === selectedOrderForChat)?.orderNumber}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-white hover:bg-white/20"
+                  onClick={() => {
+                    setShowTableChat(false);
+                    setSelectedOrderForChat(null);
+                  }}
+                  data-testid="button-close-chat"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            
+            <CardContent className="flex-1 flex flex-col min-h-0 p-0">
+              {/* Mensagens */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                {(chatMessages as any[]).length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma mensagem ainda. Inicie a conversa!
+                    </p>
+                  </div>
+                ) : (
+                  (chatMessages as any[]).map((message: any) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.senderType === 'customer' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs px-4 py-2 rounded-lg ${
+                          message.senderType === 'customer'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white text-gray-900 border'
+                        }`}
+                      >
+                        <p className="text-sm">{message.message}</p>
+                        <div
+                          className={`text-xs mt-1 ${
+                            message.senderType === 'customer'
+                              ? 'text-blue-100'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {new Date(message.createdAt).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              
+              {/* Input de mensagem */}
+              <div className="flex-shrink-0 p-4 bg-white border-t">
+                <div className="flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Digite sua mensagem..."
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    data-testid="input-chat-message"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Menu Principal - Layout Profissional */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
