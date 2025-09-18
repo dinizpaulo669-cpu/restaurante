@@ -283,6 +283,17 @@ export default function Dashboard() {
     enabled: activeSection === "historico"
   });
 
+  // Invalidar cache quando usuário muda para garantir dados corretos
+  useEffect(() => {
+    if (user?.id) {
+      // Invalidar queries relacionadas ao restaurante e dados do usuário
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/my-restaurant"] });
+      queryClient.removeQueries({ queryKey: ["/api/restaurants"] });
+      queryClient.removeQueries({ queryKey: ["/api/my-orders"] });
+      queryClient.removeQueries({ queryKey: ["/api/dev/tables"] });
+    }
+  }, [user?.id, queryClient]);
+
   // Atualizar estados quando restaurant carrega
   useEffect(() => {
     if (restaurant) {
