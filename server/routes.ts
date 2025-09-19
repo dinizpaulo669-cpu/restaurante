@@ -53,6 +53,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Always setup auth (simplified version for non-Replit deployments)
   await setupAuth(app);
 
+  // Serve static files from uploads directory
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+
   // === AUTH ROUTES ===
   app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {
     try {
