@@ -504,6 +504,18 @@ export default function Menu() {
     <div className="min-h-screen bg-background">
       {/* Header do Restaurante - Design Profissional */}
       <div className="bg-gradient-to-br from-primary/8 via-primary/4 to-background shadow-lg border-b">
+        {/* Banner do restaurante */}
+        {(restaurant as any)?.bannerUrl && (
+          <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden">
+            <img 
+              src={(restaurant as any).bannerUrl} 
+              alt="Banner do restaurante"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/20" />
+          </div>
+        )}
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Navigation Bar */}
           <div className="flex items-center justify-between py-4">
@@ -551,9 +563,18 @@ export default function Menu() {
               {/* Main Restaurant Info */}
               <div className="xl:col-span-3 space-y-6">
                 <div>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary mb-4 leading-tight">
-                    {(restaurant as any)?.name}
-                  </h1>
+                  <div className="flex items-center gap-4 mb-4">
+                    {(restaurant as any)?.logoUrl && (
+                      <img 
+                        src={(restaurant as any).logoUrl} 
+                        alt="Logo do restaurante"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-lg bg-white shadow-md"
+                      />
+                    )}
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary leading-tight">
+                      {(restaurant as any)?.name}
+                    </h1>
+                  </div>
                   <p className="text-muted-foreground text-lg sm:text-xl leading-relaxed max-w-3xl">
                     {(restaurant as any)?.description}
                   </p>
