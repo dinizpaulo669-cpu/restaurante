@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import { restaurants, products, categories, users } from '../shared/schema.js';
+import { restaurants, products, categories, users } from '../shared/schema.ts';
 
 const { Pool } = pg;
 
@@ -34,6 +34,15 @@ async function seedData() {
       role: "restaurant_owner"
     }).onConflictDoNothing();
 
+    // Inserir usuário paulo@gmail.com para produção
+    await db.insert(users).values({
+      id: "user-cGF1bG9AZ21haWwu",
+      email: "paulo@gmail.com",
+      firstName: "Paulo",
+      lastName: "Silva",
+      role: "restaurant_owner"
+    }).onConflictDoNothing();
+
     // Inserir restaurante de desenvolvimento
     const [restaurant] = await db.insert(restaurants).values({
       id: "rest-dev-123",
@@ -54,6 +63,27 @@ async function seedData() {
     }).onConflictDoNothing().returning();
 
     console.log('Restaurante criado:', restaurant);
+
+    // Inserir restaurante para paulo@gmail.com
+    const [pauloRestaurant] = await db.insert(restaurants).values({
+      id: "rest-paulo-123",
+      ownerId: "user-cGF1bG9AZ21haWwu",
+      name: "Restaurante do Paulo",
+      description: "Deliciosos pratos caseiros e lanches gourmet",
+      category: "Brasileira",
+      address: "Rua das Flores, 456 - Rio de Janeiro, RJ",
+      phone: "(21) 98765-4321",
+      email: "paulo@gmail.com",
+      rating: 4.8,
+      deliveryFee: 4.50,
+      minDeliveryTime: 25,
+      maxDeliveryTime: 45,
+      isActive: true,
+      openingTime: "10:00",
+      closingTime: "22:00"
+    }).onConflictDoNothing().returning();
+
+    console.log('Restaurante do Paulo criado:', pauloRestaurant);
 
     // Inserir categorias
     const [category1] = await db.insert(categories).values({

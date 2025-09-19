@@ -36,14 +36,14 @@ export function getSession() {
     const pgStore = connectPg(session);
     sessionStore = new pgStore({
       conString: connectionString,
-      createTableIfMissing: false,
+      createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
     });
   }
   
   return session({
-    secret: process.env.SESSION_SECRET || "dev-secret-key-not-secure",
+    secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
     store: sessionStore, // Will use memory store if sessionStore is undefined
     resave: false,
     saveUninitialized: false,
@@ -105,17 +105,56 @@ export async function setupAuth(app: Express) {
     passport.deserializeUser((user: Express.User, cb) => cb(null, user));
     
     // Add simple login routes for production deployment
-    app.post('/api/simple-login', (req: any, res) => {
-      const { email, role } = req.body;
-      const user = {
-        id: `user-${Date.now()}`,
-        email: email || 'user@example.com',
-        firstName: 'Usuário',
-        lastName: 'Sistema',
-        role: role || 'customer'
-      };
-      req.session.user = user;
-      res.json({ message: 'Login realizado com sucesso', user });
+    app.post('/api/simple-login', async (req: any, res) => {
+      try {
+        const { email } = req.body;
+        const userEmail = email || 'user@example.com';
+        
+        // Create consistent user ID based on email
+        const userId = `user-${Buffer.from(userEmail).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
+        
+        // Check if user exists in database
+        const [existingUser] = await db.select().from(users).where(eq(users.email, userEmail)).limit(1);
+        
+        let dbUser;
+        if (!existingUser) {
+          // Create new user in database with consistent ID - default to customer role
+          [dbUser] = await db.insert(users).values({
+            id: userId,
+            email: userEmail,
+            firstName: 'Usuário',
+            lastName: 'Sistema',
+            role: 'customer'
+          }).returning();
+        } else {
+          // Use existing user - don't create new ID or change role
+          dbUser = existingUser;
+        }
+        
+        // Create session user object with compatible field names
+        const sessionUser = {
+          id: dbUser.id,
+          email: dbUser.email,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          role: dbUser.role,
+          claims: {
+            sub: dbUser.id,
+            email: dbUser.email,
+            firstName: dbUser.firstName,
+            lastName: dbUser.lastName,
+            first_name: dbUser.firstName,
+            last_name: dbUser.lastName,
+            profile_image_url: dbUser.profileImageUrl
+          }
+        };
+        
+        req.session.user = sessionUser;
+        res.json({ message: 'Login realizado com sucesso', user: sessionUser });
+      } catch (error) {
+        console.error('Error in simple login:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+      }
     });
     
     return;
@@ -239,6 +278,17 @@ export const isDevAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
   
-  // Em produção, usa o middleware normal
+  // Em produção, verifica se há usuário na sessão (para autenticação simplificada)
+  if (!process.env.REPLIT_DOMAINS && !process.env.CUSTOM_AUTH_DOMAIN) {
+    // Usando autenticação simplificada
+    if ((req as any).session?.user) {
+      req.user = (req as any).session.user;
+      return next();
+    } else {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+  }
+  
+  // Em produção com OIDC, usa o middleware normal
   return isAuthenticated(req, res, next);
 };
