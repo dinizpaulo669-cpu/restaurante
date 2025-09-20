@@ -56,6 +56,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from uploads directory
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
+  // Middleware específico para proprietários de restaurante
+  const requireRestaurantOwner = async (req: any, res: any, next: any) => {
+    try {
+      let userId = null;
+      let userRole = null;
+
+      // Em desenvolvimento, permitir fallback para dev user
+      if (process.env.NODE_ENV === "development") {
+        userId = req.user?.claims?.sub || "dev-user-internal";
+        userRole = req.user?.claims?.role || "restaurant_owner";
+      } else {
+        // Em produção, exigir usuário autenticado na sessão
+        if (!(req.session as any)?.user?.id) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+        userId = (req.session as any).user.id;
+        userRole = (req.session as any).user.role;
+      }
+
+      // Verificar se o usuário tem role de proprietário
+      if (userRole !== "restaurant_owner") {
+        return res.status(403).json({ message: "Access denied. Restaurant owner role required." });
+      }
+
+      // Para dev-user-internal, usar o mapeamento padrão apenas em desenvolvimento
+      const actualOwnerId = (userId === "dev-user-internal" && process.env.NODE_ENV === "development") 
+        ? "dev-user-123" 
+        : userId;
+
+      // Buscar o restaurante do usuário autenticado
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, actualOwnerId))
+        .orderBy(desc(restaurants.createdAt))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found for this owner" });
+      }
+
+      // Adicionar dados do restaurante à requisição
+      req.restaurant = restaurant;
+      req.userId = userId;
+      req.actualOwnerId = actualOwnerId;
+      
+      next();
+    } catch (error) {
+      console.error("Error in requireRestaurantOwner middleware:", error);
+      res.status(500).json({ message: "Authentication error" });
+    }
+  };
+
   // === AUTH ROUTES ===
   app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {
     try {
@@ -78,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const devUser = {
         id: "dev-user-internal",
         email: "dev@example.com",
-        role: "customer",
+        role: "restaurant_owner",
         firstName: "Usuario",
         lastName: "Logado"
       };
@@ -2101,28 +2154,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoints para cupons
-  app.get("/api/dev/coupons", isDevAuthenticated, async (req: any, res) => {
+  // Endpoints para cupons (com autenticação segura)
+  app.get("/api/dev/coupons", requireRestaurantOwner, async (req: any, res) => {
     try {
-      // Usar sempre o ID do usuário autenticado, sem hardcode
-      let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
-      
-      // Buscar o restaurante do usuário autenticado
-      const [restaurant] = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
-        .limit(1);
-        
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
-
       const restaurantCoupons = await db
         .select()
         .from(coupons)
-        .where(eq(coupons.restaurantId, restaurant.id))
+        .where(eq(coupons.restaurantId, req.restaurant.id))
         .orderBy(desc(coupons.createdAt));
 
       res.json(restaurantCoupons);
@@ -2132,26 +2170,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/coupons", isDevAuthenticated, async (req: any, res) => {
+  app.post("/api/dev/coupons", requireRestaurantOwner, async (req: any, res) => {
     try {
-      // Usar sempre o ID do usuário autenticado, sem hardcode
-      let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
-      
-      // Buscar o restaurante do usuário autenticado
-      const [restaurant] = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
-        .limit(1);
-        
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
-
       const couponData = insertCouponSchema.parse({
         ...req.body,
-        restaurantId: restaurant.id,
+        restaurantId: req.restaurant.id,
       });
 
       const [coupon] = await db.insert(coupons).values(couponData).returning();
@@ -2163,24 +2186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Atualizar cupom
-  app.put("/api/dev/coupons/:id", isDevAuthenticated, async (req: any, res) => {
+  app.put("/api/dev/coupons/:id", requireRestaurantOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
-      
-      // Usar sempre o ID do usuário autenticado, sem hardcode
-      let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
-      
-      // Buscar o restaurante do usuário autenticado
-      const [restaurant] = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
-        .limit(1);
-        
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
 
       // Verificar se o cupom pertence ao restaurante
       const [existingCoupon] = await db
@@ -2188,7 +2196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(coupons)
         .where(and(
           eq(coupons.id, id),
-          eq(coupons.restaurantId, restaurant.id)
+          eq(coupons.restaurantId, req.restaurant.id)
         ))
         .limit(1);
 
@@ -2196,10 +2204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Coupon not found" });
       }
 
-      const updateData = {
+      // Validar dados usando schema
+      const updateData = insertCouponSchema.parse({
         ...req.body,
+        restaurantId: req.restaurant.id,
         updatedAt: new Date()
-      };
+      });
 
       const [updatedCoupon] = await db
         .update(coupons)
@@ -2215,31 +2225,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deletar cupom
-  app.delete("/api/dev/coupons/:id", isDevAuthenticated, async (req: any, res) => {
+  app.delete("/api/dev/coupons/:id", requireRestaurantOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
-      
-      // Usar sempre o ID do usuário autenticado, sem hardcode
-      let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
-      
-      // Buscar o restaurante do usuário autenticado
-      const [restaurant] = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
-        .limit(1);
-        
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
 
       // Verificar se o cupom pertence ao restaurante e deletar
       const [deletedCoupon] = await db
         .delete(coupons)
         .where(and(
           eq(coupons.id, id),
-          eq(coupons.restaurantId, restaurant.id)
+          eq(coupons.restaurantId, req.restaurant.id)
         ))
         .returning();
 
@@ -2299,12 +2294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Se houver usuário autenticado (do dashboard), buscar o restaurante dele
       if ((req.session as any)?.user?.id) {
-        const userId = (req.session as any)?.user?.id || "dev-user-internal";
+        const userId = (req.session as any)?.user?.id;
+        
+        // Para dev-user-internal, usar o mapeamento padrão
+        const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
         
         const [userRestaurant] = await db
           .select()
           .from(restaurants)
-          .where(eq(restaurants.ownerId, userId))
+          .where(eq(restaurants.ownerId, actualOwnerId))
           .orderBy(desc(restaurants.createdAt))
           .limit(1);
           
@@ -4135,7 +4133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.send(JSON.stringify({
       type: 'authenticated',
       userId: 'dev-user-internal',
-      userType: 'customer'
+      userType: 'restaurant_owner'
     }));
 
     ws.on('close', () => {

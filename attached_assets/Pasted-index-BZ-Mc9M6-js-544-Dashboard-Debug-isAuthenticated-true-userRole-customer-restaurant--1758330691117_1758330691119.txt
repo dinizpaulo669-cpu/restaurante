@@ -1,0 +1,39 @@
+index-BZ_Mc9M6.js:544 Dashboard Debug: {isAuthenticated: true, userRole: 'customer', restaurant: {…}, restaurantLoading: false, activeSection: 'cupons', …}
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: ['Endereço a ser configurado']
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+[Violation] 'requestIdleCallback' handler took 53ms
+index-BZ_Mc9M6.js:48  POST https://restaurante-rr6k.onrender.com/api/dev/coupons 404 (Not Found)
+ct @ index-BZ_Mc9M6.js:48
+mutationFn @ index-BZ_Mc9M6.js:544
+fn @ index-BZ_Mc9M6.js:48
+g @ index-BZ_Mc9M6.js:48
+start @ index-BZ_Mc9M6.js:48
+execute @ index-BZ_Mc9M6.js:48
+await in execute
+mutate @ index-BZ_Mc9M6.js:48
+(anonymous) @ index-BZ_Mc9M6.js:48
+onClick @ index-BZ_Mc9M6.js:585
+v6 @ index-BZ_Mc9M6.js:37
+y6 @ index-BZ_Mc9M6.js:37
+x6 @ index-BZ_Mc9M6.js:37
+jP @ index-BZ_Mc9M6.js:37
+BT @ index-BZ_Mc9M6.js:37
+(anonymous) @ index-BZ_Mc9M6.js:37
+g1 @ index-BZ_Mc9M6.js:40
+dT @ index-BZ_Mc9M6.js:37
+hx @ index-BZ_Mc9M6.js:37
+qj @ index-BZ_Mc9M6.js:37
+R6 @ index-BZ_Mc9M6.js:37
+index-BZ_Mc9M6.js:544 Dashboard Debug: {isAuthenticated: true, userRole: 'customer', restaurant: {…}, restaurantLoading: false, activeSection: 'cupons', …}
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: ['Endereço a ser configurado']
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: {isAuthenticated: true, userRole: 'customer', restaurant: {…}, restaurantLoading: false, activeSection: 'cupons', …}
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: ['Endereço a ser configurado']
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: {isAuthenticated: true, userRole: 'customer', restaurant: {…}, restaurantLoading: false, activeSection: 'cupons', …}
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: ['Endereço a ser configurado']
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
