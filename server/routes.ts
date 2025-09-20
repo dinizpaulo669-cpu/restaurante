@@ -2298,8 +2298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let targetRestaurantId = req.params.restaurantId;
       
       // Se houver usuário autenticado (do dashboard), buscar o restaurante dele
-      if (req.user?.claims?.sub || (req.session as any)?.user?.id) {
-        const userId = req.user?.claims?.sub || (req.session as any)?.user?.id || "dev-user-internal";
+      if ((req.session as any)?.user?.id) {
+        const userId = (req.session as any)?.user?.id || "dev-user-internal";
         
         const [userRestaurant] = await db
           .select()
