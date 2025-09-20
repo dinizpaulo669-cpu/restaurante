@@ -182,7 +182,7 @@ export default function Dashboard() {
     retry: 1,
     refetchOnMount: true,
     staleTime: 0,
-    cacheTime: 0
+    gcTime: 0
   });
 
   // Debug log para cupons
@@ -213,6 +213,7 @@ export default function Dashboard() {
     validFrom: "",
     validUntil: ""
   });
+  const [editingCoupon, setEditingCoupon] = useState<any>(null);
 
   // Mutation para criar cupom - movida para o topo para evitar erro de hooks
   const createCouponMutation = useMutation({
@@ -232,16 +233,72 @@ export default function Dashboard() {
         validFrom: "",
         validUntil: ""
       });
+      setEditingCoupon(null);
       toast({
-        title: "Cupom criado",
-        description: "Cupom criado com sucesso!"
+        title: editingCoupon ? "Cupom atualizado" : "Cupom criado",
+        description: editingCoupon ? "Cupom atualizado com sucesso!" : "Cupom criado com sucesso!"
       });
     },
     onError: (error: any) => {
-      console.error("Erro ao criar cupom:", error);
+      console.error("Erro ao processar cupom:", error);
       toast({
         title: "Erro",
-        description: error?.message || "Erro ao criar cupom",
+        description: error?.message || "Erro ao processar cupom",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation para editar cupom
+  const updateCouponMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => apiRequest("PUT", `/api/dev/coupons/${id}`, data),
+    onSuccess: async () => {
+      await refetchCoupons();
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/coupons/display'] });
+      setCouponForm({
+        code: "",
+        description: "",
+        discountType: "percentage",
+        discountValue: "",
+        minOrderValue: "",
+        maxUses: "",
+        validFrom: "",
+        validUntil: ""
+      });
+      setEditingCoupon(null);
+      toast({
+        title: "Cupom atualizado",
+        description: "Cupom atualizado com sucesso!"
+      });
+    },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar cupom:", error);
+      toast({
+        title: "Erro",
+        description: error?.message || "Erro ao atualizar cupom",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation para excluir cupom
+  const deleteCouponMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/dev/coupons/${id}`),
+    onSuccess: async () => {
+      await refetchCoupons();
+      queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/coupons/display'] });
+      toast({
+        title: "Cupom excluído",
+        description: "Cupom excluído com sucesso!"
+      });
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir cupom:", error);
+      toast({
+        title: "Erro",
+        description: error?.message || "Erro ao excluir cupom",
         variant: "destructive"
       });
     }
@@ -3092,14 +3149,46 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              <Button 
-                onClick={() => createCouponMutation.mutate(couponForm)}
-                disabled={!couponForm.code || !couponForm.discountValue || !couponForm.validFrom || !couponForm.validUntil || createCouponMutation.isPending}
-                className="w-full mt-6"
-                data-testid="button-create-coupon"
-              >
-                {createCouponMutation.isPending ? "Criando..." : "Criar Cupom"}
-              </Button>
+              <div className="flex gap-2 mt-6">
+                <Button 
+                  onClick={() => {
+                    if (editingCoupon) {
+                      updateCouponMutation.mutate({ id: editingCoupon.id, data: couponForm });
+                    } else {
+                      createCouponMutation.mutate(couponForm);
+                    }
+                  }}
+                  disabled={!couponForm.code || !couponForm.discountValue || !couponForm.validFrom || !couponForm.validUntil || createCouponMutation.isPending || updateCouponMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-save-coupon"
+                >
+                  {(createCouponMutation.isPending || updateCouponMutation.isPending) ? 
+                    (editingCoupon ? "Atualizando..." : "Criando...") : 
+                    (editingCoupon ? "Atualizar Cupom" : "Criar Cupom")
+                  }
+                </Button>
+                {editingCoupon && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setEditingCoupon(null);
+                      setCouponForm({
+                        code: "",
+                        description: "",
+                        discountType: "percentage",
+                        discountValue: "",
+                        minOrderValue: "",
+                        maxUses: "",
+                        validFrom: "",
+                        validUntil: ""
+                      });
+                    }}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -3118,7 +3207,7 @@ export default function Dashboard() {
                   {coupons.map((coupon: any) => (
                     <div key={coupon.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-semibold text-lg">{coupon.code}</h4>
                           <p className="text-muted-foreground">{coupon.description}</p>
                           <div className="flex gap-4 mt-2 text-sm">
@@ -3131,9 +3220,44 @@ export default function Dashboard() {
                             <span>Válido: {new Date(coupon.validFrom).toLocaleDateString()} - {new Date(coupon.validUntil).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <Badge variant={coupon.isActive ? "default" : "secondary"}>
-                          {coupon.isActive ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={coupon.isActive ? "default" : "secondary"}>
+                            {coupon.isActive ? "Ativo" : "Inativo"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // Preencher o formulário com os dados do cupom para edição
+                              setCouponForm({
+                                code: coupon.code,
+                                description: coupon.description,
+                                discountType: coupon.discountType,
+                                discountValue: coupon.discountValue,
+                                minOrderValue: coupon.minOrderValue || "",
+                                maxUses: coupon.maxUses || "",
+                                validFrom: new Date(coupon.validFrom).toISOString().slice(0, 16),
+                                validUntil: new Date(coupon.validUntil).toISOString().slice(0, 16)
+                              });
+                              setEditingCoupon(coupon);
+                            }}
+                            data-testid={`button-edit-coupon-${coupon.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Tem certeza que deseja excluir o cupom "${coupon.code}"?`)) {
+                                deleteCouponMutation.mutate(coupon.id);
+                              }
+                            }}
+                            data-testid={`button-delete-coupon-${coupon.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -3856,8 +3980,8 @@ export default function Dashboard() {
                 {editingOrder.items?.map((item: any, index: number) => (
                   <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
                     <div className="flex-1">
-                      <span className="font-medium">{item.productName}</span>
-                      <span className="text-sm text-gray-600 ml-2">R$ {parseFloat(item.price || 0).toFixed(2)}</span>
+                      <span className="font-medium">{item.product?.name || item.productName}</span>
+                      <span className="text-sm text-gray-600 ml-2">R$ {parseFloat(item.unitPrice || item.price || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
@@ -3898,17 +4022,25 @@ export default function Dashboard() {
                 <Select onValueChange={(productId) => {
                   const product = availableProducts?.find((p: any) => p.id === productId);
                   if (product) {
-                    const existingItemIndex = editingOrder.items?.findIndex((item: any) => item.productId === productId);
+                    const existingItemIndex = editingOrder.items?.findIndex((item: any) => 
+                      (item.product?.id || item.productId) === productId
+                    );
                     if (existingItemIndex >= 0) {
                       const newItems = [...(editingOrder.items || [])];
                       newItems[existingItemIndex].quantity += 1;
                       setEditingOrder((prev: any) => ({ ...prev, items: newItems }));
                     } else {
                       const newItem = {
+                        product: {
+                          id: product.id,
+                          name: product.name
+                        },
+                        unitPrice: product.price,
+                        quantity: 1,
+                        // Compatibilidade com estrutura antiga
                         productId: product.id,
                         productName: product.name,
-                        price: product.price,
-                        quantity: 1
+                        price: product.price
                       };
                       setEditingOrder((prev: any) => ({ 
                         ...prev, 
