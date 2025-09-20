@@ -227,6 +227,9 @@ export const insertProductSchema = createInsertSchema(products).omit({
 }).extend({
   price: z.union([z.string(), z.number()]).transform(val => String(val)),
   costPrice: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
+  stock: z.union([z.string(), z.number()]).transform(val => Number(val)).optional(),
+  minStock: z.union([z.string(), z.number()]).transform(val => Number(val)).optional(),
+  preparationTime: z.union([z.string(), z.number()]).transform(val => Number(val)).optional(),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
