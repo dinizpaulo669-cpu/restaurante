@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Restaurant } from "@shared/schema";
-import { BarChart3, Utensils, Receipt, Settings, Bell } from "lucide-react";
+import { BarChart3, Utensils, Receipt, Settings, Bell, Star } from "lucide-react";
 
 interface DashboardLayoutProps {
   restaurant: Restaurant;
@@ -14,6 +14,7 @@ const navigationItems = [
   { id: "orders", label: "Comandas", icon: Receipt },
   { id: "overview", label: "Dashboard", icon: BarChart3 },
   { id: "products", label: "Produtos", icon: Utensils },
+  { id: "reviews", label: "Avaliações", icon: Star },
   { id: "config", label: "Configurações", icon: Settings },
 ];
 

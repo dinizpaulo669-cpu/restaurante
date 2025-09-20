@@ -383,6 +383,20 @@ export default function Dashboard() {
     enabled: activeSection === "historico"
   });
 
+  // Query para buscar avaliações do restaurante
+  const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
+    queryKey: [`/api/restaurants/${restaurant?.id}/reviews`],
+    enabled: isAuthenticated && !!restaurant && activeSection === "reviews",
+    retry: false,
+  });
+
+  // Query para buscar estatísticas das avaliações
+  const { data: reviewStats } = useQuery({
+    queryKey: [`/api/restaurants/${restaurant?.id}/reviews/stats`],
+    enabled: isAuthenticated && !!restaurant && activeSection === "reviews",
+    retry: false,
+  });
+
   // Invalidar cache quando usuário muda para garantir dados corretos
   useEffect(() => {
     if (user?.id) {
@@ -3273,6 +3287,126 @@ export default function Dashboard() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (activeSection === "reviews") {
+      if (reviewsLoading) {
+        return (
+          <div className="p-6">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          </div>
+        );
+      }
+
+      const averageRating = reviewStats?.averageRating || 0;
+      const totalReviews = reviewStats?.totalReviews || 0;
+      const latestReviews = reviews.slice(0, 10);
+
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Avaliações do Restaurante</h2>
+          </div>
+
+          {/* Estatísticas das avaliações */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Star className="w-8 h-8 text-yellow-500 fill-current" />
+                </div>
+                <p className="text-2xl font-bold">{averageRating.toFixed(1)}</p>
+                <p className="text-sm text-muted-foreground">Média Geral</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Users className="w-8 h-8 text-blue-500" />
+                </div>
+                <p className="text-2xl font-bold">{totalReviews}</p>
+                <p className="text-sm text-muted-foreground">Total de Avaliações</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-4 h-4 ${
+                          star <= Math.round(averageRating)
+                            ? "text-yellow-500 fill-current"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">Classificação</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Últimas avaliações */}
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Últimas 10 Avaliações</h3>
+            </CardHeader>
+            <CardContent>
+              {latestReviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <Star className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Nenhuma avaliação encontrada</p>
+                  <p className="text-sm text-gray-400">
+                    As avaliações dos clientes aparecerão aqui
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {latestReviews.map((review: any) => (
+                    <div key={review.id} className="border-b pb-4 last:border-b-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= review.rating
+                                    ? "text-yellow-500 fill-current"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="font-medium">{review.rating}/5</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      
+                      {review.comment && (
+                        <p className="text-sm text-gray-700 mb-2">
+                          "{review.comment}"
+                        </p>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground">
+                        Por: {review.customerName || "Cliente anônimo"}
+                      </p>
                     </div>
                   ))}
                 </div>

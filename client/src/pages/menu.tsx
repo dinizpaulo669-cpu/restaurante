@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ShoppingCart, 
@@ -80,6 +81,12 @@ export default function Menu() {
   const [selectedOrderForChat, setSelectedOrderForChat] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Estados para avaliação
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [hoveredStar, setHoveredStar] = useState(0);
 
   // Buscar dados do restaurante
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
@@ -161,6 +168,35 @@ export default function Menu() {
     },
     onError: () => {
       toast({ title: "Erro ao remover favorito", variant: "destructive" });
+    },
+  });
+
+  // Buscar avaliação do usuário para este restaurante
+  const { data: userReview } = useQuery({
+    queryKey: [`/api/restaurants/${restaurantId}/reviews/check`],
+    enabled: !!restaurantId && isAuthenticated,
+  });
+
+  // Mutation para criar/atualizar avaliação
+  const createReviewMutation = useMutation({
+    mutationFn: ({ rating, comment }: { rating: number; comment?: string }) => 
+      apiRequest("POST", `/api/restaurants/${restaurantId}/reviews`, { rating, comment }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${restaurantId}/reviews/check`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${restaurantId}`] });
+      setShowReviewModal(false);
+      setReviewRating(0);
+      setReviewComment("");
+      toast({ 
+        title: "Avaliação enviada!", 
+        description: "Obrigado por avaliar este restaurante."
+      });
+    },
+    onError: () => {
+      toast({ 
+        title: "Erro ao enviar avaliação", 
+        variant: "destructive"
+      });
     },
   });
 
@@ -650,6 +686,28 @@ export default function Menu() {
                       <Heart className={`w-4 h-4 ${isRestaurantFavorite ? 'fill-current text-red-500' : ''}`} />
                       <span className="text-sm font-medium">
                         {isRestaurantFavorite ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'}
+                      </span>
+                    </Button>
+                  )}
+                  
+                  {/* Botão de Avaliação */}
+                  {isAuthenticated && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (userReview) {
+                          setReviewRating(userReview.rating);
+                          setReviewComment(userReview.comment || "");
+                        }
+                        setShowReviewModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border-yellow-200 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
+                      data-testid="button-review-restaurant"
+                    >
+                      <Star className={`w-4 h-4 ${userReview ? 'fill-current text-yellow-500' : ''}`} />
+                      <span className="text-sm font-medium">
+                        {userReview ? 'Editar Avaliação' : 'Avaliar Restaurante'}
                       </span>
                     </Button>
                   )}
@@ -1647,6 +1705,118 @@ export default function Menu() {
           </div>
         </div>
       )}
+
+      {/* Modal de Avaliação */}
+      <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              {userReview ? 'Editar Avaliação' : 'Avaliar Restaurante'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Informações do Restaurante */}
+            <div className="text-center">
+              <h3 className="font-semibold text-lg">{(restaurant as any)?.name}</h3>
+              <p className="text-sm text-muted-foreground">{(restaurant as any)?.category}</p>
+            </div>
+
+            {/* Sistema de Estrelas */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-center">
+                Dê sua nota (obrigatório)
+              </label>
+              <div className="flex justify-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    onMouseEnter={() => setHoveredStar(star)}
+                    onMouseLeave={() => setHoveredStar(0)}
+                    className="p-1 transition-transform hover:scale-110"
+                    data-testid={`star-${star}`}
+                  >
+                    <Star
+                      className={`w-8 h-8 transition-colors ${
+                        star <= (hoveredStar || reviewRating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-center text-sm text-muted-foreground">
+                {reviewRating > 0 && (
+                  <>
+                    {reviewRating === 1 && "Muito ruim"}
+                    {reviewRating === 2 && "Ruim"}
+                    {reviewRating === 3 && "Regular"}
+                    {reviewRating === 4 && "Bom"}
+                    {reviewRating === 5 && "Excelente"}
+                  </>
+                )}
+              </p>
+            </div>
+
+            {/* Campo de Comentário */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">
+                Deixe um comentário (opcional)
+              </label>
+              <Textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Conte-nos sobre sua experiência..."
+                rows={3}
+                maxLength={500}
+                data-testid="textarea-review-comment"
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {reviewComment.length}/500 caracteres
+              </p>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setReviewRating(0);
+                  setReviewComment("");
+                  setHoveredStar(0);
+                }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (reviewRating > 0) {
+                    createReviewMutation.mutate({
+                      rating: reviewRating,
+                      comment: reviewComment.trim() || undefined
+                    });
+                  }
+                }}
+                disabled={reviewRating === 0 || createReviewMutation.isPending}
+                className="flex-1"
+                data-testid="button-submit-review"
+              >
+                {createReviewMutation.isPending 
+                  ? "Enviando..." 
+                  : userReview 
+                    ? "Atualizar" 
+                    : "Enviar"
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
