@@ -50,14 +50,20 @@ export default function ControlePage() {
     }
   };
 
+  // Buscar restaurante do usuário logado primeiro
+  const { data: userRestaurant } = useQuery<any>({
+    queryKey: ["/api/my-restaurant"],
+    enabled: isAuthenticated
+  });
+
   const { data: orders = [] } = useQuery<any[]>({
-    queryKey: ["/api/dev/orders"],
+    queryKey: ["/api/my-orders"],
     enabled: isAuthenticated
   });
 
   const { data: products = [] } = useQuery<any[]>({
-    queryKey: ["/api/dev/products"],
-    enabled: isAuthenticated
+    queryKey: ["/api/restaurants", userRestaurant?.id, "products"],
+    enabled: isAuthenticated && !!userRestaurant?.id
   });
 
   // Buscar estatísticas reais do restaurante

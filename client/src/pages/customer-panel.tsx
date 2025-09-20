@@ -170,7 +170,7 @@ export default function CustomerPanel() {
   // Todos os hooks SEMPRE declarados no início
   const [, setLocation] = useLocation();
   const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth();
-  const { canInstall, installPWA, isInstalled, clearCache } = usePWA();
+  const { canInstall, installPWA, isInstalled } = usePWA();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -1150,29 +1150,6 @@ export default function CustomerPanel() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Botão temporário para limpar cache */}
-      <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <X className="h-5 w-5 text-red-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                Mudanças não aparecendo? Clique aqui para limpar o cache e ver suas alterações.
-              </p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={clearCache}
-            className="ml-3 bg-red-100 hover:bg-red-200 text-red-700 border-red-300"
-          >
-            Limpar Cache
-          </Button>
-        </div>
-      </div>
       
       {/* Desktop/Tablet Layout */}
       {!isMobile ? (
