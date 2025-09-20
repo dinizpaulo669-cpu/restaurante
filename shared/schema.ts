@@ -441,6 +441,37 @@ export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 
+// Tabela de Avaliações de Restaurantes
+export const restaurantReviews = pgTable("restaurant_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id),
+  rating: integer("rating").notNull(), // 1-5 estrelas
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations para avaliações
+export const restaurantReviewsRelations = relations(restaurantReviews, ({ one }) => ({
+  user: one(users, { fields: [restaurantReviews.userId], references: [users.id] }),
+  restaurant: one(restaurants, { fields: [restaurantReviews.restaurantId], references: [restaurants.id] }),
+}));
+
+// Insert schema para avaliações
+export const insertRestaurantReviewSchema = createInsertSchema(restaurantReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  rating: z.number().min(1).max(5),
+  comment: z.string().optional(),
+});
+
+// Tipos para avaliações
+export type RestaurantReview = typeof restaurantReviews.$inferSelect;
+export type InsertRestaurantReview = z.infer<typeof insertRestaurantReviewSchema>;
+
 // Tabela de Mensagens do Pedido
 export const orderMessages = pgTable("order_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

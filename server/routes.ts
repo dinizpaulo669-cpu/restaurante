@@ -9,9 +9,9 @@ import bcrypt from "bcrypt";
 import { db } from "./db";
 import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
-import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema, insertUserSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema, insertUserSchema, insertRestaurantReviewSchema } from "@shared/schema";
 import { z } from "zod";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory, restaurantReviews } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -863,6 +863,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Erro ao remover dos favoritos" });
     }
   });
+
+  // === RESTAURANT REVIEWS ROUTES ===
+  // Buscar avaliações de um restaurante
+  app.get("/api/restaurants/:restaurantId/reviews", async (req, res) => {
+    try {
+      const { restaurantId } = req.params;
+      const { limit = 10 } = req.query;
+      
+      const reviews = await db
+        .select({
+          id: restaurantReviews.id,
+          rating: restaurantReviews.rating,
+          comment: restaurantReviews.comment,
+          createdAt: restaurantReviews.createdAt,
+          user: {
+            firstName: users.firstName,
+            lastName: users.lastName
+          }
+        })
+        .from(restaurantReviews)
+        .leftJoin(users, eq(restaurantReviews.userId, users.id))
+        .where(eq(restaurantReviews.restaurantId, restaurantId))
+        .orderBy(desc(restaurantReviews.createdAt))
+        .limit(parseInt(limit as string));
+      
+      // Calcular estatísticas das avaliações
+      const stats = await db
+        .select({
+          avgRating: sql<number>`AVG(${restaurantReviews.rating})::numeric(3,2)`,
+          totalReviews: sql<number>`COUNT(*)::integer`,
+          ratings: sql<any>`json_object_agg(${restaurantReviews.rating}, count)`
+        })
+        .from(
+          db.select({
+            rating: restaurantReviews.rating,
+            count: sql<number>`COUNT(*)::integer`
+          })
+          .from(restaurantReviews)
+          .where(eq(restaurantReviews.restaurantId, restaurantId))
+          .groupBy(restaurantReviews.rating)
+          .as('rating_counts')
+        );
+      
+      res.json({
+        reviews,
+        stats: stats[0] || { avgRating: 0, totalReviews: 0, ratings: {} }
+      });
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      res.status(500).json({ message: "Erro ao buscar avaliações" });
+    }
+  });
+
+  // Criar nova avaliação
+  app.post("/api/restaurants/:restaurantId/reviews", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const { restaurantId } = req.params;
+      const reviewData = insertRestaurantReviewSchema.parse({
+        ...req.body,
+        userId,
+        restaurantId
+      });
+      
+      // Verificar se o usuário já avaliou este restaurante
+      const [existingReview] = await db
+        .select()
+        .from(restaurantReviews)
+        .where(and(
+          eq(restaurantReviews.userId, userId),
+          eq(restaurantReviews.restaurantId, restaurantId)
+        ))
+        .limit(1);
+      
+      if (existingReview) {
+        // Atualizar avaliação existente
+        const [updatedReview] = await db
+          .update(restaurantReviews)
+          .set({
+            rating: reviewData.rating,
+            comment: reviewData.comment,
+            updatedAt: new Date()
+          })
+          .where(eq(restaurantReviews.id, existingReview.id))
+          .returning();
+        
+        // Atualizar rating médio do restaurante
+        await updateRestaurantRating(restaurantId);
+        
+        res.json(updatedReview);
+      } else {
+        // Criar nova avaliação
+        const [newReview] = await db
+          .insert(restaurantReviews)
+          .values(reviewData)
+          .returning();
+        
+        // Atualizar rating médio do restaurante
+        await updateRestaurantRating(restaurantId);
+        
+        res.json(newReview);
+      }
+    } catch (error) {
+      console.error("Error creating/updating review:", error);
+      res.status(500).json({ message: "Erro ao salvar avaliação" });
+    }
+  });
+
+  // Verificar se usuário já avaliou o restaurante
+  app.get("/api/restaurants/:restaurantId/reviews/check", async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      }
+      
+      const { restaurantId } = req.params;
+      
+      const [userReview] = await db
+        .select()
+        .from(restaurantReviews)
+        .where(and(
+          eq(restaurantReviews.userId, userId),
+          eq(restaurantReviews.restaurantId, restaurantId)
+        ))
+        .limit(1);
+      
+      res.json(userReview || null);
+    } catch (error) {
+      console.error("Error checking user review:", error);
+      res.status(500).json({ message: "Erro ao verificar avaliação" });
+    }
+  });
+
+  // Função auxiliar para atualizar o rating médio do restaurante
+  async function updateRestaurantRating(restaurantId: string) {
+    try {
+      const [avgResult] = await db
+        .select({
+          avgRating: sql<number>`AVG(${restaurantReviews.rating})::numeric(3,1)`
+        })
+        .from(restaurantReviews)
+        .where(eq(restaurantReviews.restaurantId, restaurantId));
+      
+      if (avgResult?.avgRating) {
+        await db
+          .update(restaurants)
+          .set({ rating: avgResult.avgRating.toString() })
+          .where(eq(restaurants.id, restaurantId));
+      }
+    } catch (error) {
+      console.error("Error updating restaurant rating:", error);
+    }
+  }
 
   app.get("/api/customer/profile", async (req: any, res) => {
     try {
