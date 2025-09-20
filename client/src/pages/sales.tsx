@@ -274,6 +274,8 @@ export default function Sales() {
                     onClick={() => {
                       // Save selected plan to localStorage
                       localStorage.setItem('selectedPlan', plan.name);
+                      // Set user type as restaurant owner since they're selecting a restaurant plan
+                      localStorage.setItem('selectedUserType', 'restaurant_owner');
                       // Redirect to restaurant setup
                       window.location.href = "/setup-restaurant";
                     }}
