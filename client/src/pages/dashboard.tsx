@@ -198,6 +198,7 @@ export default function Dashboard() {
     mutationFn: (data: any) => apiRequest("POST", "/api/dev/coupons", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/coupons/display'] });
       setCouponForm({
         code: "",
         description: "",

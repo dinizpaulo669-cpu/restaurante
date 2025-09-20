@@ -13,7 +13,7 @@ export function CouponsSection({ restaurantId }: CouponsSectionProps) {
   const { toast } = useToast();
   
   const { data: coupons = [], isLoading } = useQuery({
-    queryKey: [`/api/restaurants/${restaurantId}/coupons`],
+    queryKey: ['/api/coupons/display', restaurantId],
     enabled: !!restaurantId
   });
 
