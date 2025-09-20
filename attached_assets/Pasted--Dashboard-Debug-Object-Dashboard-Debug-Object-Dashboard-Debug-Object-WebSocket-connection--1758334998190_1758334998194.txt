@@ -1,0 +1,185 @@
+ Dashboard Debug: Object
+ Dashboard Debug: Object
+ Dashboard Debug: Object
+ WebSocket connection to 'wss://restaurante-rr6k.onrender.com/ws' failed: WebSocket is closed before the connection is established.
+u @ index-BZ_Mc9M6.js:433
+ Dashboard Debug: Object
+ Erro WebSocket: Event
+g.onerror @ index-BZ_Mc9M6.js:433
+ WebSocket desconectado: 1006 
+ Dashboard Debug: Object
+ Dashboard Debug: Object
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ WebSocket conectado
+ WebSocket mensagem recebida: Object
+ Conexão confirmada: e0vk8gifdlf
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ WebSocket mensagem recebida: Object
+ Autenticado como: restaurant_owner dev-user-internal
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ WebSocket conectado
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ WebSocket mensagem recebida: Object
+ Conexão confirmada: 8k27g9ib56f
+ WebSocket mensagem recebida: Object
+ Autenticado como: restaurant_owner dev-user-internal
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+api/dev/coupons:1  Failed to load resource: the server responded with a status of 403 ()
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+ Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+ Dashboard Debug: Object
+ Extraindo cidade/estado de: Endereço a ser configurado
+ Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+api/dev/coupons:1  Failed to load resource: the server responded with a status of 403 ()
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+api/dev/coupons:1  Failed to load resource: the server responded with a status of 403 ()
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+api/dev/coupons:1  Failed to load resource: the server responded with a status of 403 ()
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
+index-BZ_Mc9M6.js:544 Dashboard Debug: Object
+index-BZ_Mc9M6.js:544 Extraindo cidade/estado de: Endereço a ser configurado
+index-BZ_Mc9M6.js:544 Parts: Array(1)
+index-BZ_Mc9M6.js:544 Não foi possível extrair cidade/estado. Usando valores padrão para teste.
