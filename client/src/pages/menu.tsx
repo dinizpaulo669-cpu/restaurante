@@ -26,7 +26,8 @@ import {
   MessageCircle,
   Receipt,
   Send,
-  CheckCircle2
+  CheckCircle2,
+  Heart
 } from "lucide-react";
 import { CouponsSection } from "@/components/coupons-section";
 
@@ -129,6 +130,38 @@ export default function Menu() {
     queryKey: [`/api/orders/${selectedOrderForChat}/messages`],
     enabled: !!selectedOrderForChat,
     refetchInterval: 10000, // Backup polling para mensagens
+  });
+
+  // Buscar favoritos do cliente se autenticado
+  const { data: customerFavorites = [] } = useQuery({
+    queryKey: ["/api/customer/favorites"],
+    enabled: isAuthenticated,
+  });
+
+  // Verificar se o restaurante atual é favorito
+  const isRestaurantFavorite = restaurantId && customerFavorites.some((fav: any) => fav.id === restaurantId);
+
+  // Mutations para favoritos
+  const addToFavoritesMutation = useMutation({
+    mutationFn: (restaurantId: string) => apiRequest("POST", "/api/customer/favorites/" + restaurantId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
+      toast({ title: "Restaurante adicionado aos favoritos!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao adicionar favorito", variant: "destructive" });
+    },
+  });
+
+  const removeFromFavoritesMutation = useMutation({
+    mutationFn: (restaurantId: string) => apiRequest("DELETE", "/api/customer/favorites/" + restaurantId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
+      toast({ title: "Restaurante removido dos favoritos" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao remover favorito", variant: "destructive" });
+    },
   });
 
   // WebSocket para atualizações em tempo real
@@ -593,6 +626,32 @@ export default function Menu() {
                     <Badge variant="outline" className="px-4 py-2 text-sm font-semibold border-green-300 text-green-700 bg-green-50">
                       Mesa {tableInfo?.number || 'N/A'}
                     </Badge>
+                  )}
+                  {/* Botão de Favoritos */}
+                  {isAuthenticated && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (isRestaurantFavorite) {
+                          removeFromFavoritesMutation.mutate(restaurantId!);
+                        } else {
+                          addToFavoritesMutation.mutate(restaurantId!);
+                        }
+                      }}
+                      disabled={addToFavoritesMutation.isPending || removeFromFavoritesMutation.isPending}
+                      className={`flex items-center gap-2 px-4 py-2 transition-all duration-200 ${
+                        isRestaurantFavorite 
+                          ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                      data-testid="button-favorite-restaurant"
+                    >
+                      <Heart className={`w-4 h-4 ${isRestaurantFavorite ? 'fill-current text-red-500' : ''}`} />
+                      <span className="text-sm font-medium">
+                        {isRestaurantFavorite ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'}
+                      </span>
+                    </Button>
                   )}
                 </div>
               </div>
