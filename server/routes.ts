@@ -60,23 +60,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const requireRestaurantOwner = async (req: any, res: any, next: any) => {
     try {
       let userId = null;
-      let userRole = null;
 
       // Em desenvolvimento, permitir fallback para dev user
       if (process.env.NODE_ENV === "development") {
         userId = req.user?.claims?.sub || "dev-user-internal";
-        userRole = req.user?.claims?.role || "restaurant_owner";
       } else {
         // Em produção, exigir usuário autenticado na sessão
         if (!(req.session as any)?.user?.id) {
           return res.status(401).json({ message: "Authentication required" });
         }
         userId = (req.session as any).user.id;
-        userRole = (req.session as any).user.role;
+      }
+
+      // Buscar o usuário no banco para verificar o role
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       // Verificar se o usuário tem role de proprietário
-      if (userRole !== "restaurant_owner") {
+      if (user.role !== "restaurant_owner") {
         return res.status(403).json({ message: "Access denied. Restaurant owner role required." });
       }
 
