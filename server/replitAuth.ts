@@ -107,8 +107,12 @@ export async function setupAuth(app: Express) {
     // Add simple login routes for production deployment
     app.post('/api/simple-login', async (req: any, res) => {
       try {
-        const { email } = req.body;
+        const { email, role } = req.body;
         const userEmail = email || 'user@example.com';
+        
+        // For now, allow restaurant_owner role to maintain compatibility
+        // In production, this should be restricted with proper authentication
+        const userRole = role || 'restaurant_owner';
         
         // Create consistent user ID based on email
         const userId = `user-${Buffer.from(userEmail).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
@@ -118,13 +122,13 @@ export async function setupAuth(app: Express) {
         
         let dbUser;
         if (!existingUser) {
-          // Create new user in database with consistent ID - default to customer role
+          // Create new user in database with consistent ID and specified role
           [dbUser] = await db.insert(users).values({
             id: userId,
             email: userEmail,
             firstName: 'Usuário',
             lastName: 'Sistema',
-            role: 'customer'
+            role: userRole
           }).returning();
         } else {
           // Use existing user - don't create new ID or change role
