@@ -304,12 +304,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/restaurants/:id/products", async (req, res) => {
     try {
+      const { orderType } = req.query; // "table" | "delivery"
+      
+      let whereConditions = [eq(products.restaurantId, req.params.id)];
+      
+      // Filter products based on order type
+      if (orderType === "table") {
+        // For table orders: show products with "local_only" or "local_and_delivery"
+        whereConditions.push(or(
+          eq(products.availabilityType, "local_only"),
+          eq(products.availabilityType, "local_and_delivery")
+        )!);
+      } else if (orderType === "delivery") {
+        // For delivery orders: show only products with "local_and_delivery" (exclude "local_only")
+        whereConditions.push(eq(products.availabilityType, "local_and_delivery"));
+      }
+      // If no orderType specified, show all products (default behavior)
+      
       const result = await db
         .select()
         .from(products)
-        .where(eq(products.restaurantId, req.params.id))
+        .where(and(...whereConditions))
         .orderBy(products.sortOrder);
         
+      console.log(`🍽️ Products fetched for ${orderType || 'all'} orders: ${result.length} products`);
       res.json(result);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -355,29 +373,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId = (req as any).session.user.id;
       }
       
-      // Create order
-      const [order] = await db
-        .insert(orders)
-        .values({
-          ...orderData,
-          customerId: customerId, // Always associate orders with the customer who created them
-          orderNumber: nextOrderNumber,
-          status: "pending",
-          orderType: orderData.orderType || "delivery", // Use the orderType from frontend
-          paymentMethod: "pix"
-        })
-        .returning();
-      
-      // Save order items if provided
+      // Validate items before processing order
       if (items && items.length > 0) {
-        const orderItemsData = items.map((item: any) => ({
-          ...item,
-          orderId: order.id
-        }));
-        await db.insert(orderItems).values(orderItemsData);
+        // Verify all products belong to the restaurant and have valid quantities
+        for (const item of items) {
+          if (!item.productId || !item.quantity || item.quantity <= 0) {
+            return res.status(400).json({ 
+              message: "Invalid item: product ID and positive quantity required" 
+            });
+          }
+          
+          // Check if product belongs to the restaurant
+          const [product] = await db
+            .select({ id: products.id, restaurantId: products.restaurantId, stock: products.stock })
+            .from(products)
+            .where(and(
+              eq(products.id, item.productId),
+              eq(products.restaurantId, orderData.restaurantId)
+            ))
+            .limit(1);
+            
+          if (!product) {
+            return res.status(400).json({ 
+              message: `Product ${item.productId} not found or doesn't belong to this restaurant` 
+            });
+          }
+        }
       }
       
-      res.json(order);
+      // Start transaction for order creation and stock updates
+      const result = await db.transaction(async (tx) => {
+        // Create order
+        const [order] = await tx
+          .insert(orders)
+          .values({
+            ...orderData,
+            customerId: customerId,
+            orderNumber: nextOrderNumber,
+            status: "pending",
+            orderType: orderData.orderType || "delivery",
+            paymentMethod: "pix"
+          })
+          .returning();
+        
+        // Save order items and update stock
+        if (items && items.length > 0) {
+          const orderItemsData = items.map((item: any) => ({
+            ...item,
+            orderId: order.id
+          }));
+          await tx.insert(orderItems).values(orderItemsData);
+          
+          // Update stock for each product (allow negative stock as per user requirement)
+          for (const item of items) {
+            const [updatedProduct] = await tx
+              .update(products)
+              .set({
+                stock: sql`${products.stock} - ${item.quantity}`,
+                updatedAt: new Date()
+              })
+              .where(and(
+                eq(products.id, item.productId),
+                eq(products.restaurantId, orderData.restaurantId)
+              ))
+              .returning({ id: products.id, newStock: products.stock });
+            
+            if (!updatedProduct) {
+              throw new Error(`Failed to update stock for product ${item.productId}`);
+            }
+            
+            console.log(`🔄 Stock updated for product ${item.productId}: reduced by ${item.quantity}, new stock: ${updatedProduct.newStock}`);
+          }
+        }
+        
+        return order;
+      });
+      
+      res.json(result);
     } catch (error) {
       console.error("Error creating order:", error);
       res.status(500).json({ message: "Failed to create order" });

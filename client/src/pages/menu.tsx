@@ -93,9 +93,9 @@ export default function Menu() {
     enabled: !!restaurantId,
   });
 
-  // Buscar produtos do restaurante
+  // Buscar produtos do restaurante (filtrados por tipo de pedido)
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: [`/api/restaurants/${restaurantId}/products`],
+    queryKey: [`/api/restaurants/${restaurantId}/products`, { orderType: isTableOrder ? 'table' : 'delivery' }],
     enabled: !!restaurantId,
   });
 
