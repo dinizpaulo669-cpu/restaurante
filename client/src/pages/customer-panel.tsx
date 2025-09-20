@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PWAInstall } from "@/components/pwa-install";
 
 // Componente de Chat para Pedidos
 const OrderChatComponent = ({ orderId }: { orderId: string }) => {
@@ -1154,6 +1155,9 @@ export default function CustomerPanel() {
       {/* Desktop/Tablet Layout */}
       {!isMobile ? (
         <div className="max-w-6xl mx-auto p-4">
+          {/* PWA Install Component */}
+          <PWAInstall />
+          
           {/* Navigation Tabs */}
           <div className="flex space-x-8 mb-6 border-b">
             {bottomNavItems.map(({ icon: Icon, label, value }) => (
@@ -1178,6 +1182,9 @@ export default function CustomerPanel() {
         /* Mobile Layout */
         <div className="flex flex-col min-h-screen">
           <div className="flex-1 p-5 pb-24">
+            {/* PWA Install Component for Mobile */}
+            <PWAInstall />
+            
             {renderContent()}
           </div>
           

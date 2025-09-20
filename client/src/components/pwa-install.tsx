@@ -50,16 +50,22 @@ export function PWAInstall() {
       }
     };
 
-    // Alterar dinamicamente o manifest para o controle
+    // Alterar dinamicamente o manifest baseado na página
     const updateManifest = () => {
-      const isControlePage = window.location.pathname.includes('/controle') || 
-                            window.location.pathname.includes('/dashboard');
-      
+      const currentPath = window.location.pathname;
       const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
-      if (manifestLink && isControlePage) {
-        manifestLink.href = '/manifest-controle.json';
-      } else if (manifestLink && !isControlePage) {
-        manifestLink.href = '/manifest.json';
+      
+      if (manifestLink) {
+        if (currentPath.includes('/controle')) {
+          manifestLink.href = '/manifest-controle.json';
+        } else if (currentPath.includes('/dashboard')) {
+          manifestLink.href = '/manifest-dashboard.json';
+        } else if (currentPath.includes('/customer-panel')) {
+          manifestLink.href = '/manifest.json';
+        } else {
+          // Página padrão (customer-panel)
+          manifestLink.href = '/manifest.json';
+        }
       }
     };
 

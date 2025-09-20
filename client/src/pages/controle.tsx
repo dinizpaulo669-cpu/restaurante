@@ -18,7 +18,8 @@ import {
   BarChart3,
   PieChart,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ArrowLeft
 } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Bar, BarChart, Cell, PieChart as RechartsPieChart, Pie } from "recharts";
 import { PWAInstall } from "@/components/pwa-install";
@@ -137,6 +138,15 @@ export default function ControlePage() {
               <p className="text-sm sm:text-base text-gray-600">Dashboard administrativo completo</p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/dashboard?tab=comandas')}
+                data-testid="button-back-to-commands"
+                className="w-full sm:w-auto flex items-center"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para Comandas
+              </Button>
               <select 
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
