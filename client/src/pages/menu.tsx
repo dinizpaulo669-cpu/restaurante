@@ -76,7 +76,6 @@ export default function Menu() {
 
   // Estados para funcionalidade da mesa
   const [showTableOrders, setShowTableOrders] = useState(false);
-  const [showTableChat, setShowTableChat] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [selectedOrderForChat, setSelectedOrderForChat] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -853,9 +852,8 @@ export default function Menu() {
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedOrderForChat(order.id);
-                                  setShowTableChat(true);
                                 }}
-                                data-testid={`button-chat-${order.id}`}
+                                data-testid={`button-chat-order-${order.id}`}
                               >
                                 <MessageCircle className="w-3 h-3" />
                               </Button>
@@ -896,20 +894,13 @@ export default function Menu() {
                       </p>
                     </div>
                   ) : (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Selecione um pedido ao lado para conversar com o restaurante
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Clique no ícone de chat ao lado de cada pedido para conversar sobre ele
                       </p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => setShowTableChat(true)}
-                        disabled={tableOrders.length === 0}
-                        data-testid="button-open-chat"
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Abrir Chat
-                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Cada pedido tem seu próprio chat com o restaurante
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -940,7 +931,7 @@ export default function Menu() {
       )}
 
       {/* Modal de Chat */}
-      {showTableChat && selectedOrderForChat && (
+      {selectedOrderForChat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-lg max-h-[80vh] flex flex-col">
             <CardHeader className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
@@ -954,7 +945,6 @@ export default function Menu() {
                   variant="ghost"
                   className="text-white hover:bg-white/20"
                   onClick={() => {
-                    setShowTableChat(false);
                     setSelectedOrderForChat(null);
                   }}
                   data-testid="button-close-chat"
