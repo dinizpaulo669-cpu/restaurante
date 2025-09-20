@@ -352,7 +352,7 @@ export default function CustomerPanel() {
   });
 
   const addToFavoritesMutation = useMutation({
-    mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "POST"),
+    mutationFn: (restaurantId: string) => apiRequest("POST", "/api/customer/favorites/" + restaurantId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
 
@@ -364,7 +364,7 @@ export default function CustomerPanel() {
   });
 
   const removeFromFavoritesMutation = useMutation({
-    mutationFn: (restaurantId: string) => apiRequest("/api/customer/favorites/" + restaurantId, "DELETE"),
+    mutationFn: (restaurantId: string) => apiRequest("DELETE", "/api/customer/favorites/" + restaurantId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer/favorites"] });
 
