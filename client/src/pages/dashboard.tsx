@@ -176,10 +176,31 @@ export default function Dashboard() {
   const [neighborhoodSearchTerm, setNeighborhoodSearchTerm] = useState("");
 
   // Query para cupons - movida para o topo para evitar erro de hooks
-  const { data: coupons = [] } = useQuery<Coupon[]>({
+  const { data: coupons = [], isLoading: couponsLoading, error: couponsError, refetch: refetchCoupons } = useQuery<Coupon[]>({
     queryKey: ["/api/dev/coupons"],
-    enabled: isAuthenticated && activeSection === "cupons"
+    enabled: isAuthenticated,
+    retry: 1,
+    refetchOnMount: true,
+    staleTime: 0,
+    cacheTime: 0
   });
+
+  // Debug log para cupons
+  console.log("Cupons Debug:", {
+    isAuthenticated,
+    activeSection,
+    coupons,
+    couponsLoading,
+    couponsError: couponsError?.message
+  });
+
+  // Forçar refresh dos cupons quando mudar para a seção de cupons
+  useEffect(() => {
+    if (activeSection === "cupons" && isAuthenticated) {
+      console.log("Forçando refresh dos cupons...");
+      refetchCoupons();
+    }
+  }, [activeSection, isAuthenticated, refetchCoupons]);
 
   // Estados para formulário de cupom
   const [couponForm, setCouponForm] = useState({
@@ -196,7 +217,9 @@ export default function Dashboard() {
   // Mutation para criar cupom - movida para o topo para evitar erro de hooks
   const createCouponMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/dev/coupons", data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Forçar refresh imediato
+      await refetchCoupons();
       queryClient.invalidateQueries({ queryKey: ["/api/dev/coupons"] });
       queryClient.invalidateQueries({ queryKey: ['/api/coupons/display'] });
       setCouponForm({
@@ -214,10 +237,11 @@ export default function Dashboard() {
         description: "Cupom criado com sucesso!"
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Erro ao criar cupom:", error);
       toast({
         title: "Erro",
-        description: "Erro ao criar cupom",
+        description: error?.message || "Erro ao criar cupom",
         variant: "destructive"
       });
     }
