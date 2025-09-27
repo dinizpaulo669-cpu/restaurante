@@ -201,6 +201,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === SUBSCRIPTION PLANS ROUTES (PUBLIC) ===
+  app.get("/api/plans", async (req, res) => {
+    try {
+      const plans = await db
+        .select()
+        .from(subscriptionPlans)
+        .where(eq(subscriptionPlans.isActive, true))
+        .orderBy(subscriptionPlans.sortOrder, subscriptionPlans.createdAt);
+
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching public plans:", error);
+      res.status(500).json({ message: "Failed to fetch plans" });
+    }
+  });
+
   // Create new restaurant
   app.post("/api/restaurants", isDevAuthenticated, async (req: any, res) => {
     try {

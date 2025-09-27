@@ -70,7 +70,7 @@ const features = [
 export default function Sales() {
   // Buscar planos reais do banco de dados
   const { data: plans } = useQuery<SubscriptionPlan[]>({
-    queryKey: ["/api/admin/plans"],
+    queryKey: ["/api/plans"],
     retry: false,
   });
 
