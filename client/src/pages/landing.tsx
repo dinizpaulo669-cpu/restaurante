@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { Search, Pizza, Sandwich, Fish, IceCream, Coffee, Leaf } from "lucide-react";
+import heroBackground from "@assets/stock_images/food_delivery_backgr_42870423.jpg";
 
 const categories = [
   { icon: Pizza, name: "Pizza", value: "pizza" },
@@ -69,8 +70,16 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-orange-500 via-orange-400 to-orange-600 text-white py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section 
+        className="relative bg-gradient-to-br from-orange-500 via-orange-400 to-orange-600 text-white py-24 overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(rgba(234, 88, 12, 0.85), rgba(234, 88, 12, 0.85)), url(${heroBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="mb-8">
@@ -162,7 +171,7 @@ export default function Landing() {
       </section>
 
       {/* Restaurant Categories */}
-      <section className="py-20 bg-gradient-to-br from-gray-50/50 to-orange-50/50">
+      <section className="py-20 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="categories-title">
@@ -173,33 +182,51 @@ export default function Landing() {
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {categories.map(({ icon: Icon, name, value }) => (
-              <button
-                key={value}
-                onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
-                className={`text-center group cursor-pointer p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
-                  selectedCategory === value 
-                    ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-xl" 
-                    : "bg-white hover:bg-orange-50 shadow-lg hover:shadow-xl"
-                }`}
-                data-testid={`category-${value}`}
-              >
-                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
-                  selectedCategory === value 
-                    ? "bg-white/20 backdrop-blur-sm" 
-                    : "bg-gradient-to-br from-orange-100 to-orange-200 group-hover:from-orange-200 group-hover:to-orange-300"
-                }`}>
-                  <Icon className={`h-8 w-8 transition-colors duration-300 ${
-                    selectedCategory === value ? "text-white" : "text-orange-600"
-                  }`} />
-                </div>
-                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                  selectedCategory === value ? "text-white" : "text-gray-900"
-                }`}>
-                  {name}
-                </span>
-              </button>
-            ))}
+            {categories.map(({ icon: Icon, name, value }, index) => {
+              const colors = [
+                "from-red-400 to-pink-500",
+                "from-blue-400 to-indigo-500", 
+                "from-green-400 to-emerald-500",
+                "from-purple-400 to-violet-500",
+                "from-yellow-400 to-orange-500",
+                "from-teal-400 to-cyan-500"
+              ];
+              const selectedColors = [
+                "from-red-500 to-pink-600",
+                "from-blue-500 to-indigo-600",
+                "from-green-500 to-emerald-600", 
+                "from-purple-500 to-violet-600",
+                "from-yellow-500 to-orange-600",
+                "from-teal-500 to-cyan-600"
+              ];
+              return (
+                <button
+                  key={value}
+                  onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
+                  className={`text-center group cursor-pointer p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                    selectedCategory === value 
+                      ? `bg-gradient-to-br ${selectedColors[index]} text-white shadow-xl` 
+                      : "bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl"
+                  }`}
+                  data-testid={`category-${value}`}
+                >
+                  <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                    selectedCategory === value 
+                      ? "bg-white/20 backdrop-blur-sm" 
+                      : `bg-gradient-to-br ${colors[index]} group-hover:shadow-lg`
+                  }`}>
+                    <Icon className={`h-8 w-8 transition-colors duration-300 ${
+                      selectedCategory === value ? "text-white" : "text-white"
+                    }`} />
+                  </div>
+                  <span className={`text-sm font-semibold transition-colors duration-300 ${
+                    selectedCategory === value ? "text-white" : "text-gray-900"
+                  }`}>
+                    {name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -263,32 +290,32 @@ export default function Landing() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+            <div className="text-center group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Search className="h-10 w-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Busca Inteligente</h3>
               <p className="text-gray-600">Encontre exatamente o que você quer com nossa busca avançada e filtros personalizados.</p>
             </div>
             
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+            <div className="text-center group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Pizza className="h-10 w-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Qualidade Garantida</h3>
               <p className="text-gray-600">Parceiros selecionados com rigorosos padrões de qualidade e higiene.</p>
             </div>
             
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+            <div className="text-center group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Coffee className="h-10 w-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Entrega Expressa</h3>
               <p className="text-gray-600">Rastreamento em tempo real e entrega no horário prometido, sempre.</p>
             </div>
             
-            <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+            <div className="text-center group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Leaf className="h-10 w-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Sustentabilidade</h3>
