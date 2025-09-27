@@ -154,9 +154,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { search, category, limit } = req.query;
-      const conditions = [eq(restaurants.isActive, true)];
+      let conditions = [eq(restaurants.isActive, true)];
+      let restaurantIds: string[] = [];
+
+      // Verificar se o search é um CEP (8 dígitos numéricos)
+      const isZipCode = search && typeof search === 'string' && /^\d{8}$/.test(search.replace(/\D/g, ''));
       
-      if (search && typeof search === 'string') {
+      if (isZipCode && typeof search === 'string') {
+        try {
+          // Buscar informações do CEP na API ViaCEP
+          const cleanCep = search.replace(/\D/g, '');
+          const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+          const viaCepData = await viaCepResponse.json();
+          
+          if (!viaCepData.erro) {
+            // Buscar restaurantes que atendem essa região
+            const serviceAreasResult = await db
+              .select({ restaurantId: serviceAreas.restaurantId })
+              .from(serviceAreas)
+              .where(
+                and(
+                  eq(serviceAreas.isActive, true),
+                  or(
+                    and(
+                      ilike(serviceAreas.city, `%${viaCepData.localidade}%`),
+                      ilike(serviceAreas.state, `%${viaCepData.uf}%`)
+                    ),
+                    ilike(serviceAreas.neighborhood, `%${viaCepData.bairro}%`)
+                  )
+                )
+              );
+            
+            restaurantIds = serviceAreasResult.map(area => area.restaurantId);
+            
+            // Se encontrou restaurantes que atendem a região, filtrar por eles
+            if (restaurantIds.length > 0) {
+              conditions.push(
+                sql`${restaurants.id} IN (${sql.join(restaurantIds.map(id => sql`${id}`), sql`, `)})`
+              );
+            } else {
+              // Se não encontrou nenhum restaurante para essa região, retornar array vazio
+              return res.json([]);
+            }
+          } else {
+            // CEP inválido, fazer busca normal
+            const searchCondition = or(
+              ilike(restaurants.name, `%${search}%`),
+              ilike(restaurants.description, `%${search}%`),
+              ilike(restaurants.category, `%${search}%`)
+            );
+            if (searchCondition) conditions.push(searchCondition);
+          }
+        } catch (cepError) {
+          console.error("Erro ao buscar CEP:", cepError);
+          // Em caso de erro na API do CEP, fazer busca normal
+          const searchCondition = or(
+            ilike(restaurants.name, `%${search}%`),
+            ilike(restaurants.description, `%${search}%`),
+            ilike(restaurants.category, `%${search}%`)
+          );
+          if (searchCondition) conditions.push(searchCondition);
+        }
+      } else if (search && typeof search === 'string') {
+        // Busca normal por nome, descrição ou categoria
         const searchCondition = or(
           ilike(restaurants.name, `%${search}%`),
           ilike(restaurants.description, `%${search}%`),
