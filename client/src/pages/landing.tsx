@@ -162,23 +162,42 @@ export default function Landing() {
       </section>
 
       {/* Restaurant Categories */}
-      <section className="py-16 bg-secondary/30">
+      <section className="py-20 bg-gradient-to-br from-gray-50/50 to-orange-50/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12" data-testid="categories-title">Categorias</h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="categories-title">
+              Explore por Categoria
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Encontre exatamente o que você está procurando em nossa seleção de restaurantes especializados
+            </p>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {categories.map(({ icon: Icon, name, value }) => (
               <button
                 key={value}
                 onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
-                className={`text-center group cursor-pointer p-4 rounded-lg transition-colors ${
-                  selectedCategory === value ? "bg-primary/10 text-primary" : "hover:bg-card"
+                className={`text-center group cursor-pointer p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                  selectedCategory === value 
+                    ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-xl" 
+                    : "bg-white hover:bg-orange-50 shadow-lg hover:shadow-xl"
                 }`}
                 data-testid={`category-${value}`}
               >
-                <div className="w-20 h-20 bg-card rounded-full shadow-md flex items-center justify-center mx-auto mb-3 group-hover:shadow-lg transition-shadow">
-                  <Icon className="h-8 w-8 text-primary" />
+                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  selectedCategory === value 
+                    ? "bg-white/20 backdrop-blur-sm" 
+                    : "bg-gradient-to-br from-orange-100 to-orange-200 group-hover:from-orange-200 group-hover:to-orange-300"
+                }`}>
+                  <Icon className={`h-8 w-8 transition-colors duration-300 ${
+                    selectedCategory === value ? "text-white" : "text-orange-600"
+                  }`} />
                 </div>
-                <span className="text-sm font-medium">{name}</span>
+                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                  selectedCategory === value ? "text-white" : "text-gray-900"
+                }`}>
+                  {name}
+                </span>
               </button>
             ))}
           </div>
@@ -186,11 +205,19 @@ export default function Landing() {
       </section>
 
       {/* Featured Restaurants */}
-      <section className="py-16">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold mb-8" data-testid="restaurants-title">
-            {selectedCategory ? `Restaurantes de ${categories.find(c => c.value === selectedCategory)?.name}` : "Restaurantes em destaque"}
-          </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="restaurants-title">
+              {selectedCategory ? `Restaurantes de ${categories.find(c => c.value === selectedCategory)?.name}` : "Restaurantes em Destaque"}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              {selectedCategory 
+                ? `Descubra os melhores restaurantes de ${categories.find(c => c.value === selectedCategory)?.name.toLowerCase()} da sua região`
+                : "Seleção especial dos restaurantes mais queridos pelos nossos clientes"
+              }
+            </p>
+          </div>
           
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -350,19 +377,34 @@ export default function Landing() {
             
             <div className="relative">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                <h3 className="text-2xl font-bold mb-6">Resultados reais de nossos parceiros:</h3>
+                <h3 className="text-2xl font-bold mb-6 text-white">Vantagens Exclusivas</h3>
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between py-3 border-b border-white/20">
-                    <span className="text-white/90">Aumento médio em vendas</span>
-                    <span className="text-2xl font-bold text-green-300">+185%</span>
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-green-400/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-green-300 text-xl font-bold">📈</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Crescimento Garantido</h4>
+                      <p className="text-white/90 text-sm">Alcance mais clientes com nossa plataforma otimizada</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-white/20">
-                    <span className="text-white/90">Novos clientes por mês</span>
-                    <span className="text-2xl font-bold text-green-300">+340</span>
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-blue-400/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-300 text-xl font-bold">⚡</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Setup Rápido</h4>
+                      <p className="text-white/90 text-sm">Comece a vender em menos de 24 horas</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between py-3">
-                    <span className="text-white/90">Tempo de setup</span>
-                    <span className="text-2xl font-bold text-green-300">24h</span>
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-purple-400/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-300 text-xl font-bold">🎯</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-1">Suporte Completo</h4>
+                      <p className="text-white/90 text-sm">Time dedicado para seu sucesso</p>
+                    </div>
                   </div>
                 </div>
               </div>
