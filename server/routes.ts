@@ -12,7 +12,7 @@ import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema, insertUserSchema, insertRestaurantReviewSchema } from "@shared/schema";
 import { z } from "zod";
 import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory, restaurantReviews } from "@shared/schema";
-import { eq, desc, and, ilike, or, sql, gte, lte, isNull } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte, lte, isNull, inArray } from "drizzle-orm";
 
 // Configure multer for file uploads
 const multerStorage = multer.diskStorage({
@@ -169,19 +169,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!viaCepData.erro) {
             // Buscar restaurantes que atendem essa região
+            const searchConditions = [
+              and(
+                ilike(serviceAreas.city, `%${viaCepData.localidade}%`),
+                ilike(serviceAreas.state, `%${viaCepData.uf}%`)
+              )
+            ];
+            
+            // Só adicionar condição de bairro se o ViaCEP retornou um bairro válido
+            if (viaCepData.bairro && viaCepData.bairro.trim()) {
+              searchConditions.push(
+                ilike(serviceAreas.neighborhood, `%${viaCepData.bairro}%`)
+              );
+            }
+            
             const serviceAreasResult = await db
               .select({ restaurantId: serviceAreas.restaurantId })
               .from(serviceAreas)
               .where(
                 and(
                   eq(serviceAreas.isActive, true),
-                  or(
-                    and(
-                      ilike(serviceAreas.city, `%${viaCepData.localidade}%`),
-                      ilike(serviceAreas.state, `%${viaCepData.uf}%`)
-                    ),
-                    ilike(serviceAreas.neighborhood, `%${viaCepData.bairro}%`)
-                  )
+                  or(...searchConditions)
                 )
               );
             
@@ -189,9 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Se encontrou restaurantes que atendem a região, filtrar por eles
             if (restaurantIds.length > 0) {
-              conditions.push(
-                sql`${restaurants.id} IN (${sql.join(restaurantIds.map(id => sql`${id}`), sql`, `)})`
-              );
+              conditions.push(inArray(restaurants.id, restaurantIds));
             } else {
               // Se não encontrou nenhum restaurante para essa região, retornar array vazio
               return res.json([]);
