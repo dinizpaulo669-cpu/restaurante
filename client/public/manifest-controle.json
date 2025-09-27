@@ -1,6 +1,6 @@
 {
-  "name": "RestaurantePro - Controle",
-  "short_name": "RestaurantePro",
+  "name": "GoFood - Controle",
+  "short_name": "GoFood",
   "description": "Sistema completo de gestão de restaurantes - Painel de controle para gerenciar pedidos, produtos e relatórios",
   "start_url": "/controle",
   "display": "standalone",

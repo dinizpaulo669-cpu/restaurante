@@ -38,7 +38,7 @@ export default function Register() {
     onSuccess: async (userData) => {
       toast({
         title: "Cadastro realizado!",
-        description: "Bem-vindo ao RestaurantePro!",
+        description: "Bem-vindo ao GoFood!",
       });
       
       // Limpar o tipo selecionado

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import { RestaurantCard } from "@/components/restaurant-card";
 import { Search, Pizza, Sandwich, Fish, IceCream, Coffee, Leaf } from "lucide-react";
 
@@ -35,9 +36,7 @@ export default function Landing() {
       <header className="bg-card shadow-sm border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
-            </div>
+            <Logo />
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-home">
                 Para Você
@@ -70,33 +69,93 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary to-accent text-white py-20">
+      <section className="bg-gradient-to-br from-orange-500 via-orange-400 to-orange-600 text-white py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6" data-testid="hero-title">
-              Peça comida na sua casa
-            </h1>
-            <p className="text-xl mb-8 opacity-90" data-testid="hero-subtitle">
-              Milhares de restaurantes na palma da sua mão
-            </p>
-            <div className="max-w-md mx-auto">
-              <form onSubmit={handleSearch} className="flex bg-white rounded-lg shadow-lg">
-                <Input
-                  type="text"
-                  placeholder="Digite seu endereço"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 border-0 text-gray-800 rounded-l-lg focus:ring-0"
-                  data-testid="input-address-search"
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <div className="mb-8">
+                <Logo 
+                  className="h-20 w-auto mx-auto lg:mx-0" 
+                  showText={false}
                 />
-                <Button 
-                  type="submit" 
-                  className="bg-primary text-white rounded-r-lg hover:bg-primary/90"
-                  data-testid="button-search"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </form>
+              </div>
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight" data-testid="hero-title">
+                Sua comida favorita, 
+                <span className="block text-white/90">sempre perto de você</span>
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 text-white/90 leading-relaxed" data-testid="hero-subtitle">
+                Descubra sabores incríveis com delivery rápido e seguro. 
+                Conectamos você aos melhores restaurantes da sua região.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="flex bg-white/10 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
+                  <Input
+                    type="text"
+                    placeholder="Digite seu endereço ou CEP"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent border-0 text-white placeholder:text-white/70 rounded-l-xl focus:ring-0 text-lg"
+                    data-testid="input-address-search"
+                  />
+                  <Button 
+                    onClick={handleSearch}
+                    className="bg-white text-orange-500 rounded-r-xl hover:bg-white/90 px-6"
+                    data-testid="button-search"
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-6 text-sm">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                  <span>Entrega rápida</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                  <span>Pagamento seguro</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                  <span>Suporte 24h</span>
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
+                      <Pizza className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2">+500 Restaurantes</h3>
+                    <p className="text-white/80 text-sm">Variedade incrível de opções para todos os gostos</p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
+                      <Coffee className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2">Delivery 30min</h3>
+                    <p className="text-white/80 text-sm">Entrega rápida garantida na sua porta</p>
+                  </div>
+                </div>
+                <div className="space-y-4 mt-8">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
+                      <Leaf className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2">Alimentação Saudável</h3>
+                    <p className="text-white/80 text-sm">Opções nutritivas e deliciosas</p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
+                      <IceCream className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg mb-2">Sobremesas Especiais</h3>
+                    <p className="text-white/80 text-sm">Finalize com chave de ouro</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -164,24 +223,151 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-accent to-primary text-white">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="cta-title">
-            Tem um restaurante?
-          </h2>
-          <p className="text-xl mb-8 opacity-90" data-testid="cta-subtitle">
-            Cadastre seu estabelecimento e alcance milhares de clientes
-          </p>
-          <Link href="/sales">
-            <Button 
-              size="lg" 
-              className="bg-white text-primary px-8 py-3 font-semibold hover:bg-gray-100 transition-colors"
-              data-testid="button-bring-restaurant"
-            >
-              Traga seu Restaurante
-            </Button>
-          </Link>
+      {/* Features Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Por que escolher o GoFood?
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Somos mais que um app de delivery. Somos sua ponte para experiências gastronômicas incríveis.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Search className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Busca Inteligente</h3>
+              <p className="text-gray-600">Encontre exatamente o que você quer com nossa busca avançada e filtros personalizados.</p>
+            </div>
+            
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Pizza className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Qualidade Garantida</h3>
+              <p className="text-gray-600">Parceiros selecionados com rigorosos padrões de qualidade e higiene.</p>
+            </div>
+            
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Coffee className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Entrega Expressa</h3>
+              <p className="text-gray-600">Rastreamento em tempo real e entrega no horário prometido, sempre.</p>
+            </div>
+            
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Leaf className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Sustentabilidade</h3>
+              <p className="text-gray-600">Comprometidos com práticas sustentáveis e apoio à economia local.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section for Restaurants */}
+      <section className="py-20 bg-gradient-to-br from-orange-600 via-orange-500 to-red-500 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6" data-testid="cta-title">
+                Transforme seu restaurante
+              </h2>
+              <p className="text-xl mb-8 text-white/90 leading-relaxed" data-testid="cta-subtitle">
+                Junte-se a centenas de restaurantes que já multiplicaram suas vendas com o GoFood. 
+                Nossa plataforma oferece tudo que você precisa para crescer.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-green-900 text-xs font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Gestão Completa</h4>
+                    <p className="text-white/80 text-sm">Dashboard intuitivo para controlar pedidos, estoque e vendas</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-green-900 text-xs font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Marketing Digital</h4>
+                    <p className="text-white/80 text-sm">Exposição para milhares de clientes em potencial</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-green-900 text-xs font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Suporte Dedicado</h4>
+                    <p className="text-white/80 text-sm">Time especializado para ajudar seu negócio crescer</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-green-900 text-xs font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Análise de Dados</h4>
+                    <p className="text-white/80 text-sm">Relatórios detalhados para otimizar suas operações</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/sales">
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-orange-600 px-8 py-4 font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+                    data-testid="button-bring-restaurant"
+                  >
+                    Cadastrar Restaurante
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="border-white/30 text-white px-8 py-4 font-semibold text-lg hover:bg-white/10 transition-colors"
+                  data-testid="button-learn-more"
+                >
+                  Saiba Mais
+                </Button>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                <h3 className="text-2xl font-bold mb-6">Resultados reais de nossos parceiros:</h3>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between py-3 border-b border-white/20">
+                    <span className="text-white/90">Aumento médio em vendas</span>
+                    <span className="text-2xl font-bold text-green-300">+185%</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-white/20">
+                    <span className="text-white/90">Novos clientes por mês</span>
+                    <span className="text-2xl font-bold text-green-300">+340</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-white/90">Tempo de setup</span>
+                    <span className="text-2xl font-bold text-green-300">24h</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>

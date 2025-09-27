@@ -1,6 +1,6 @@
 {
-  "name": "RestaurantePro - Cliente",
-  "short_name": "RestaurantePro",
+  "name": "GoFood - Cliente",
+  "short_name": "GoFood",
   "description": "Aplicativo para pedidos de comida online com a melhor experiência do usuário",
   "start_url": "/customer-panel",
   "display": "standalone",

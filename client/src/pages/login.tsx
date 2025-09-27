@@ -39,7 +39,7 @@ export default function Login() {
               Entrar
             </CardTitle>
             <p className="text-muted-foreground" data-testid="login-subtitle">
-              Como você vai usar o RestaurantePro?
+              Como você vai usar o GoFood?
             </p>
           </CardHeader>
           <CardContent>

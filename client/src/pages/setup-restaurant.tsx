@@ -80,7 +80,7 @@ export default function SetupRestaurant() {
       localStorage.removeItem('selectedPlan');
       toast({
         title: "Restaurante Criado!",
-        description: "Seu restaurante foi configurado com sucesso. Bem-vindo ao RestaurantePro!",
+        description: "Seu restaurante foi configurado com sucesso. Bem-vindo ao GoFood!",
       });
       // Aguardar um pouco antes de redirecionar para garantir que a query seja invalidada
       setTimeout(() => {
@@ -204,7 +204,7 @@ export default function SetupRestaurant() {
       <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+            <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">GoFood</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
                 {(user as any)?.firstName || (user as any)?.email}

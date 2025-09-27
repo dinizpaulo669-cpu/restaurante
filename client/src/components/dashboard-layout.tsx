@@ -29,7 +29,7 @@ export function DashboardLayout({
       {/* Sidebar */}
       <div className="w-64 bg-sidebar border-r border-sidebar-border">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-sidebar-primary" data-testid="dashboard-logo">RestaurantePro</h1>
+          <h1 className="text-xl font-bold text-sidebar-primary" data-testid="dashboard-logo">GoFood</h1>
         </div>
         <nav className="mt-6">
           {navigationItems.map(({ id, label, icon: Icon }) => (

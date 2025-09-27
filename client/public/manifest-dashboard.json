@@ -1,5 +1,5 @@
 {
-  "name": "RestaurantePro - Dashboard",
+  "name": "GoFood - Dashboard",
   "short_name": "Dashboard",
   "description": "Sistema de gestão completo para restaurantes - Dashboard administrativo para gerenciar produtos, pedidos e configurações",
   "start_url": "/dashboard",

@@ -54,7 +54,7 @@ export default function Onboarding() {
     if (!selectedRole) {
       toast({
         title: "Selecione uma opção",
-        description: "Escolha como deseja usar o RestaurantePro",
+        description: "Escolha como deseja usar o GoFood",
         variant: "destructive",
       });
       return;
@@ -76,7 +76,7 @@ export default function Onboarding() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold" data-testid="onboarding-title">
-              Bem-vindo ao RestaurantePro!
+              Bem-vindo ao GoFood!
             </CardTitle>
             <p className="text-muted-foreground mt-2" data-testid="onboarding-subtitle">
               Olá, {user?.firstName || user?.email}! Como você gostaria de usar nossa plataforma?

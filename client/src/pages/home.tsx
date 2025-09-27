@@ -75,7 +75,7 @@ export default function Home() {
         <header className="bg-card shadow-sm border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+              <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">GoFood</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground" data-testid="user-welcome">
                   Olá, {user.firstName || user.email}
@@ -95,7 +95,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 py-12">
           <Card>
             <CardHeader>
-              <CardTitle data-testid="welcome-title">Bem-vindo ao RestaurantePro!</CardTitle>
+              <CardTitle data-testid="welcome-title">Bem-vindo ao GoFood!</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground" data-testid="customer-description">
@@ -136,7 +136,7 @@ export default function Home() {
             <header className="bg-card shadow-sm border-b border-border">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">GoFood</h1>
                   <Button 
                     variant="outline"
                     onClick={() => window.location.href = "/api/logout"}
@@ -156,7 +156,7 @@ export default function Home() {
                 <CardContent className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-green-800 text-sm">
-                      <strong>🎉 Parabéns!</strong> Você tem 7 dias gratuitos para testar todas as funcionalidades do RestaurantePro.
+                      <strong>🎉 Parabéns!</strong> Você tem 7 dias gratuitos para testar todas as funcionalidades do GoFood.
                       {user?.trialEndsAt && (
                         <span className="block mt-1">
                           Seu teste expira em: <strong>{new Date(user.trialEndsAt).toLocaleDateString('pt-BR')}</strong>
@@ -194,7 +194,7 @@ export default function Home() {
             <header className="bg-card shadow-sm border-b border-border">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+                  <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">GoFood</h1>
                   <Button 
                     variant="outline"
                     onClick={() => window.location.href = "/api/logout"}
@@ -214,7 +214,7 @@ export default function Home() {
                 <CardContent className="space-y-4">
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <p className="text-amber-800 text-sm">
-                      Seu período de teste gratuito expirou. Escolha um plano para continuar usando o RestaurantePro.
+                      Seu período de teste gratuito expirou. Escolha um plano para continuar usando o GoFood.
                     </p>
                   </div>
                   <p className="text-muted-foreground" data-testid="setup-description">

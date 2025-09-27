@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                 <h1 className="text-xl font-bold text-slate-900" data-testid="admin-dashboard-title">
                   Painel Administrativo
                 </h1>
-                <p className="text-sm text-slate-600">RestaurantePro</p>
+                <p className="text-sm text-slate-600">GoFood</p>
               </div>
             </div>
           </div>

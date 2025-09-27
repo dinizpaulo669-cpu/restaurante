@@ -3922,7 +3922,7 @@ export default function Dashboard() {
                                     
                                     <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #333; font-size: 12px;">
                                       Obrigado pela preferência!<br>
-                                      RestaurantePro - Sistema de Gestão
+                                      GoFood - Sistema de Gestão
                                     </div>
                                   </div>
                                 `;
@@ -3978,7 +3978,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div className="w-64 bg-card shadow-lg border-r">
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-primary">RestaurantePro</h1>
+          <h1 className="text-xl font-bold text-primary">GoFood</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Bem vindo(a), {user?.firstName || user?.email?.split('@')[0] || 'Paulo'} teste!
           </p>

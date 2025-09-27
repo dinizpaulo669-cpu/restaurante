@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { ArrowLeft, CheckCircle, BarChart3, Utensils, Receipt, MessageSquare, Settings, Printer, Crown, Zap, Sparkles } from "lucide-react";
 
 interface SubscriptionPlan {
@@ -106,7 +107,7 @@ export default function Sales() {
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>
-              <h1 className="text-2xl font-bold text-primary" data-testid="logo-text">RestaurantePro</h1>
+              <Logo />
             </div>
             <div className="flex items-center space-x-4">
               <Button 
