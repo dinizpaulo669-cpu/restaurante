@@ -79,22 +79,22 @@ export default function Landing() {
                   showText={false}
                 />
               </div>
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight" data-testid="hero-title">
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight drop-shadow-lg" data-testid="hero-title">
                 Sua comida favorita, 
-                <span className="block text-white/90">sempre perto de você</span>
+                <span className="block text-white">sempre perto de você</span>
               </h1>
-              <p className="text-xl md:text-2xl mb-8 text-white/90 leading-relaxed" data-testid="hero-subtitle">
+              <p className="text-xl md:text-2xl mb-8 text-white leading-relaxed drop-shadow-md" data-testid="hero-subtitle">
                 Descubra sabores incríveis com delivery rápido e seguro. 
                 Conectamos você aos melhores restaurantes da sua região.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="flex bg-white/10 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
+                <div className="flex bg-white/20 backdrop-blur-sm rounded-xl shadow-lg border border-white/30">
                   <Input
                     type="text"
                     placeholder="Digite seu endereço ou CEP"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent border-0 text-white placeholder:text-white/70 rounded-l-xl focus:ring-0 text-lg"
+                    className="flex-1 bg-transparent border-0 text-white placeholder:text-white/90 rounded-l-xl focus:ring-0 text-lg"
                     data-testid="input-address-search"
                   />
                   <Button 
@@ -128,15 +128,15 @@ export default function Landing() {
                     <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
                       <Pizza className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">+500 Restaurantes</h3>
-                    <p className="text-white/80 text-sm">Variedade incrível de opções para todos os gostos</p>
+                    <h3 className="font-bold text-lg mb-2 text-white">+500 Restaurantes</h3>
+                    <p className="text-white/90 text-sm">Variedade incrível de opções para todos os gostos</p>
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
                     <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
                       <Coffee className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">Delivery 30min</h3>
-                    <p className="text-white/80 text-sm">Entrega rápida garantida na sua porta</p>
+                    <h3 className="font-bold text-lg mb-2 text-white">Delivery 30min</h3>
+                    <p className="text-white/90 text-sm">Entrega rápida garantida na sua porta</p>
                   </div>
                 </div>
                 <div className="space-y-4 mt-8">
@@ -144,15 +144,15 @@ export default function Landing() {
                     <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
                       <Leaf className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">Alimentação Saudável</h3>
-                    <p className="text-white/80 text-sm">Opções nutritivas e deliciosas</p>
+                    <h3 className="font-bold text-lg mb-2 text-white">Alimentação Saudável</h3>
+                    <p className="text-white/90 text-sm">Opções nutritivas e deliciosas</p>
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-white/30">
                     <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-4">
                       <IceCream className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-lg mb-2">Sobremesas Especiais</h3>
-                    <p className="text-white/80 text-sm">Finalize com chave de ouro</p>
+                    <h3 className="font-bold text-lg mb-2 text-white">Sobremesas Especiais</h3>
+                    <p className="text-white/90 text-sm">Finalize com chave de ouro</p>
                   </div>
                 </div>
               </div>
