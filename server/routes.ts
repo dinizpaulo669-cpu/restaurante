@@ -218,6 +218,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware combinado para verificar se é proprietário E se o plano está ativo
   const requireActiveOwner = [requireRestaurantOwner, checkPlanStatus];
 
+  // Middleware simplificado para verificar plano (sem verificar proprietário)
+  const checkPlanOnly = async (req: any, res: any, next: any) => {
+    try {
+      let userId = null;
+
+      if (process.env.NODE_ENV === "development") {
+        userId = req.user?.claims?.sub || (req.session as any)?.user?.id || "dev-user-internal";
+      } else {
+        userId = (req.session as any)?.user?.id;
+      }
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const now = new Date();
+
+      // Verificar e expirar trial se necessário
+      if (user.isTrialActive && user.trialEndsAt) {
+        const trialEnd = new Date(user.trialEndsAt);
+        
+        if (now <= trialEnd) {
+          return next();
+        } else {
+          await db
+            .update(users)
+            .set({
+              isTrialActive: false,
+              updatedAt: new Date()
+            })
+            .where(eq(users.id, userId));
+          
+          return res.status(403).json({ 
+            message: "Seu período de teste expirou. Por favor, escolha um plano para continuar.",
+            trialExpired: true
+          });
+        }
+      }
+
+      // Verificar plano ativo
+      if (user.planEndDate) {
+        const planEnd = new Date(user.planEndDate);
+        if (now <= planEnd) {
+          return next();
+        }
+      }
+
+      // Se for restaurant_owner e não tem trial/plano ativo, bloquear
+      if (user.role === "restaurant_owner") {
+        return res.status(403).json({ 
+          message: "Você precisa de um plano ativo para acessar este recurso.",
+          planRequired: true
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error in checkPlanOnly middleware:", error);
+      res.status(500).json({ message: "Error checking plan status" });
+    }
+  };
+
   // === AUTH ROUTES ===
   app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {
     try {
@@ -420,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new restaurant
-  app.post("/api/restaurants", isDevAuthenticated, async (req: any, res) => {
+  app.post("/api/restaurants", checkPlanOnly, async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if (req.user?.claims?.sub) {
@@ -1538,7 +1610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Endpoint para atualizar número do WhatsApp
-  app.put("/api/dev/restaurant/whatsapp", async (req: any, res) => {
+  app.put("/api/dev/restaurant/whatsapp", checkPlanOnly, async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
       if ((req.session as any)?.user?.id) {
@@ -2063,7 +2135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === DEV PRODUCTS ===
-  app.post("/api/dev/products", upload.single('image'), async (req: any, res) => {
+  app.post("/api/dev/products", checkPlanOnly, upload.single('image'), async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
@@ -2112,7 +2184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para ajustar estoque de produto
-  app.post("/api/dev/products/:productId/stock", isDevAuthenticated, async (req: any, res) => {
+  app.post("/api/dev/products/:productId/stock", checkPlanOnly, async (req: any, res) => {
     try {
       const { productId } = req.params;
       
@@ -2161,7 +2233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotas para upload de logo e banner
-  app.post("/api/dev/restaurants/logo", isDevAuthenticated, upload.single('logo'), async (req: any, res) => {
+  app.post("/api/dev/restaurants/logo", checkPlanOnly, upload.single('logo'), async (req: any, res) => {
     try {
       // Usar a mesma lógica de resolução de usuário das outras rotas dev
       const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
@@ -2196,7 +2268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/restaurants/banner", isDevAuthenticated, upload.single('banner'), async (req: any, res) => {
+  app.post("/api/dev/restaurants/banner", checkPlanOnly, upload.single('banner'), async (req: any, res) => {
     try {
       // Usar a mesma lógica de resolução de usuário das outras rotas dev
       const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
@@ -2232,7 +2304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para salvar configurações de SEO
-  app.put("/api/dev/restaurants/seo", isDevAuthenticated, async (req: any, res) => {
+  app.put("/api/dev/restaurants/seo", checkPlanOnly, async (req: any, res) => {
     try {
       // Usar a mesma lógica de resolução de usuário das outras rotas
       const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
@@ -2275,7 +2347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/categories", async (req: any, res) => {
+  app.post("/api/dev/categories", checkPlanOnly, async (req: any, res) => {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
