@@ -12,11 +12,19 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: restaurant, isLoading: restaurantLoading } = useQuery({
+  const { data: restaurant, isLoading: restaurantLoading, error: restaurantError } = useQuery({
     queryKey: ["/api/my-restaurant"],
     enabled: isAuthenticated && user?.role === "restaurant_owner",
     retry: false,
   });
+
+  // Verificar se houve erro de trial expirado
+  useEffect(() => {
+    if (restaurantError && (restaurantError as any)?.trialExpired) {
+      // Recarregar a página para obter o status atualizado do usuário
+      window.location.reload();
+    }
+  }, [restaurantError]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
