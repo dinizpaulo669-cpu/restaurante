@@ -11,7 +11,7 @@ import { setupAuth, isDevAuthenticated } from "./replitAuth";
 import whatsappService from "./whatsappService";
 import { insertRestaurantSchema, insertProductSchema, insertOrderSchema, insertOrderItemSchema, insertCategorySchema, insertTableSchema, insertCouponSchema, insertSubscriptionPlanSchema, insertSystemFeatureSchema, insertPlanFeatureSchema, insertAdminUserSchema, insertUserSchema, insertRestaurantReviewSchema } from "@shared/schema";
 import { z } from "zod";
-import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory, restaurantReviews } from "@shared/schema";
+import { users, restaurants, products, categories, orders, orderItems, userFavorites, orderMessages, tables, coupons, couponUsages, serviceAreas, insertServiceAreaSchema, subscriptionPlans, systemFeatures, planFeatures, adminUsers, adminLogs, pixPayments, paymentHistory, restaurantReviews, globalSettings } from "@shared/schema";
 import { eq, desc, and, ilike, or, sql, gte, lte, isNull, inArray } from "drizzle-orm";
 
 // Configure multer for file uploads
@@ -4179,6 +4179,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Confirm payment error:", error);
       res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
+  // === GLOBAL SETTINGS ROUTES ===
+  
+  // Buscar configurações globais (admin)
+  app.get('/api/admin/settings', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const [settings] = await db
+        .select()
+        .from(globalSettings)
+        .limit(1);
+
+      if (!settings) {
+        // Criar configurações padrão se não existirem
+        const [newSettings] = await db
+          .insert(globalSettings)
+          .values({
+            supportWhatsapp: '',
+            supportEmail: ''
+          })
+          .returning();
+        
+        return res.json({ settings: newSettings });
+      }
+
+      res.json({ settings });
+    } catch (error) {
+      console.error("Get settings error:", error);
+      res.status(500).json({ message: "Failed to get settings" });
+    }
+  });
+
+  // Atualizar configurações globais (admin)
+  app.put('/api/admin/settings', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { supportWhatsapp, supportEmail } = req.body;
+
+      // Buscar configuração existente
+      const [existingSettings] = await db
+        .select()
+        .from(globalSettings)
+        .limit(1);
+
+      if (existingSettings) {
+        // Atualizar
+        const [updated] = await db
+          .update(globalSettings)
+          .set({
+            supportWhatsapp,
+            supportEmail,
+            updatedAt: new Date()
+          })
+          .where(eq(globalSettings.id, existingSettings.id))
+          .returning();
+        
+        return res.json({ settings: updated });
+      } else {
+        // Criar
+        const [created] = await db
+          .insert(globalSettings)
+          .values({
+            supportWhatsapp,
+            supportEmail
+          })
+          .returning();
+        
+        return res.json({ settings: created });
+      }
+    } catch (error) {
+      console.error("Update settings error:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Buscar número de suporte (público - para página de vendas)
+  app.get('/api/settings/support', async (req, res) => {
+    try {
+      const [settings] = await db
+        .select({
+          supportWhatsapp: globalSettings.supportWhatsapp,
+          supportEmail: globalSettings.supportEmail
+        })
+        .from(globalSettings)
+        .limit(1);
+
+      res.json({ 
+        supportWhatsapp: settings?.supportWhatsapp || '',
+        supportEmail: settings?.supportEmail || ''
+      });
+    } catch (error) {
+      console.error("Get support info error:", error);
+      res.status(500).json({ message: "Failed to get support info" });
     }
   });
 

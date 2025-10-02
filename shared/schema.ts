@@ -632,6 +632,15 @@ export const adminLogs = pgTable("admin_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Tabela de Configurações Globais do Sistema
+export const globalSettings = pgTable("global_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supportWhatsapp: varchar("support_whatsapp"), // Número do WhatsApp para suporte
+  supportEmail: varchar("support_email"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations para novas tabelas
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
   planFeatures: many(planFeatures),
@@ -711,6 +720,12 @@ export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
   createdAt: true,
 });
 
+export const insertGlobalSettingsSchema = createInsertSchema(globalSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Tipos para novas tabelas
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
@@ -726,3 +741,6 @@ export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
+
+export type GlobalSettings = typeof globalSettings.$inferSelect;
+export type InsertGlobalSettings = z.infer<typeof insertGlobalSettingsSchema>;
