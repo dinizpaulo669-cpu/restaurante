@@ -117,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Middleware para verificar status do plano e bloquear após 15 dias de atraso
+  // Middleware para verificar status do plano e bloquear após trial expirado
   const checkPlanStatus = async (req: any, res: any, next: any) => {
     try {
       let userId = null;
@@ -144,24 +144,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Se o usuário está em trial ativo, permitir acesso
+      const now = new Date();
+
+      // Verificar e expirar trial se necessário
       if (user.isTrialActive && user.trialEndsAt) {
-        const now = new Date();
         const trialEnd = new Date(user.trialEndsAt);
+        
+        // Se trial ainda está ativo
         if (now <= trialEnd) {
           return next();
+        } else {
+          // Trial expirado - atualizar no banco
+          await db
+            .update(users)
+            .set({
+              isTrialActive: false,
+              updatedAt: new Date()
+            })
+            .where(eq(users.id, userId));
+          
+          // Bloquear acesso - trial expirado
+          return res.status(403).json({ 
+            message: "Seu período de teste expirou. Por favor, escolha um plano para continuar.",
+            trialExpired: true
+          });
         }
       }
 
-      // Verificar se tem data de vencimento do plano
+      // Se não está em trial, verificar se tem plano ativo
       if (user.planEndDate) {
-        const now = new Date();
         const planEnd = new Date(user.planEndDate);
         const diffTime = now.getTime() - planEnd.getTime();
-        // Usar lógica correta: positivo = arredondar para cima, negativo = arredondar para baixo
         const diffDays = diffTime >= 0 
-          ? Math.ceil(diffTime / (1000 * 60 * 60 * 24))   // Vencido: arredondar para cima
-          : Math.floor(diffTime / (1000 * 60 * 60 * 24));  // Ativo: arredondar para baixo
+          ? Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          : Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         // Se o plano está vencido há mais de 15 dias, bloquear acesso
         if (diffDays > 15) {
@@ -180,6 +196,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: `Seu plano está vencido há ${diffDays} dias. Você tem ${15 - diffDays} dias para renovar antes do bloqueio.`
           };
         }
+        
+        return next();
+      }
+
+      // Se não tem trial ativo nem plano, bloquear acesso
+      if (user.role === "restaurant_owner") {
+        return res.status(403).json({ 
+          message: "Você precisa de um plano ativo para acessar este recurso.",
+          planRequired: true
+        });
       }
 
       next();
@@ -3568,6 +3594,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to get user info" });
+    }
+  });
+
+  // Endpoint para verificar e expirar trials automaticamente
+  app.post('/api/check-trial-expiration', async (req: any, res) => {
+    try {
+      const now = new Date();
+      
+      // Buscar todos os usuários com trial ativo
+      const activeTrialUsers = await db
+        .select()
+        .from(users)
+        .where(and(
+          eq(users.isTrialActive, true),
+          eq(users.role, "restaurant_owner")
+        ));
+      
+      let expiredCount = 0;
+      
+      // Verificar e atualizar trials expirados
+      for (const user of activeTrialUsers) {
+        if (user.trialEndsAt && new Date(user.trialEndsAt) < now) {
+          await db
+            .update(users)
+            .set({
+              isTrialActive: false,
+              updatedAt: new Date()
+            })
+            .where(eq(users.id, user.id));
+          
+          expiredCount++;
+        }
+      }
+      
+      res.json({ 
+        message: "Trial expiration check completed",
+        expiredCount,
+        totalChecked: activeTrialUsers.length
+      });
+    } catch (error) {
+      console.error("Error checking trial expiration:", error);
+      res.status(500).json({ message: "Failed to check trial expiration" });
     }
   });
 
