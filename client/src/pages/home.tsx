@@ -21,10 +21,15 @@ export default function Home() {
   // Verificar se houve erro de trial expirado
   useEffect(() => {
     if (restaurantError && (restaurantError as any)?.trialExpired) {
-      // Recarregar a página para obter o status atualizado do usuário
-      window.location.reload();
+      toast({
+        title: "Período de teste expirado",
+        description: "Seu período de teste de 7 dias expirou. Escolha um plano para continuar.",
+        variant: "destructive",
+      });
+      // Redirecionar para a página de planos
+      setLocation("/sales");
     }
-  }, [restaurantError]);
+  }, [restaurantError, toast, setLocation]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
