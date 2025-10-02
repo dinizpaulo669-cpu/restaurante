@@ -48,9 +48,17 @@ interface PixPaymentDetails {
   asaasPaymentId?: string;
 }
 
+interface CurrentPlanInfo {
+  subscriptionPlan: string | null;
+  planEndDate: string | null;
+  isTrialActive: boolean;
+  trialEndsAt: string | null;
+}
+
 interface PaymentHistoryData {
   paymentHistory: PaymentRecord[];
   pendingPayments: PendingPayment[];
+  currentPlan: CurrentPlanInfo | null;
 }
 
 export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
@@ -160,9 +168,84 @@ export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
     }
   };
 
+  const calculateDaysRemaining = (planEndDate: string | null) => {
+    if (!planEndDate) return null;
+    
+    const now = new Date();
+    const endDate = new Date(planEndDate);
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = diffTime >= 0 
+      ? Math.ceil(diffTime / (1000 * 60 * 60 * 24))  // Positivo: arredondar para cima
+      : Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Negativo: arredondar para baixo
+    
+    return diffDays;
+  };
+
+  const getPlanStatusBadge = (daysRemaining: number | null, currentPlan: CurrentPlanInfo | null) => {
+    if (!currentPlan) return null;
+
+    if (currentPlan.isTrialActive) {
+      const trialDays = currentPlan.trialEndsAt ? calculateDaysRemaining(currentPlan.trialEndsAt) : null;
+      if (trialDays === null) {
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Trial sem data</Badge>;
+      }
+      if (trialDays > 0) {
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            Trial - {trialDays} dias restantes
+          </Badge>
+        );
+      }
+      if (trialDays === 0) {
+        return (
+          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+            Trial vence hoje
+          </Badge>
+        );
+      }
+      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Trial Expirado</Badge>;
+    }
+
+    if (daysRemaining === null) {
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Sem plano ativo</Badge>;
+    }
+
+    if (daysRemaining > 15) {
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          {daysRemaining} dias restantes
+        </Badge>
+      );
+    } else if (daysRemaining > 0) {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          ⚠️ {daysRemaining} dias restantes
+        </Badge>
+      );
+    } else if (daysRemaining === 0) {
+      return (
+        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+          ⚠️ Vence hoje
+        </Badge>
+      );
+    } else if (daysRemaining >= -15) {
+      return (
+        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+          ⚠️ Vencido há {Math.abs(daysRemaining)} dias
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          🚫 Bloqueado - {Math.abs(daysRemaining)} dias de atraso
+        </Badge>
+      );
+    }
+  };
+
   const hasAnyData = paymentHistory.length > 0 || pendingPayments.length > 0;
 
-  if (!hasAnyData) {
+  if (!hasAnyData && !data?.currentPlan) {
     return (
       <div className="text-center p-8">
         <CreditCard className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
@@ -174,8 +257,39 @@ export function PaymentHistory({ restaurantId }: { restaurantId?: string }) {
     );
   }
 
+  const daysRemaining = data?.currentPlan?.planEndDate ? calculateDaysRemaining(data.currentPlan.planEndDate) : null;
+
   return (
     <div className="space-y-4">
+      {/* Status do Plano Atual */}
+      {data?.currentPlan && (
+        <Card className="border-2 border-primary">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="font-medium text-lg">Plano Atual</h4>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {data.currentPlan.subscriptionPlan || 'Nenhum plano ativo'}
+                </p>
+                {data.currentPlan.planEndDate && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Vence em: {format(new Date(data.currentPlan.planEndDate), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                {getPlanStatusBadge(daysRemaining, data.currentPlan)}
+                {daysRemaining !== null && daysRemaining < 0 && daysRemaining >= -15 && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    Sistema será bloqueado em {15 + daysRemaining} dias
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Pagamentos Pendentes */}
       {pendingPayments.length > 0 && (
         <div className="space-y-3">

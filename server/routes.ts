@@ -158,7 +158,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const now = new Date();
         const planEnd = new Date(user.planEndDate);
         const diffTime = now.getTime() - planEnd.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Usar lógica correta: positivo = arredondar para cima, negativo = arredondar para baixo
+        const diffDays = diffTime >= 0 
+          ? Math.ceil(diffTime / (1000 * 60 * 60 * 24))   // Vencido: arredondar para cima
+          : Math.floor(diffTime / (1000 * 60 * 60 * 24));  // Ativo: arredondar para baixo
 
         // Se o plano está vencido há mais de 15 dias, bloquear acesso
         if (diffDays > 15) {
@@ -4399,9 +4402,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .orderBy(desc(pixPayments.createdAt));
 
+      // Buscar informações do plano atual do usuário
+      const [currentUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      let currentPlanInfo = null;
+      if (currentUser) {
+        currentPlanInfo = {
+          subscriptionPlan: currentUser.subscriptionPlan,
+          planEndDate: currentUser.planEndDate,
+          isTrialActive: currentUser.isTrialActive,
+          trialEndsAt: currentUser.trialEndsAt
+        };
+      }
+
       res.json({
         paymentHistory: paymentHistoryRecords,
-        pendingPayments: pendingPixPayments
+        pendingPayments: pendingPixPayments,
+        currentPlan: currentPlanInfo
       });
     } catch (error) {
       console.error("Error fetching payment history:", error);
