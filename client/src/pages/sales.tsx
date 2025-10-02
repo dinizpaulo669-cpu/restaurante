@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { ArrowLeft, CheckCircle, BarChart3, Utensils, Receipt, MessageSquare, Settings, Printer, Crown, Zap, Sparkles } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 
 interface SubscriptionPlan {
   id: string;
@@ -67,6 +68,32 @@ const features = [
     description: "Imprima pedidos e comandas automaticamente",
   },
 ];
+
+// Componente do botão flutuante de WhatsApp
+function WhatsAppButton() {
+  const { data: supportData } = useQuery<{ supportWhatsapp: string; supportEmail: string }>({
+    queryKey: ["/api/settings/support"],
+    retry: false,
+  });
+
+  if (!supportData?.supportWhatsapp) {
+    return null;
+  }
+
+  const whatsappUrl = `https://wa.me/${supportData.supportWhatsapp}?text=${encodeURIComponent('Olá! Gostaria de tirar dúvidas sobre os planos.')}`;
+
+  return (
+    <a
+      href={whatsappUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg transition-all hover:scale-110 z-50"
+      data-testid="button-whatsapp-support"
+    >
+      <SiWhatsapp className="h-8 w-8" />
+    </a>
+  );
+}
 
 export default function Sales() {
   // Buscar planos reais do banco de dados
@@ -295,6 +322,9 @@ export default function Sales() {
           </div>
         </div>
       </section>
+
+      {/* Botão flutuante de WhatsApp */}
+      <WhatsAppButton />
     </div>
   );
 }

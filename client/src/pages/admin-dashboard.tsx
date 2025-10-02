@@ -102,6 +102,14 @@ interface SubscriptionPlan {
   sortOrder: number;
 }
 
+interface GlobalSettings {
+  id: string;
+  supportWhatsapp: string;
+  supportEmail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Componente de formulário de configurações
 function SettingsForm() {
   const { toast } = useToast();
@@ -110,7 +118,7 @@ function SettingsForm() {
   const [supportEmail, setSupportEmail] = useState("");
 
   // Buscar configurações atuais
-  const { data: settingsData, isLoading: loadingSettings } = useQuery({
+  const { data: settingsData, isLoading: loadingSettings } = useQuery<{ settings: GlobalSettings }>({
     queryKey: ["/api/admin/settings"],
   });
 
@@ -124,11 +132,7 @@ function SettingsForm() {
   // Mutation para atualizar configurações
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { supportWhatsapp: string; supportEmail: string }) => {
-      return apiRequest("/api/admin/settings", {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("PUT", "/api/admin/settings", data);
     },
     onSuccess: () => {
       toast({
