@@ -225,6 +225,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user role endpoint
+  app.post('/api/update-role', isDevAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.body;
+      const userId = req.user.claims.sub;
+      
+      if (!role || (role !== "customer" && role !== "restaurant_owner")) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const updateData: any = { 
+        role,
+        updatedAt: new Date() 
+      };
+      
+      // Se for restaurant_owner, configurar trial de 7 dias
+      if (role === "restaurant_owner") {
+        updateData.subscriptionPlan = "trial";
+        updateData.isTrialActive = true;
+        updateData.trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+      }
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning();
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
   // === RESTAURANT ROUTES ===
   app.get("/api/restaurants", async (req, res) => {
     try {
@@ -1384,17 +1419,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(senha, 10);
       
       // Criar usuário no banco de dados
+      const userRole = role || "customer";
+      const userValues: any = {
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        address: endereco,
+        password: hashedPassword,
+        role: userRole
+      };
+      
+      // Se for restaurant_owner, configurar trial de 7 dias
+      if (userRole === "restaurant_owner") {
+        userValues.subscriptionPlan = "trial";
+        userValues.isTrialActive = true;
+        userValues.trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+      }
+      
       const [newUser] = await db
         .insert(users)
-        .values({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone,
-          address: endereco,
-          password: hashedPassword,
-          role: role || "customer"
-        })
+        .values(userValues)
         .returning();
       
       // Criar sessão com dados do usuário
