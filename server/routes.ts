@@ -117,6 +117,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Middleware para verificar status do plano e bloquear após 15 dias de atraso
+  const checkPlanStatus = async (req: any, res: any, next: any) => {
+    try {
+      let userId = null;
+
+      // Obter userId da mesma forma que o middleware anterior
+      if (process.env.NODE_ENV === "development") {
+        userId = req.user?.claims?.sub || req.userId || "dev-user-internal";
+      } else {
+        userId = (req.session as any)?.user?.id || req.userId;
+      }
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Buscar o usuário no banco
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Se o usuário está em trial ativo, permitir acesso
+      if (user.isTrialActive && user.trialEndsAt) {
+        const now = new Date();
+        const trialEnd = new Date(user.trialEndsAt);
+        if (now <= trialEnd) {
+          return next();
+        }
+      }
+
+      // Verificar se tem data de vencimento do plano
+      if (user.planEndDate) {
+        const now = new Date();
+        const planEnd = new Date(user.planEndDate);
+        const diffTime = now.getTime() - planEnd.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Se o plano está vencido há mais de 15 dias, bloquear acesso
+        if (diffDays > 15) {
+          return res.status(403).json({ 
+            message: "Acesso bloqueado. Seu plano está vencido há mais de 15 dias. Por favor, renove sua assinatura.",
+            planExpired: true,
+            daysOverdue: diffDays
+          });
+        }
+
+        // Se está vencido mas dentro do período de graça, adicionar aviso
+        if (diffDays > 0) {
+          req.planWarning = {
+            daysOverdue: diffDays,
+            daysRemaining: 15 - diffDays,
+            message: `Seu plano está vencido há ${diffDays} dias. Você tem ${15 - diffDays} dias para renovar antes do bloqueio.`
+          };
+        }
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error in checkPlanStatus middleware:", error);
+      res.status(500).json({ message: "Error checking plan status" });
+    }
+  };
+
+  // Middleware combinado para verificar se é proprietário E se o plano está ativo
+  const requireActiveOwner = [requireRestaurantOwner, checkPlanStatus];
+
   // === AUTH ROUTES ===
   app.get('/api/auth/user', isDevAuthenticated, async (req: any, res) => {
     try {
@@ -2475,7 +2547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoints para cupons (com autenticação segura)
-  app.get("/api/dev/coupons", requireRestaurantOwner, async (req: any, res) => {
+  app.get("/api/dev/coupons", ...requireActiveOwner, async (req: any, res) => {
     try {
       const restaurantCoupons = await db
         .select()
@@ -2490,7 +2562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/dev/coupons", requireRestaurantOwner, async (req: any, res) => {
+  app.post("/api/dev/coupons", ...requireActiveOwner, async (req: any, res) => {
     try {
       const couponData = insertCouponSchema.parse({
         ...req.body,
@@ -2506,7 +2578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Atualizar cupom
-  app.put("/api/dev/coupons/:id", requireRestaurantOwner, async (req: any, res) => {
+  app.put("/api/dev/coupons/:id", ...requireActiveOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
 
@@ -2545,7 +2617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deletar cupom
-  app.delete("/api/dev/coupons/:id", requireRestaurantOwner, async (req: any, res) => {
+  app.delete("/api/dev/coupons/:id", ...requireActiveOwner, async (req: any, res) => {
     try {
       const { id } = req.params;
 
