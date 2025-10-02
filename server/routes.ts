@@ -3907,6 +3907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({
           subscriptionPlan: plan.name.toLowerCase(),
           isTrialActive: false,
+          planEndDate: planEndDate,
           updatedAt: new Date()
         })
         .where(eq(users.id, payment.userId));
@@ -4189,6 +4190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 subscriptionPlan: plan.name.toLowerCase(),
                 isTrialActive: false,
                 trialEndsAt: null,
+                planEndDate: planEndDate,
                 updatedAt: new Date(),
               })
               .where(eq(users.id, pixPayment.userId));

@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   subscriptionPlan: varchar("subscription_plan").default("trial"), // "trial" | "basic" | "pro" | "enterprise"
   trialEndsAt: timestamp("trial_ends_at"),
   isTrialActive: boolean("is_trial_active").default(true),
+  planEndDate: timestamp("plan_end_date"),
   // Campos específicos para funcionários
   restaurantId: varchar("restaurant_id"), // Apenas para funcionários - reference will be added later
   permissions: text("permissions").array(), // Permissões do funcionário
