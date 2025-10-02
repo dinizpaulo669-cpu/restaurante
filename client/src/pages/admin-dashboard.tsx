@@ -102,6 +102,99 @@ interface SubscriptionPlan {
   sortOrder: number;
 }
 
+// Componente de formulário de configurações
+function SettingsForm() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+
+  // Buscar configurações atuais
+  const { data: settingsData, isLoading: loadingSettings } = useQuery({
+    queryKey: ["/api/admin/settings"],
+  });
+
+  useEffect(() => {
+    if (settingsData?.settings) {
+      setSupportWhatsapp(settingsData.settings.supportWhatsapp || "");
+      setSupportEmail(settingsData.settings.supportEmail || "");
+    }
+  }, [settingsData]);
+
+  // Mutation para atualizar configurações
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: { supportWhatsapp: string; supportEmail: string }) => {
+      return apiRequest("/api/admin/settings", {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações atualizadas",
+        description: "As configurações foram salvas com sucesso!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar as configurações",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate({ supportWhatsapp, supportEmail });
+  };
+
+  if (loadingSettings) {
+    return <div>Carregando...</div>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="supportWhatsapp">Número do WhatsApp de Suporte</Label>
+        <Input
+          id="supportWhatsapp"
+          type="text"
+          placeholder="Ex: 5511999999999"
+          value={supportWhatsapp}
+          onChange={(e) => setSupportWhatsapp(e.target.value)}
+          data-testid="input-support-whatsapp"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Formato: código do país + DDD + número (apenas números)
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="supportEmail">E-mail de Suporte</Label>
+        <Input
+          id="supportEmail"
+          type="email"
+          placeholder="suporte@exemplo.com"
+          value={supportEmail}
+          onChange={(e) => setSupportEmail(e.target.value)}
+          data-testid="input-support-email"
+        />
+      </div>
+
+      <Button
+        type="submit"
+        disabled={updateSettingsMutation.isPending}
+        data-testid="button-save-settings"
+      >
+        {updateSettingsMutation.isPending ? "Salvando..." : "Salvar Configurações"}
+      </Button>
+    </form>
+  );
+}
+
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -336,7 +429,7 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <TrendingUp className="h-4 w-4 mr-2" />
               Dashboard
@@ -360,6 +453,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="pagamentos" data-testid="tab-pagamentos">
               <CreditCard className="h-4 w-4 mr-2" />
               Pagamentos
+            </TabsTrigger>
+            <TabsTrigger value="configuracoes" data-testid="tab-configuracoes">
+              <Cog className="h-4 w-4 mr-2" />
+              Configurações
             </TabsTrigger>
           </TabsList>
 
@@ -920,6 +1017,25 @@ export default function AdminDashboard() {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Configurações */}
+          <TabsContent value="configuracoes" className="space-y-6 mt-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Configurações do Sistema</h2>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Suporte</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Configure os canais de suporte para os clientes
+                </p>
+              </CardHeader>
+              <CardContent>
+                <SettingsForm />
               </CardContent>
             </Card>
           </TabsContent>
