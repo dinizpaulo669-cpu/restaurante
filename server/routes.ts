@@ -491,21 +491,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new restaurant
-  app.post("/api/restaurants", checkPlanOnly, async (req: any, res) => {
+  // Register new restaurant (public endpoint for onboarding)
+  app.post("/api/register-restaurant", async (req: any, res) => {
     try {
-      let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
+      // Only allow in development or for authenticated users
+      if (process.env.NODE_ENV === "production" && !req.user?.claims?.sub) {
+        return res.status(401).json({ message: "Authentication required" });
       }
+
+      // Validate required fields
+      if (!req.body.email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      let userId = req.user?.claims?.sub;
       
-      const restaurantData = insertRestaurantSchema.parse({
-        ...req.body,
-        ownerId: userId,
-      });
-      
-      // Update user role to restaurant_owner if authenticated with real user
-      if (req.user?.claims?.sub) {
+      // In development, use email to determine user ID (normalized)
+      if (!userId && process.env.NODE_ENV === "development") {
+        const normalizedEmail = req.body.email.toLowerCase().trim();
+        userId = `dev-user-${normalizedEmail}`;
+        
+        // Create the user if doesn't exist
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        
+        if (!existingUser) {
+          await db
+            .insert(users)
+            .values({
+              id: userId,
+              email: normalizedEmail,
+              firstName: req.body.ownerName?.split(" ")[0] || "Usuario",
+              lastName: req.body.ownerName?.split(" ").slice(1).join(" ") || "Logado",
+              phone: req.body.phone || "",
+              role: "restaurant_owner",
+              subscriptionPlan: "trial",
+              isTrialActive: true,
+              trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            });
+        }
+      } else if (userId) {
+        // For authenticated Replit users
         await db
           .insert(users)
           .values({
@@ -527,6 +556,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
       }
+      
+      // Check if user already has a restaurant
+      const existingRestaurants = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId))
+        .limit(1);
+      
+      if (existingRestaurants.length > 0) {
+        return res.status(400).json({ 
+          message: "Você já possui um restaurante cadastrado. Faça login para acessar.",
+          restaurantId: existingRestaurants[0].id
+        });
+      }
+      
+      const restaurantData = insertRestaurantSchema.parse({
+        ...req.body,
+        ownerId: userId,
+      });
+
+      // Create the restaurant
+      const [restaurant] = await db
+        .insert(restaurants)
+        .values(restaurantData)
+        .returning();
+      
+      console.log("Restaurant registered successfully:", restaurant.id);
+      res.json({ restaurant, userId });
+    } catch (error) {
+      console.error("Error registering restaurant:", error);
+      res.status(500).json({ message: "Failed to register restaurant" });
+    }
+  });
+
+  // Create new restaurant (requires authentication and valid plan)
+  app.post("/api/restaurants", checkPlanOnly, async (req: any, res) => {
+    try {
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      const restaurantData = insertRestaurantSchema.parse({
+        ...req.body,
+        ownerId: userId,
+      });
 
       // Create the restaurant
       const [restaurant] = await db

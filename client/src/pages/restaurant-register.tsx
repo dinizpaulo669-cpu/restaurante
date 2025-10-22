@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, UtensilsCrossed, FileText, Clock } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function RestaurantRegister() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     ownerName: "",
     email: "",
@@ -34,7 +36,7 @@ export default function RestaurantRegister() {
     }
   }, [setLocation]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.ownerName || !formData.email || !formData.phone || !formData.restaurantName || !formData.address) {
@@ -46,32 +48,60 @@ export default function RestaurantRegister() {
       return;
     }
 
-    // Salvar dados do restaurante no localStorage
-    localStorage.setItem('currentUser', JSON.stringify({
-      id: Date.now().toString(),
-      ownerName: formData.ownerName,
-      email: formData.email,
-      phone: formData.phone,
-      restaurantName: formData.restaurantName,
-      description: formData.description,
-      address: formData.address,
-      cuisine: formData.cuisine,
-      operatingHours: formData.operatingHours,
-      plan: selectedPlan,
-      type: 'restaurant',
-      createdAt: new Date().toISOString()
-    }));
+    setIsSubmitting(true);
 
-    // Limpar plano selecionado
-    localStorage.removeItem('selectedPlan');
+    try {
+      // Enviar dados para o backend
+      const response = await apiRequest("POST", "/api/register-restaurant", {
+        ownerName: formData.ownerName,
+        email: formData.email,
+        phone: formData.phone,
+        name: formData.restaurantName,
+        description: formData.description,
+        address: formData.address,
+        category: formData.cuisine || "Diversos",
+      });
 
-    toast({
-      title: "Restaurante cadastrado!",
-      description: `Bem-vindo ao RestaurantePro, ${formData.restaurantName}!`,
-    });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao criar restaurante");
+      }
 
-    // Redirecionar para o painel do restaurante
-    setLocation("/dashboard");
+      const data = await response.json();
+
+      // Salvar dados do usuário no localStorage para manter a sessão
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: data.userId,
+        ownerName: formData.ownerName,
+        email: formData.email,
+        phone: formData.phone,
+        restaurantId: data.restaurant.id,
+        restaurantName: formData.restaurantName,
+        plan: selectedPlan,
+        type: 'restaurant',
+        createdAt: new Date().toISOString()
+      }));
+
+      // Limpar plano selecionado
+      localStorage.removeItem('selectedPlan');
+
+      toast({
+        title: "Restaurante cadastrado!",
+        description: `Bem-vindo ao RestaurantePro, ${formData.restaurantName}!`,
+      });
+
+      // Redirecionar para o painel do restaurante
+      setLocation("/dashboard");
+    } catch (error: any) {
+      console.error("Erro ao cadastrar restaurante:", error);
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message || "Ocorreu um erro ao criar seu restaurante. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -257,8 +287,9 @@ export default function RestaurantRegister() {
                 type="submit"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 data-testid="button-register-restaurant"
+                disabled={isSubmitting}
               >
-                Cadastrar Restaurante
+                {isSubmitting ? "Cadastrando..." : "Cadastrar Restaurante"}
               </Button>
 
               <div className="text-center">
