@@ -62,11 +62,6 @@ export default function RestaurantRegister() {
         category: formData.cuisine || "Diversos",
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Erro ao criar restaurante");
-      }
-
       const data = await response.json();
 
       // Salvar dados do usuário no localStorage para manter a sessão
