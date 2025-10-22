@@ -51,7 +51,7 @@ export default function RestaurantRegister() {
     setIsSubmitting(true);
 
     try {
-      // Enviar dados para o backend
+      // Enviar dados para o backend (novo endpoint de registro)
       const response = await apiRequest("POST", "/api/register-restaurant", {
         ownerName: formData.ownerName,
         email: formData.email,
