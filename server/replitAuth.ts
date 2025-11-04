@@ -272,10 +272,10 @@ export const isDevAuthenticated: RequestHandler = async (req, res, next) => {
     // Simula a estrutura de um usuário do Replit Auth
     req.user = {
       claims: {
-        sub: "dev-user-123",
-        email: "test@restaurant.com",
-        first_name: "Usuário", 
-        last_name: "Teste",
+        sub: "dev-user-internal",
+        email: "dev@example.com",
+        first_name: "Usuario", 
+        last_name: "Logado",
         profile_image_url: null
       }
     };
