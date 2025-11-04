@@ -519,6 +519,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
         
         if (!existingUser) {
+          // Hash default password for development
+          const defaultPassword = "123456";
+          const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+          
           await db
             .insert(users)
             .values({
@@ -531,6 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               subscriptionPlan: "trial",
               isTrialActive: true,
               trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+              password: hashedPassword,
             });
         }
       } else if (userId) {

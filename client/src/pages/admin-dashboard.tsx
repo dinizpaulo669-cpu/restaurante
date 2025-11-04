@@ -617,10 +617,20 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-1">
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => window.open(`/restaurant/${item.restaurant.id}`, '_blank')}
+                                data-testid={`button-edit-${item.restaurant.id}`}
+                              >
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => window.open(`/dashboard?restaurantId=${item.restaurant.id}`, '_blank')}
+                                data-testid={`button-settings-${item.restaurant.id}`}
+                              >
                                 <Settings className="h-3 w-3" />
                               </Button>
                             </div>
