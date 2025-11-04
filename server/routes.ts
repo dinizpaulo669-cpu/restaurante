@@ -646,8 +646,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dev alias for the above route - to match frontend expectations
   app.get("/api/dev/my-restaurant", isDevAuthenticated, async (req: any, res) => {
     try {
-      // Usar a mesma lógica de resolução de usuário das outras rotas dev
-      const userId = req.user?.claims?.sub ?? (req.session as any)?.user?.id ?? "dev-user-internal";
+      // Usar a mesma lógica do endpoint /api/my-restaurant
+      let userId = "dev-user-internal";
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       const [restaurant] = await db
         .select()
