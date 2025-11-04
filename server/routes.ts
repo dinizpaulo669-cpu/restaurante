@@ -3983,6 +3983,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete restaurant
+  app.delete('/api/admin/restaurants/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const restaurantId = req.params.id;
+      
+      // Delete related data first
+      await db.delete(products).where(eq(products.restaurantId, restaurantId));
+      await db.delete(categories).where(eq(categories.restaurantId, restaurantId));
+      await db.delete(tables).where(eq(tables.restaurantId, restaurantId));
+      await db.delete(coupons).where(eq(coupons.restaurantId, restaurantId));
+      
+      // Delete restaurant
+      const [deletedRestaurant] = await db
+        .delete(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .returning();
+
+      if (!deletedRestaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      res.json({ message: "Restaurant deleted successfully" });
+    } catch (error) {
+      console.error("Delete restaurant error:", error);
+      res.status(500).json({ message: "Failed to delete restaurant" });
+    }
+  });
+
+  // Delete user
+  app.delete('/api/admin/users/:id', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      
+      // Check if user has restaurants
+      const userRestaurants = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, userId));
+      
+      if (userRestaurants.length > 0) {
+        return res.status(400).json({ 
+          message: "Não é possível excluir usuário com restaurantes cadastrados. Exclua os restaurantes primeiro." 
+        });
+      }
+      
+      // Delete user
+      const [deletedUser] = await db
+        .delete(users)
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!deletedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Create user
+  app.post('/api/admin/users', isAdminAuthenticated, async (req: any, res) => {
+    try {
+      const { email, firstName, lastName, phone, role, password } = req.body;
+      
+      if (!email || !firstName || !password) {
+        return res.status(400).json({ message: "Email, nome e senha são obrigatórios" });
+      }
+      
+      // Check if email already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Email já cadastrado" });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create user ID
+      const userId = `dev-user-${email.toLowerCase().trim()}`;
+      
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          id: userId,
+          email: email.toLowerCase().trim(),
+          firstName,
+          lastName: lastName || '',
+          phone: phone || '',
+          role: role || 'customer',
+          password: hashedPassword,
+          subscriptionPlan: role === 'restaurant_owner' ? 'trial' : null,
+          isTrialActive: role === 'restaurant_owner',
+          trialEndsAt: role === 'restaurant_owner' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+        })
+        .returning();
+
+      res.json(newUser);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // CRUD para planos de assinatura
   app.get('/api/admin/plans', isAdminAuthenticated, async (req: any, res) => {
     try {

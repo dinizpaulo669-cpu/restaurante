@@ -633,6 +633,31 @@ export default function AdminDashboard() {
                               >
                                 <Settings className="h-3 w-3" />
                               </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={async () => {
+                                  if (confirm(`Tem certeza que deseja excluir o restaurante "${item.restaurant.name}"?`)) {
+                                    try {
+                                      await apiRequest("DELETE", `/api/admin/restaurants/${item.restaurant.id}`);
+                                      toast({
+                                        title: "Restaurante excluído",
+                                        description: "O restaurante foi excluído com sucesso",
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Erro",
+                                        description: error.message || "Erro ao excluir restaurante",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                }}
+                                data-testid={`button-delete-${item.restaurant.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -646,7 +671,7 @@ export default function AdminDashboard() {
 
           {/* Usuários */}
           <TabsContent value="users" className="space-y-6 mt-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-between">
               <div className="flex-1">
                 <Input
                   placeholder="Buscar usuários..."
@@ -656,6 +681,115 @@ export default function AdminDashboard() {
                   data-testid="input-search-users"
                 />
               </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="newUserEmail">Email *</Label>
+                      <Input
+                        id="newUserEmail"
+                        type="email"
+                        placeholder="usuario@email.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newUserFirstName">Nome *</Label>
+                      <Input
+                        id="newUserFirstName"
+                        placeholder="Nome"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newUserLastName">Sobrenome</Label>
+                      <Input
+                        id="newUserLastName"
+                        placeholder="Sobrenome"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newUserPhone">Telefone</Label>
+                      <Input
+                        id="newUserPhone"
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newUserRole">Tipo</Label>
+                      <select id="newUserRole" className="w-full border rounded px-3 py-2">
+                        <option value="customer">Cliente</option>
+                        <option value="restaurant_owner">Dono de Restaurante</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="newUserPassword">Senha *</Label>
+                      <Input
+                        id="newUserPassword"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+                    <Button 
+                      className="w-full"
+                      onClick={async () => {
+                        const email = (document.getElementById('newUserEmail') as HTMLInputElement).value;
+                        const firstName = (document.getElementById('newUserFirstName') as HTMLInputElement).value;
+                        const lastName = (document.getElementById('newUserLastName') as HTMLInputElement).value;
+                        const phone = (document.getElementById('newUserPhone') as HTMLInputElement).value;
+                        const role = (document.getElementById('newUserRole') as HTMLSelectElement).value;
+                        const password = (document.getElementById('newUserPassword') as HTMLInputElement).value;
+                        
+                        if (!email || !firstName || !password) {
+                          toast({
+                            title: "Campos obrigatórios",
+                            description: "Preencha email, nome e senha",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        try {
+                          await apiRequest("POST", "/api/admin/users", {
+                            email,
+                            firstName,
+                            lastName,
+                            phone,
+                            role,
+                            password,
+                          });
+                          toast({
+                            title: "Usuário criado",
+                            description: "O usuário foi criado com sucesso",
+                          });
+                          queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+                          // Clear fields
+                          (document.getElementById('newUserEmail') as HTMLInputElement).value = '';
+                          (document.getElementById('newUserFirstName') as HTMLInputElement).value = '';
+                          (document.getElementById('newUserLastName') as HTMLInputElement).value = '';
+                          (document.getElementById('newUserPhone') as HTMLInputElement).value = '';
+                          (document.getElementById('newUserPassword') as HTMLInputElement).value = '';
+                        } catch (error: any) {
+                          toast({
+                            title: "Erro",
+                            description: error.message || "Erro ao criar usuário",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Criar Usuário
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <Card>
@@ -749,11 +883,30 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-1">
-                              <Button size="sm" variant="outline">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                <Settings className="h-3 w-3" />
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={async () => {
+                                  if (confirm(`Tem certeza que deseja excluir o usuário "${user.firstName} ${user.lastName}"?`)) {
+                                    try {
+                                      await apiRequest("DELETE", `/api/admin/users/${user.id}`);
+                                      toast({
+                                        title: "Usuário excluído",
+                                        description: "O usuário foi excluído com sucesso",
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Erro",
+                                        description: error.message || "Erro ao excluir usuário",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                }}
+                                data-testid={`button-delete-user-${user.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
