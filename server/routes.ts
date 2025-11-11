@@ -599,7 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/restaurants", checkPlanOnly, async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       }
       
@@ -626,7 +630,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/my-restaurant", isDevAuthenticated, async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       }
       
@@ -653,7 +661,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Usar a mesma lógica do endpoint /api/my-restaurant
       let userId = "dev-user-internal";
-      if (req.user?.claims?.sub) {
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       }
       
