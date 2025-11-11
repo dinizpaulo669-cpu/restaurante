@@ -989,7 +989,7 @@ export default function CustomerPanel() {
   const renderFavoritesContent = () => (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-lg sm:text-xl lg:text-2xl font-bold">Meus Favoritos</h2>
-      {customerFavorites.length === 0 ? (
+      {!customerFavorites || customerFavorites.length === 0 ? (
         <div className="text-center py-12">
           <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Você ainda não tem restaurantes favoritos.</p>
@@ -998,8 +998,14 @@ export default function CustomerPanel() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          <p className="text-muted-foreground">Seus restaurantes favoritos aparecerão aqui.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {customerFavorites.map((restaurant: any) => (
+            <RestaurantCard
+              key={restaurant.id}
+              restaurant={restaurant}
+              data-testid={`favorite-restaurant-${restaurant.id}`}
+            />
+          ))}
         </div>
       )}
     </div>

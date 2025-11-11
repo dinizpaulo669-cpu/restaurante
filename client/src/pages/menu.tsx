@@ -199,6 +199,36 @@ export default function Menu() {
     },
   });
 
+  // Mutation para criar pedido
+  const createOrderMutation = useMutation({
+    mutationFn: (orderData: any) => apiRequest("POST", "/api/orders", orderData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/orders"] });
+      if (tableInfo?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/tables/${tableInfo.id}/orders`] });
+      }
+      toast({
+        title: "Pedido realizado!",
+        description: "Seu pedido foi enviado com sucesso. Em breve entraremos em contato!",
+      });
+      // Limpar carrinho, observações e cupom
+      setCart([]);
+      setCustomer({ name: "", phone: "", address: "", notes: "" });
+      setAppliedCoupon(null);
+      setCouponCode("");
+      setCouponError("");
+      setShowCheckout(false);
+      setShowCart(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao fazer pedido",
+        description: error?.message || "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // WebSocket para atualizações em tempo real
   const { sendMessage: sendWSMessage, connectionStatus } = useWebSocket({
     orderId: selectedOrderForChat || undefined,
@@ -426,7 +456,12 @@ export default function Menu() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  const handleOrder = async () => {
+  const handleOrder = () => {
+    // Prevenir cliques múltiplos durante o envio
+    if (createOrderMutation.isPending) {
+      return;
+    }
+
     // Para pedidos de mesa, permitir sem autenticação completa
     if (!isTableOrder) {
       // Validar se o cliente tem perfil completo (apenas para delivery)
@@ -472,79 +507,46 @@ export default function Menu() {
       return;
     }
 
-    try {
-      const deliveryFee = getDeliveryFee();
-      const couponDiscount = getCouponDiscount();
-      
-      // Definir dados do cliente baseado no tipo de pedido
-      const customerName = isTableOrder 
-        ? customer.name 
-        : ((customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
-          ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
-          : (customerProfile as any)?.email);
-      
-      const customerPhone = isTableOrder 
-        ? customer.phone || '' 
-        : (customerProfile as any)?.phone || '';
-      
-      const customerAddress = isTableOrder 
-        ? `Mesa ${tableInfo?.number || 'N/A'}` 
-        : (customerProfile as any)?.address || 'Endereço não informado';
-      
-      const orderData = {
-        restaurantId,
-        customerName,
-        customerPhone,
-        customerAddress,
-        notes: customer.notes,
-        orderType: isTableOrder ? 'table' : 'delivery',
-        tableId: isTableOrder ? tableInfo?.id : null,
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          totalPrice: item.price * item.quantity
-        })),
-        subtotal: getTotalPrice(),
-        deliveryFee: deliveryFee,
-        couponCode: appliedCoupon?.code || null,
-        couponDiscount: couponDiscount,
-        total: getFinalTotal()
-      };
+    const deliveryFee = getDeliveryFee();
+    const couponDiscount = getCouponDiscount();
+    
+    // Definir dados do cliente baseado no tipo de pedido
+    const customerName = isTableOrder 
+      ? customer.name 
+      : ((customerProfile as any)?.firstName && (customerProfile as any)?.lastName 
+        ? `${(customerProfile as any).firstName} ${(customerProfile as any).lastName}`
+        : (customerProfile as any)?.email);
+    
+    const customerPhone = isTableOrder 
+      ? customer.phone || '' 
+      : (customerProfile as any)?.phone || '';
+    
+    const customerAddress = isTableOrder 
+      ? `Mesa ${tableInfo?.number || 'N/A'}` 
+      : (customerProfile as any)?.address || 'Endereço não informado';
+    
+    const orderData = {
+      restaurantId,
+      customerName,
+      customerPhone,
+      customerAddress,
+      notes: customer.notes,
+      orderType: isTableOrder ? 'table' : 'delivery',
+      tableId: isTableOrder ? tableInfo?.id : null,
+      items: cart.map(item => ({
+        productId: item.id,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        totalPrice: item.price * item.quantity
+      })),
+      subtotal: getTotalPrice(),
+      deliveryFee: deliveryFee,
+      couponCode: appliedCoupon?.code || null,
+      couponDiscount: couponDiscount,
+      total: getFinalTotal()
+    };
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar pedido');
-      }
-
-      toast({
-        title: "Pedido realizado!",
-        description: "Seu pedido foi enviado com sucesso. Em breve entraremos em contato!",
-      });
-
-      // Limpar carrinho, observações e cupom
-      setCart([]);
-      setCustomer({ name: "", phone: "", address: "", notes: "" });
-      setAppliedCoupon(null);
-      setCouponCode("");
-      setCouponError("");
-      setShowCheckout(false);
-      setShowCart(false);
-
-    } catch (error) {
-      toast({
-        title: "Erro ao fazer pedido",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    }
+    createOrderMutation.mutate(orderData);
   };
 
   if (restaurantLoading) {
@@ -1679,15 +1681,24 @@ export default function Menu() {
                   variant="outline" 
                   onClick={() => setShowCheckout(false)}
                   className="flex-1"
+                  disabled={createOrderMutation.isPending}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleOrder}
-                  className="flex-1"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+                  disabled={createOrderMutation.isPending}
                   data-testid="button-confirm-order"
                 >
-                  Confirmar Pedido
+                  {createOrderMutation.isPending ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                      Enviando...
+                    </div>
+                  ) : (
+                    "Confirmar Pedido"
+                  )}
                 </Button>
               </div>
             </CardContent>
