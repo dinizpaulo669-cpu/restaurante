@@ -88,16 +88,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Restaurant owner role required." });
       }
 
-      // Para dev-user-internal, usar o mapeamento padrão apenas em desenvolvimento
-      const actualOwnerId = (userId === "dev-user-internal" && process.env.NODE_ENV === "development") 
-        ? "dev-user-123" 
-        : userId;
-
       // Buscar o restaurante do usuário autenticado
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
 
@@ -108,7 +103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Adicionar dados do restaurante à requisição
       req.restaurant = restaurant;
       req.userId = userId;
-      req.actualOwnerId = actualOwnerId;
       
       next();
     } catch (error) {
@@ -1139,22 +1133,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/my-orders", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
       }
       
-      // Get restaurant owned by this user
-      // For development, use the correct owner ID
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
-      console.log(`🔍 Looking for restaurant with owner_id: ${actualOwnerId} (original userId: ${userId})`);
+      console.log(`🔍 Looking for restaurant with owner_id: ${userId}`);
       
       const userRestaurant = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .limit(1);
       
-      console.log(`📊 Found ${userRestaurant.length} restaurants for owner ${actualOwnerId}`);
+      console.log(`📊 Found ${userRestaurant.length} restaurants for owner ${userId}`);
       if (userRestaurant.length > 0) {
         console.log(`🏪 Restaurant found: ${userRestaurant[0].name} (ID: ${userRestaurant[0].id})`);
       }
@@ -1708,11 +1703,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/dev/restaurant/whatsapp", checkPlanOnly, async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
       }
       
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       const { whatsappNumber } = req.body;
 
       if (!whatsappNumber) {
@@ -1725,7 +1723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notificationWhatsapp: whatsappNumber,
           updatedAt: new Date()
         })
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .returning();
 
       if (!updatedRestaurant) {
@@ -1767,16 +1765,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tables", async (req: any, res) => {
     try {
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
+      
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
       }
       
       // Get restaurant owned by this user
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .limit(1);
       
       if (!restaurant) {
@@ -2003,18 +2004,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
       
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       // Buscar o restaurante do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .limit(1);
       
       if (!restaurant) {
@@ -2125,18 +2127,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
       
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
       
@@ -2161,18 +2164,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
       
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
       
@@ -2234,18 +2238,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
       
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
@@ -2446,18 +2451,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obter ID do usuário (dev ou real)
       let userId = "dev-user-internal";
-      if ((req.session as any)?.user?.id) {
-        userId = (req.session as any).user.id;
-      }
       
-      // Para usuários reais, usar o ID da sessão; para dev, mapear para dev-user-123
-      const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+      // Verificar primeiro a sessão interna (login Supabase)
+      if (req.session?.user?.id) {
+        userId = req.session.user.id;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       
       // Buscar o restaurante mais recente do usuário
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(desc(restaurants.createdAt))
         .limit(1);
         
@@ -2927,15 +2933,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Se houver usuário autenticado (do dashboard), buscar o restaurante dele
       if ((req.session as any)?.user?.id) {
-        const userId = (req.session as any)?.user?.id;
+        let userId = (req.session as any)?.user?.id;
         
-        // Para dev-user-internal, usar o mapeamento padrão
-        const actualOwnerId = userId === "dev-user-internal" ? "dev-user-123" : userId;
+        // Verificar Replit auth como fallback
+        if (!userId && req.user?.claims?.sub) {
+          userId = req.user.claims.sub;
+        }
         
         const [userRestaurant] = await db
           .select()
           .from(restaurants)
-          .where(eq(restaurants.ownerId, actualOwnerId))
+          .where(eq(restaurants.ownerId, userId))
           .orderBy(desc(restaurants.createdAt))
           .limit(1);
           
@@ -3093,13 +3101,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Usar sempre o ID do usuário autenticado, sem hardcode
       let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
       
       // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(restaurants.createdAt)
         .limit(1);
         
@@ -3226,13 +3233,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Usar sempre o ID do usuário autenticado, sem hardcode
       let userId = req.user?.claims?.sub || "dev-user-internal";
-      const actualOwnerId = userId;
       
       // Buscar o restaurante do usuário autenticado (sempre o primeiro por ordem de criação)
       const [restaurant] = await db
         .select()
         .from(restaurants)
-        .where(eq(restaurants.ownerId, actualOwnerId))
+        .where(eq(restaurants.ownerId, userId))
         .orderBy(restaurants.createdAt)
         .limit(1);
         
